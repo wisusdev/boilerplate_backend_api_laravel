@@ -1,7 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\Auth\AuthController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\Auth\ForgotController;
+use App\Http\Controllers\Api\Auth\LoginController;
+use App\Http\Controllers\Api\Auth\RegisterController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,15 +16,16 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// Auth
+Route::group(['prefix' => '/auth'], function () {
+	Route::post('/login', [LoginController::class, 'login']);
+	Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth:api');
+	Route::post('/register', [RegisterController::class, 'register']);
+	Route::post('/forgot-password', [ForgotController::class, 'forgot']);
+	Route::post('/reset-password', [ForgotController::class, 'reset']);
 });
 
-// Auth routes
-Route::group(['middleware' => 'api', 'prefix' => 'auth'], function () {
-    Route::post('login', [AuthController::class, 'login']);
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('logout', [AuthController::class, 'logout']);
-    Route::post('refresh', [AuthController::class, 'refresh']);
-    Route::get('profile', [AuthController::class, 'userProfile']);
+Route::group(['middleware' => 'auth:api'], function () {
+	// User
+	Route::get('/user', [LoginController::class, 'user']);
 });
