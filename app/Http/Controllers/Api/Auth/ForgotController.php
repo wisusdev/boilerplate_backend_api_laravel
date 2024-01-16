@@ -24,10 +24,9 @@ class ForgotController extends Controller
 
 		$token = Str::random(10);
 
-		DB::table('password_reset_tokens')->insert([
-			'email' => $email,
+		DB::table('password_reset_tokens')->updateOrInsert(['email' => $email], [
 			'token' => $token,
-			'created_at' => now()->addHour(6)
+			'created_at' => now()->addHours(6)
 		]);
 
 		// Send email
