@@ -18,14 +18,20 @@ class RegisterController extends Controller
                 'first_name' => 'required|max:255',
                 'last_name' => 'required|max:255',
                 'email' => 'required|unique:users|max:255',
-                'password' => 'required|confirmed|max:255',
+				'password' => [
+					'required',
+					'confirmed',
+					'min:8',
+					'max:128',
+					'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/',
+				],
             ]);
 
             if ($validator->fails()) {
                 return response()->json($validator->errors(), 400);
             }
 
-            $userData = User::create($request->except('password_confirmation'));
+            User::create($request->except('password_confirmation'));
 
             return response()->json(['status' => true], 200);
 
