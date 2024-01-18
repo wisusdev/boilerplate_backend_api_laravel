@@ -17,17 +17,25 @@ class LoginController extends Controller
 		try {
 			$validator = Validator::make($request->all(), [
 				'email' => 'required|email',
-				'password' => 'required|string|min:8',
+				'password' => 'required',
 			]);
 
 			if ($validator->fails()) {
-				return response()->json($validator->errors(), 422);
+				return response()->json([
+					'errors' => [
+						'status' => '422',
+						'title'  => 'Validation Error',
+						'detail' => $validator->errors(),
+					]
+				], 422);
 			}
 
 			$data = [
-				'status' => false,
-				'code' => 401,
-				'message' => 'Invalid credentials',
+				'errors' => [
+					'status' => '400',
+					'title'  => 'Bad Request',
+					'detail' => 'Invalid credentials',
+				]
 			];
 
 			if (auth()->attempt(['email' => $request->email, 'password' => $request->password])) {
@@ -36,20 +44,31 @@ class LoginController extends Controller
 				$token->expires_at = Carbon::now()->addWeeks(1);
 				$token->save();
 
-				$data['type'] = 'Bearer';
-				$data['token'] = $tokenResult->accessToken;
-				$data['expires_at'] = $tokenResult->token->expires_at;
-				$data['status'] = true;
-				$data['code'] = 200;
-				$data['message'] = 'Login success';
+				$data = [
+					'data' => [
+						'type' => 'Bearer',
+						'id' => $tokenResult->accessToken,
+						'attributes' => [
+							'expires_at' => $tokenResult->token->expires_at,
+							'status' => 'Success',
+							'message' => 'Login success',
+						]
+					]
+				];
 
-				return response()->json($data, $data['code']);
+				return response()->json($data, 200);
 			}
 
-			return response()->json($data, $data['code']);
+			return response()->json($data, 400);
 			
 		} catch (Exception $error) {
-			return response()->json(['message' => $error->getMessage(), "statusCode" => 422]);
+			return response()->json([
+				'errors' => [
+					'status' => '422',
+					'title'  => 'Unprocessable Entity',
+					'detail' => $error->getMessage(),
+				]
+			], 422);
 		}
 	}
 
