@@ -2,7 +2,9 @@
 
 namespace App\Exceptions;
 
+use App\Http\Responses\JsonApiValidationErrorResponse;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -26,5 +28,10 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+    }
+
+    protected function invalidJson($request, ValidationException $exception) : JsonApiValidationErrorResponse
+    {
+        return new JsonApiValidationErrorResponse($exception);
     }
 }
