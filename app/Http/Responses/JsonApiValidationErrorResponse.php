@@ -23,7 +23,7 @@ class JsonApiValidationErrorResponse extends JsonResponse {
             'errors' => collect($exception->errors())
                 ->map(function ($message, $field) use ($title) {
                     return [
-                        'title' => $title,
+                        'title' => $field,
                         'detail' => $message[0],
                         'source' => [
                             'pointer' => "/".str_replace(".", "/", $field)
