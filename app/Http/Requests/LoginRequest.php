@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class LoginRequest extends FormRequest
 {
@@ -22,7 +23,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.email' => ['required', 'email'],
+            'data.email' => ['required', 'email', Rule::exists('users', 'email')],
             'data.password' => ['required'],
             'data.device_name' => ['required']
         ];
@@ -33,6 +34,7 @@ class LoginRequest extends FormRequest
         return [
             'data.email.required' => 'Email is required',
             'data.email.email' => 'Email is invalid',
+            'data.email.exists' => 'Email is not registered',
             'data.password.required' => 'Password is required',
             'data.device_name.required' => 'Device name is required'
         ];
