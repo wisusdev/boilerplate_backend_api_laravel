@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function show(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         return response()->json(['status' => true, 'data' => $request->user()], 200);
     }
