@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Requests\RegisterRequest;
-use Exception;
 use App\Models\User;
 use App\Http\Controllers\Controller;
 
