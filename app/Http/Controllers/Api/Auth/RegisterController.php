@@ -11,7 +11,11 @@ class RegisterController extends Controller
 {
     public function register(RegisterRequest $request)
     {
-        User::create($request->except('password_confirmation'));
-        return response()->json(['status' => true], 200);
+        $data = $request->validated();
+        User::create($data['data']);
+        return response()->json([
+            'status' => true,
+            'message' => 'User created successfully',
+        ], 201);
     }
 }
