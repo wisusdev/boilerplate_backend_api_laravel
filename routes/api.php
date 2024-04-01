@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 
 // Auth
 Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
-    Route::post('/login', [LoginController::class, 'login'])->name('auth.login');
+    Route::post('/auth/login', [LoginController::class, 'login'])->name('auth.login');
     Route::post('/auth/logout', [LoginController::class, 'logout'])->name('auth.logout');
     Route::post('/auth/register', [RegisterController::class, 'register'])->name('auth.register');
     Route::post('/auth/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot');
@@ -28,6 +28,5 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
 });
 
 Route::group(['middleware' => 'auth:api'], function () {
-	// User
-	Route::get('/user', [UserController::class, 'index'])->name('user.index');
+    Route::apiResource('/users', UserController::class);
 });
