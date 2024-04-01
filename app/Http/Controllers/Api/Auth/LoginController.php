@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Http\Requests\LoginRequest;
 use App\Models\User;
 use Carbon\Carbon;
 use Exception;
@@ -21,23 +22,19 @@ class LoginController extends Controller
         $this->middleware('auth:api', ['except' => ['login']]);
     }
 
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $request->validate([
-            'data.email' => ['required', 'email'],
-            'data.password' => ['required'],
-            'data.device_name' => ['required']
-        ]);
+        $requestData = $request->validated();
 
-        $user = User::whereEmail($request->email)->first();
+        $user = User::whereEmail($requestData['data']['email'])->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user || !Hash::check($requestData['data']['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => [__('auth.failed')]
             ]);
         }
 
-        $tokenResult = $user()->createToken('authToken');
+        $tokenResult = $user->createToken('authToken ' . $requestData['data']['device_name']);
         $token = $tokenResult->token;
         $token->expires_at = Carbon::now()->addWeeks(1);
         $token->save();
