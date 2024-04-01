@@ -10,6 +10,6 @@ class UserController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        return response()->json(['status' => true, 'data' => $request->user()], 200);
+        return response()->json(['data' => $request->user()]);
     }
 }
