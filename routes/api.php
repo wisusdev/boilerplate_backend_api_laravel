@@ -2,7 +2,11 @@
 
 use App\Http\Controllers\Api\Auth\ForgotController;
 use App\Http\Controllers\Api\Auth\LoginController;
+use App\Http\Controllers\Api\Auth\LogoutController;
 use App\Http\Controllers\Api\Auth\RegisterController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Middleware\ValidateJsonApiDocument;
 use Illuminate\Support\Facades\Route;
@@ -21,7 +25,9 @@ use Illuminate\Support\Facades\Route;
 // Auth
 Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
     Route::post('/auth/login', [LoginController::class, 'login'])->name('auth.login');
-    Route::post('/auth/logout', [LoginController::class, 'logout'])->name('auth.logout');
+    Route::post('/auth/logout', [LogoutController::class, 'logout'])->name('auth.logout');
+    Route::post('/auth/logout-device/{id}', [LogoutController::class, 'logoutDevice'])->name('auth.logout-device');
+    Route::post('/auth/logout-all-devices', [LogoutController::class, 'logoutAllDevices'])->name('auth.logout-all-devices');
     Route::post('/auth/register', [RegisterController::class, 'register'])->name('auth.register');
     Route::post('/auth/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot');
     Route::post('/auth/reset-password', [ForgotController::class, 'reset'])->name('auth.reset');
@@ -29,4 +35,9 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
 
 Route::group(['middleware' => 'auth:api'], function () {
     Route::apiResource('/users', UserController::class);
+    Route::apiResource('/settings', SettingController::class)->only(['index', 'show', 'update']);
+    Route::apiResource('/roles', RoleController::class)->except(['show']);
+    Route::get('/profile/devices-auth-list', [ProfileController::class, 'devicesAuthList'])->name('profile.devices-auth-list');
+    Route::post('/profile/change-password', [ProfileController::class, 'changePassword'])->name('profile.change-password');
+    Route::post('/profile/update-profile', [ProfileController::class, 'updateProfile'])->name('profile.update-profile');
 });
