@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class RegisterRequest extends FormRequest
 {
@@ -22,36 +23,31 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'username' => 'required|unique:users|max:255',
-            'first_name' => 'required|max:255',
-            'last_name' => 'required|max:255',
-            'email' => 'required|unique:users|max:255',
-            'password' => [
-                'required',
-                'confirmed',
-                'min:8',
-                'max:128'
-            ],
+            'data.username' => ['required', 'max:255', Rule::unique('users', 'username')],
+            'data.first_name' => ['required', 'max:255'],
+            'data.last_name' => ['required', 'max:255'],
+            'data.email' => ['required', 'max:255', Rule::unique('users', 'email')],
+            'data.password' => ['required', 'confirmed', 'min:8', 'max:128'],
         ];
     }
 
     public function messages()
     {
         return [
-            'username.required' => 'Username is required',
-            'username.unique' => 'Username is already taken',
-            'username.max' => 'Username is too long',
-            'first_name.required' => 'First name is required',
-            'first_name.max' => 'First name is too long',
-            'last_name.required' => 'Last name is required',
-            'last_name.max' => 'Last name is too long',
-            'email.required' => 'Email is required',
-            'email.unique' => 'Email is already taken',
-            'email.max' => 'Email is too long',
-            'password.required' => 'Password is required',
-            'password.confirmed' => 'Passwords do not match',
-            'password.min' => 'Password is too short',
-            'password.max' => 'Password is too long'
+            'data.username.required' => 'Username is required',
+            'data.username.unique' => 'Username is already taken',
+            'data.username.max' => 'Username is too long',
+            'data.first_name.required' => 'First name is required',
+            'data.first_name.max' => 'First name is too long',
+            'data.last_name.required' => 'Last name is required',
+            'data.last_name.max' => 'Last name is too long',
+            'data.email.required' => 'Email is required',
+            'data.email.unique' => 'Email is already taken',
+            'data.email.max' => 'Email is too long',
+            'data.password.required' => 'Password is required',
+            'data.password.confirmed' => 'Passwords do not match',
+            'data.password.min' => 'Password is too short',
+            'data.password.max' => 'Password is too long'
         ];
     }
 }
