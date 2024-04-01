@@ -3,8 +3,8 @@
 use App\Http\Controllers\Api\Auth\ForgotController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\RegisterController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Middleware\ValidateJsonApiDocument;
-use App\Http\Middleware\ValidateJsonApiHeaders;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,15 +19,15 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Auth
-Route::group(['prefix' => '/auth'], function () {
-    Route::post('/login', [LoginController::class, 'login']);
-    Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth:api');
-    Route::post('/register', [RegisterController::class, 'register']);
-    Route::post('/forgot-password', [ForgotController::class, 'forgot']);
-    Route::post('/reset-password', [ForgotController::class, 'reset']);
-})->withoutMiddleware(ValidateJsonApiHeaders::class);
+Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
+    Route::post('/login', [LoginController::class, 'login'])->name('auth.login');
+    Route::post('/auth/logout', [LoginController::class, 'logout'])->name('auth.logout');
+    Route::post('/auth/register', [RegisterController::class, 'register'])->name('auth.register');
+    Route::post('/auth/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot');
+    Route::post('/auth/reset-password', [ForgotController::class, 'reset'])->name('auth.reset');
+});
 
 Route::group(['middleware' => 'auth:api'], function () {
 	// User
-	Route::get('/user', [LoginController::class, 'user']);
+	Route::get('/user', [UserController::class, 'index'])->name('user.index');
 });
