@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
-class ProfileController extends Controller
+class AccountController extends Controller
 {
     public function devicesAuthList(Request $request): JsonResponse
     {
