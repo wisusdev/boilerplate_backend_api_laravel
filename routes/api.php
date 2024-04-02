@@ -4,7 +4,8 @@ use App\Http\Controllers\Api\Auth\ForgotController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutController;
 use App\Http\Controllers\Api\Auth\RegisterController;
-use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\UserController;
@@ -31,13 +32,15 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
     Route::post('/auth/register', [RegisterController::class, 'register'])->name('auth.register');
     Route::post('/auth/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot');
     Route::post('/auth/reset-password', [ForgotController::class, 'reset'])->name('auth.reset');
+    Route::post('/auth/email/resend', [VerifyEmailController::class, 'resend'])->name('verification.send');
+    Route::get('/auth/email/verify/{id}/{hash}', [VerifyEmailController::class, 'verifyEmail'])->name('verification.verify');
 });
 
-Route::group(['middleware' => 'auth:api'], function () {
+Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::apiResource('/users', UserController::class);
     Route::apiResource('/settings', SettingController::class)->only(['index', 'show', 'update']);
     Route::apiResource('/roles', RoleController::class)->except(['show']);
-    Route::get('/profile/devices-auth-list', [ProfileController::class, 'devicesAuthList'])->name('profile.devices-auth-list');
-    Route::post('/profile/change-password', [ProfileController::class, 'changePassword'])->name('profile.change-password');
-    Route::post('/profile/update-profile', [ProfileController::class, 'updateProfile'])->name('profile.update-profile');
+    Route::get('/account/devices-auth-list', [AccountController::class, 'devicesAuthList'])->name('profile.devices-auth-list');
+    Route::post('/account/change-password', [AccountController::class, 'changePassword'])->name('profile.change-password');
+    Route::post('/account/update-profile', [AccountController::class, 'updateProfile'])->name('profile.update-profile');
 });
