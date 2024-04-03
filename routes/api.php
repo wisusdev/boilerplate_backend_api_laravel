@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\Auth\SocialAuthController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SettingController;
@@ -34,6 +35,8 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
     Route::post('/auth/reset-password', [ForgotController::class, 'reset'])->name('auth.reset');
     Route::post('/auth/email/resend', [VerifyEmailController::class, 'resend'])->name('verification.send');
     Route::get('/auth/email/verify/{id}/{hash}', [VerifyEmailController::class, 'verifyEmail'])->name('verification.verify');
+    Route::get('/login/{driver}', [SocialAuthController::class, 'redirectToProvider'])->name('social.oauth');
+    Route::get('/login/{driver}/callback', [SocialAuthController::class,'handleProviderCallback'])->name('social.callback');
 });
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
