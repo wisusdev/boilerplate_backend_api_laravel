@@ -24,8 +24,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'data.email' => ['required', 'email', Rule::exists('users', 'email')],
-            'data.password' => ['required'],
-            'data.device_name' => ['required']
+            'data.password' => ['required']
         ];
     }
 
