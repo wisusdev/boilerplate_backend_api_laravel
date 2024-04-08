@@ -16,7 +16,7 @@ class RegisterController extends Controller
 
         $user = User::create($data['data']);
 
-        event(new Registered($user));
+        $user->sendEmailVerificationNotification();
 
         return response()->json([
             'status' => true,
