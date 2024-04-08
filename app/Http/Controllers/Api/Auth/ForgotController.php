@@ -29,8 +29,10 @@ class ForgotController extends Controller
 			'created_at' => now()->addHours(6)
 		]);
 
+		$url = config('app.frontend_url').'/auth/reset-password?token='.$token;
+
 		// Send email
-		Mail::send('mail.password_reset', ['token' => $token], function ($message) use ($email) {
+		Mail::send('mail.password_reset', ['url' => $url], function ($message) use ($email) {
 			$message->to($email);
 			$message->subject('Reset your password');
 		});
