@@ -17,10 +17,10 @@ class ForgotController extends Controller
 	public function forgot(Request $request): JsonResponse
     {
 		$request->validate([
-			'email' => ['required', 'email', 'exists:users,email']
+			'data.email' => ['required', 'email', 'exists:users,email']
 		]);
 
-		$email = $request->email;
+		$email = $request->data['email'];
 
 		$token = Str::random(10);
 
@@ -44,11 +44,11 @@ class ForgotController extends Controller
 	public function reset(Request $request): JsonResponse
     {
 		$this->validate($request, [
-			'token' => 'required|string',
-			'password' => 'required|string|confirmed'
+			'data.token' => 'required|string',
+			'data.password' => 'required|string|confirmed'
 		]);
 
-		$token = $request->token;
+		$token = $request->data['token'];
 		$passwordReset = DB::table('password_reset_tokens')->where('token', $token)->first();
 
 		// verify
