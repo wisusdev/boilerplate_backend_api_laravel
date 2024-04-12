@@ -36,28 +36,28 @@ return [
     'facebook' => [
         'client_id'     => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
-        'redirect'      => '/oauth/facebook/callback',
+        'redirect'      => config('app.frontend_url') . '/oauth/facebook/callback',
     ],
 
     // https://developer.twitter.com/en/apps
     'twitter' => [
         'client_id'     => env('TWITTER_CLIENT_ID'),
         'client_secret' => env('TWITETR_CLIENT_SECRET'),
-        'redirect'      => '/oauth/twitter/callback',
+        'redirect'      => config('app.frontend_url') . '/oauth/twitter/callback',
     ],
 
     // https://console.cloud.google.com/apis/dashboard?pli=1
     'google' => [
         'client_id'     => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect'      => '/oauth/google/callback',
+        'redirect'      => config('app.frontend_url') . '/oauth/google/callback',
     ],
 
     // https://github.com/settings/developers
     'github' => [
         'client_id'     => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
-        'redirect'      => '/oauth/github/callback',
+        'redirect'      => config('app.frontend_url') . '/oauth/github/callback',
     ]
 
 ];
