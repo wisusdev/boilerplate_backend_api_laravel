@@ -15,11 +15,9 @@ class LoginController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $requestData = $request->validated();
+        $user = User::whereEmail($request['data']['email'])->first();
 
-        $user = User::whereEmail($requestData['data']['email'])->first();
-
-        if (!$user || !Hash::check($requestData['data']['password'], $user->password)) {
+        if (!$user || !Hash::check($request['data']['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => [__('auth.failed')]
             ]);
