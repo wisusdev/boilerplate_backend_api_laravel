@@ -73,7 +73,6 @@ class ForgotController extends Controller
             ]);
 		}
 
-		$user->password = bcrypt($request->password);
 		$user->save();
 
 		DB::table('password_reset_tokens')->where('email', $user->email)->delete();
