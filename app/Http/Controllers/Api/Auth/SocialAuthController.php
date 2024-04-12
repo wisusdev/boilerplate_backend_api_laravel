@@ -16,7 +16,7 @@ class SocialAuthController extends Controller
             return $validated;
         }
 
-        return Socialite::driver($provider)->stateless()->redirect();
+        return Socialite::driver($provider)->redirect();
     }
 
     public function handleProviderCallback($provider)
@@ -27,7 +27,7 @@ class SocialAuthController extends Controller
             return $validated;
         }
 
-        $user = Socialite::driver($provider)->stateless()->user();
+        $user = Socialite::driver($provider)->user();
 
         $userCreated = User::firstOrCreate(
             [
