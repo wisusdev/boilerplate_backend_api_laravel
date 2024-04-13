@@ -10,6 +10,11 @@ use Illuminate\Validation\ValidationException;
 
 class AccountController extends Controller
 {
+    public function profile(Request $request): JsonResponse
+    {
+        return response()->json(['data' => $request->user()]);
+    }
+
     public function devicesAuthList(Request $request): JsonResponse
     {
         return response()->json(['data' => $request->user()->tokens]);
