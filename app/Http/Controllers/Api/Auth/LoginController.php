@@ -3,17 +3,18 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Requests\LoginRequest;
+use App\Http\Resources\LoginResource;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
 
-    public function login(LoginRequest $request): JsonResponse
+    public function login(LoginRequest $request): JsonResource
     {
         $user = User::whereEmail($request['data']['email'])->first();
 
@@ -30,10 +31,13 @@ class LoginController extends Controller
         $token->expires_at = Carbon::now()->addWeeks(1);
         $token->save();
 
-        return response()->json([
-            'access_token' => $tokenResult->accessToken,
+        $dataResponse = (object)[
+            'user' => $user,
+            'token' => $tokenResult->accessToken,
             'token_type' => 'Bearer',
-            'expires_at' => Carbon::parse($token->expires_at)->toDateTimeString()
-        ]);
+            'expires_at' => Carbon::parse($token->expires_at)->toDateTimeString(),
+        ];
+
+        return LoginResource::make($dataResponse);
     }
 }
