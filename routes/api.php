@@ -39,12 +39,14 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
     Route::get('/oauth/{driver}/callback', [SocialAuthController::class,'handleProviderCallback'])->name('social.callback');
 });
 
-Route::middleware(['auth:api', 'verified'])->group(function () {
+Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
     Route::apiResource('/users', UserController::class);
     Route::apiResource('/settings', SettingController::class)->only(['index', 'show', 'update']);
     Route::apiResource('/roles', RoleController::class)->except(['show']);
+
+    // Account
     Route::get('/account/profile', [AccountController::class, 'profile'])->name('profile.profile');
+    Route::patch('/account/profile', [AccountController::class, 'updateProfile'])->name('profile.update-profile');
     Route::get('/account/devices-auth-list', [AccountController::class, 'devicesAuthList'])->name('profile.devices-auth-list');
     Route::post('/account/change-password', [AccountController::class, 'changePassword'])->name('profile.change-password');
-    Route::post('/account/update-profile', [AccountController::class, 'updateProfile'])->name('profile.update-profile');
 });
