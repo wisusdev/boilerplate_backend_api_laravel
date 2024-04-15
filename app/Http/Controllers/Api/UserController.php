@@ -12,4 +12,9 @@ class UserController extends Controller
     {
         return response()->json(['data' => $request->user()]);
     }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        return response()->json(['data' => $request->user()]);
+    }
 }
