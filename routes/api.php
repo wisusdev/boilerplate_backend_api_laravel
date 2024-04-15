@@ -47,6 +47,6 @@ Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
     // Account
     Route::get('/account/profile', [AccountController::class, 'profile'])->name('profile.profile');
     Route::patch('/account/profile', [AccountController::class, 'updateProfile'])->name('profile.update-profile');
+    Route::patch('/account/change-password', [AccountController::class, 'changePassword'])->name('profile.change-password');
     Route::get('/account/devices-auth-list', [AccountController::class, 'devicesAuthList'])->name('profile.devices-auth-list');
-    Route::post('/account/change-password', [AccountController::class, 'changePassword'])->name('profile.change-password');
 });
