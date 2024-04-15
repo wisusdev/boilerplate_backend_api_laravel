@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -13,7 +14,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable, SoftDeletes, HasRoles, HasApiTokens;
+    use HasFactory, Notifiable, SoftDeletes, HasRoles, HasApiTokens, HasUuids;
 
     /**
      * The attributes that are mass assignable.
@@ -26,6 +27,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'last_name',
         'email',
         'password',
+        'avatar',
+        'language',
     ];
 
     /**
@@ -51,5 +54,10 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new VerifyEmail());
+    }
+
+    public function getResourceType(): string
+    {
+        return 'users';
     }
 }
