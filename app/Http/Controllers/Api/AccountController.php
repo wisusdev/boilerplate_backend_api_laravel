@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AccountUpdateRequest;
+use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Resources\ProfileResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,30 +56,27 @@ class AccountController extends Controller
         return ProfileResource::make($user);
     }
 
-    public function devicesAuthList(Request $request): JsonResponse
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
     {
-        return response()->json(['data' => $request->user()->tokens]);
-    }
-
-    public function changePassword(Request $request): JsonResponse
-    {
-        $request->validate([
-            'current_password' => 'required|string',
-            'password' => 'required|string|confirmed'
-        ]);
 
         $user = $request->user();
 
-        if (!Hash::check($request->current_password, $user->password)) {
+        if (!Hash::check($request->input('data.attributes.current_password'), $user->password)) {
             throw ValidationException::withMessages([
                 'current_password' => ['Current password is incorrect'],
             ]);
         }
 
-        $user->password = Hash::make($request->password);
-        $user->save();
+        $user->update([
+            'password' => $request->input('data.attributes.password')
+        ]);
 
         return response()->json(['message' => 'Password changed successfully']);
+    }
+
+    public function devicesAuthList(Request $request): JsonResponse
+    {
+        return response()->json(['data' => $request->user()->tokens]);
     }
 
 }
