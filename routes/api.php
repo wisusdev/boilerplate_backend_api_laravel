@@ -28,8 +28,6 @@ use Illuminate\Support\Facades\Route;
 Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
     Route::post('/auth/login', [LoginController::class, 'login'])->name('auth.login');
     Route::post('/auth/logout', [LogoutController::class, 'logout'])->name('auth.logout');
-    Route::post('/auth/logout-device/{id}', [LogoutController::class, 'logoutDevice'])->name('auth.logout-device');
-    Route::post('/auth/logout-all-devices', [LogoutController::class, 'logoutAllDevices'])->name('auth.logout-all-devices');
     Route::post('/auth/register', [RegisterController::class, 'register'])->name('auth.register');
     Route::post('/auth/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot');
     Route::post('/auth/reset-password', [ForgotController::class, 'reset'])->name('auth.reset');
@@ -49,5 +47,5 @@ Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
     Route::patch('/account/profile', [AccountController::class, 'updateProfile'])->name('profile.update-profile');
     Route::patch('/account/change-password', [AccountController::class, 'changePassword'])->name('profile.change-password');
     Route::get('/account/devices-auth-list', [AccountController::class, 'devicesAuthList'])->name('profile.devices-auth-list');
-    Route::delete('/account/devices-auth/{id}', [AccountController::class, 'deleteDeviceAuth'])->name('profile.delete-device-auth');
+    Route::withoutMiddleware(ValidateJsonApiDocument::class)->post('/account/logout-device', [AccountController::class, 'logoutDevice'])->name('profile.logout-device');
 });
