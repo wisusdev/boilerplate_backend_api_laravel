@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AccountUpdateRequest;
 use App\Http\Requests\ChangePasswordRequest;
+use App\Http\Requests\LogoutDeviceRequest;
 use App\Http\Resources\ProfileResource;
 use App\Models\DeviceInfo;
 use Illuminate\Http\JsonResponse;
@@ -28,7 +29,7 @@ class AccountController extends Controller
         if ($request->has('data.attributes.avatar') && $request->input('data.attributes.avatar')) {
             $destinationPath = '/uploads/' . date('Y') . '/' . date('m') . '/' . date('d');
 
-            if (Storage::disk('public')->exists($user->avatar)) {
+            if (isset($user->avatar) && Storage::disk('public')->exists($user->avatar)) {
                 Storage::disk('public')->delete($user->avatar);
             }
 
@@ -81,19 +82,21 @@ class AccountController extends Controller
 
         $devices = DeviceInfo::where('user_id', $userId)
             ->sparseFieldset()
-            ->jsonPaginate(1);
+            ->jsonPaginate();
 
         return response()->json(['data' => $devices]);
     }
 
-    public function logoutDevice(Request $request, $id): JsonResponse
+    public function logoutDevice(LogoutDeviceRequest $request): JsonResponse
     {
-        $deviceInfo = DeviceInfo::find($id);
+        $deviceInfo = DeviceInfo::find($request->input('data.attributes.device_id'));
+
         if (!$deviceInfo || $deviceInfo->user_id != $request->user()->id) {
             return response()->json(['message' => 'Device not found'], 404);
         }
 
         $token = $request->user()->tokens()->where('id', $deviceInfo->session_token)->first();
+        $deviceInfo->delete();
 
         if ($token) {
             $token->revoke();
