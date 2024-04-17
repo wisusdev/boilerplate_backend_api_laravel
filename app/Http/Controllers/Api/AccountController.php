@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AccountUpdateRequest;
 use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Resources\ProfileResource;
+use App\Models\DeviceInfo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -76,7 +77,30 @@ class AccountController extends Controller
 
     public function devicesAuthList(Request $request): JsonResponse
     {
-        return response()->json(['data' => $request->user()->tokens]);
+        $userId = $request->user()->id;
+
+        $devices = DeviceInfo::where('user_id', $userId)
+            ->sparseFieldset()
+            ->jsonPaginate(1);
+
+        return response()->json(['data' => $devices]);
+    }
+
+    public function logoutDevice(Request $request, $id): JsonResponse
+    {
+        $deviceInfo = DeviceInfo::find($id);
+        if (!$deviceInfo || $deviceInfo->user_id != $request->user()->id) {
+            return response()->json(['message' => 'Device not found'], 404);
+        }
+
+        $token = $request->user()->tokens()->where('id', $deviceInfo->session_token)->first();
+
+        if ($token) {
+            $token->revoke();
+        }
+
+        return response()->json(['message' => 'Device logged out successfully']);
+
     }
 
 }
