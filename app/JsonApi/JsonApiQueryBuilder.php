@@ -82,12 +82,11 @@ class JsonApiQueryBuilder
 				return $this;
 			}
 
-
 			$fields = explode(',', request('fields.' . $this->getResouceType()));
-			$routeKeyname = $this->getModel()->getRouteKeyName();
+			$routeKeyName = $this->getModel()->getRouteKeyName();
 
-			if (!in_array($routeKeyname, $fields)) {
-				$fields[] = $routeKeyname;
+			if (!in_array($routeKeyName, $fields)) {
+				$fields[] = $routeKeyName;
 			}
 
 			return $this->addSelect($fields);
