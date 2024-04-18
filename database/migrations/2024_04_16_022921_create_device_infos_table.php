@@ -20,7 +20,6 @@ return new class extends Migration
             $table->string('os');
             $table->string('ip');
             $table->string('country');
-            $table->timestamps();
         });
     }
 
