@@ -79,45 +79,34 @@ class LoginController extends Controller
 
     private function getBrowser($userAgent): string
     {
-        $trans = array(
-            'OPR' => 'Opera',
-            'UBrowser' => 'UC Browser',
-            'YaBrowser' => 'Yandex',
-            'Edg' => 'Edge',
-            'Edge' => 'Microsoft Edge',
-            'MSIE' => 'Internet Explorer',
-            // yes, I know Trident isn't IE but it's the string that identifies IE11
-            'Trident' => 'Internet Explorer 11.0',
-            'PostmanRuntime' => 'Postman'
-        );
 
         $browsers = [
-            'Brave',
-            'Chrome',
-            'coc_coc_browser',
-            'Edg',
-            'Edge',
-            'Firefox',
-            'IEMobile',
-            'MSIEMobile',
-            'MSIE',
-            'Opera',
-            'Opera Mini',
-            'OPR',
-            'PaleMoon',
-            'PostmanRuntime',
-            'Safari',
-            'Trident',
-            'Trident/[.0-9]+',
-            'UCBrowser',
-            'Unknown',
-            'UBrowser',
-            'Vivaldi',
-            'Virgilio',
-            'YaBrowser'
+            'Brave' => 'Brave',
+            'Chrome' => 'Chrome',
+            'coc_coc_browser' => 'Coc Coc',
+            'Edg' => 'Edge',
+            'Edge' => 'Edge',
+            'Firefox' => 'Firefox',
+            'IEMobile' => 'Internet Explorer Mobile',
+            'MSIEMobile' => 'Internet Explorer Mobile',
+            'MSIE' => 'Internet Explorer',
+            'Opera' => 'Opera',
+            'Opera Mini' => 'Opera Mini',
+            'OPR' => 'Opera',
+            'PaleMoon' => 'Pale Moon',
+            'PostmanRuntime' => 'Postman',
+            'Safari' => 'Safari',
+            'Trident' => 'Internet Explorer 11.0',
+            'Trident/[.0-9]+' => 'Internet Explorer 11.0',
+            'UCBrowser' => 'UC Browser',
+            'Unknown' => 'Unknown Browser',
+            'UBrowser' => 'UC Browser',
+            'Vivaldi' => 'Vivaldi',
+            'Virgilio' => 'Virgilio',
+            'YaBrowser' => 'Yandex',
         ];
 
-        foreach ($browsers as $browser) {
+        foreach ($browsers as $browser => $browserName) {
             if (false !== $pos = strpos($userAgent, $browser)){
                 break;
             }
@@ -127,12 +116,6 @@ class LoginController extends Controller
         $sub2 = explode(' ', $sub1);     // just browser name and version
         $sub3 = explode('/', $sub2[0]);  // split browser name and version
         $sub4 = explode('.', $sub3[1]);  // get sub, sub sub versions etc
-
-        $browserName = $browser;
-
-        if (isset($trans[$browser])) {
-            $browserName = $trans[$browser];
-        }
 
         return $browserName;
     }
