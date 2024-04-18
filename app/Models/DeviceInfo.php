@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Date;
 
 class DeviceInfo extends Model
 {
@@ -32,7 +33,7 @@ class DeviceInfo extends Model
 
     public function getLoginAtAttribute($value): string
     {
-        return Carbon::parse($value)->diffForHumans();
+        return Date::parse($value)->format('Y-m-d H:i:s');
     }
 
     public function getResouceType(): string
