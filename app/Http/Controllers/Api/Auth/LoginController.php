@@ -25,6 +25,23 @@ class LoginController extends Controller
             ]);
         }
 
+        $limitAuthDevices = intval(config('auth.limit_auth_devices'));
+
+        if($limitAuthDevices > 0) {
+            $validTokens = $user->tokens()
+                ->where('revoked', 0)
+                ->where('expires_at', '>', Carbon::now())
+                ->get();
+
+            $tokenCount = $validTokens->count();
+
+            if($tokenCount >= $limitAuthDevices) {
+                throw ValidationException::withMessages([
+                    'email' => [__('auth.limit_auth_devices')]
+                ]);
+            }
+        }
+
         $tokenResult = $user->createToken('Login');
         $token = $tokenResult->token;
         $token->expires_at = Carbon::now()->addWeeks(1);
