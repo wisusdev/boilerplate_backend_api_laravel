@@ -117,4 +117,16 @@ return [
 
     'password_timeout' => 10800,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Limit of Authenticated Devices Per User
+    |--------------------------------------------------------------------------
+    |
+    | Here you may define the limit of authenticated devices per user.
+    | By default, the limit is 5 devices.
+    |
+    */
+
+    'limit_auth_devices' => env('LIMIT_AUTH_DEVICES', 5),
+
 ];
