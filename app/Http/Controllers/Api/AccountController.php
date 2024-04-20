@@ -76,6 +76,25 @@ class AccountController extends Controller
         return response()->json(['message' => 'Password changed successfully']);
     }
 
+    public function deleteAccount(Request $request, string $id): JsonResponse
+    {
+        $user = $request->user();
+
+        if($user->id != $id) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        if($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+            Storage::disk('public')->delete($user->avatar);
+        }
+
+        $user->devices()->delete();
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json(['message' => 'Account deleted successfully']);
+    }
+
     public function devicesAuthList(Request $request): JsonResponse
     {
         $userId = $request->user()->id;
