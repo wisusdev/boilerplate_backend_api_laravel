@@ -37,7 +37,7 @@ class LoginController extends Controller
 
             if($tokenCount >= $limitAuthDevices) {
                 throw ValidationException::withMessages([
-                    'email' => [__('auth.limit_auth_devices')]
+                    'email' => ['limit_auth_devices']
                 ]);
             }
         }
