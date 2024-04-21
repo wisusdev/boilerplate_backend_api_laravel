@@ -26,6 +26,8 @@ class DeviceInfo extends Model
         'login_at' => 'datetime',
     ];
 
+    public $timestamps = false;
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
