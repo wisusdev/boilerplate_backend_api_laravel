@@ -118,7 +118,7 @@ class AccountController extends Controller
         $deviceInfo->delete();
 
         if ($token) {
-            $token->revoke();
+            $token->delete();
         }
 
         return response()->json(['message' => 'Device logged out successfully']);
