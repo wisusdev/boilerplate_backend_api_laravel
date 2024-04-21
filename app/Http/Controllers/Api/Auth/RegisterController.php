@@ -15,7 +15,7 @@ class RegisterController extends Controller
         $data = $request->validated();
 
         $user = User::create($data['data']);
-
+        $user->assignRole('user');
         $user->sendEmailVerificationNotification();
 
         return response()->json([
