@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class RoleSeeder extends Seeder
 {
@@ -15,8 +15,7 @@ class RoleSeeder extends Seeder
     public function run(): void
     {
         $roles = [
-            'editor',
-            'subscriber',
+            'user',
             'admin',
         ];
 
