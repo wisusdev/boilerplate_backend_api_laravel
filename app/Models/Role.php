@@ -11,4 +11,9 @@ class Role extends SpatieRole
     use HasFactory, HasUuids;
 
     protected $primaryKey = 'uuid';
+
+    public function getResourceType(): string
+    {
+        return 'roles';
+    }
 }
