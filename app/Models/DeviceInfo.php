@@ -38,7 +38,7 @@ class DeviceInfo extends Model
         return Date::parse($value)->format('Y-m-d H:i:s');
     }
 
-    public function getResouceType(): string
+    public function getResourceType(): string
     {
         return 'device_info';
     }
