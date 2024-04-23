@@ -14,26 +14,23 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            // env file
-            'env:index',
-            'env:update',
-
             // setting
-            'setting:index',
-            'setting:update',
+            'settings:index',
+            'settings:update',
 
             // role
-            'role:index',
-            'role:create',
-            'role:update',
-            'role:delete',
+            'roles:index',
+            'roles:store',
+            'roles:show',
+            'roles:update',
+            'roles:delete',
 
             // user
-            'user:index',
-            'user:show',
-            'user:create',
-            'user:update',
-            'user:delete',
+            'users:index',
+            'users:store',
+            'users:show',
+            'users:update',
+            'users:delete',
         ];
 
         foreach ($permissions as $permission) {
