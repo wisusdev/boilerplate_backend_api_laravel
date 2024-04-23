@@ -7,7 +7,8 @@ use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\Auth\SocialAuthController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
-use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\PermissionsController;
+use App\Http\Controllers\Api\RolesController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Middleware\ValidateJsonApiDocument;
@@ -38,9 +39,17 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
 });
 
 Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
+    // Users
     Route::apiResource('/users', UserController::class);
+
+    // Settings
     Route::apiResource('/settings', SettingController::class)->only(['index', 'show', 'update']);
-    Route::apiResource('/roles', RoleController::class)->except(['show']);
+
+    // Roles
+    Route::apiResource('/roles', RolesController::class);
+
+    // Permissions
+    Route::get('/permissions', [PermissionsController::class, 'index'])->name('permissions.index');
 
     // Account
     Route::get('/account/profile', [AccountController::class, 'profile'])->name('profile.profile');
