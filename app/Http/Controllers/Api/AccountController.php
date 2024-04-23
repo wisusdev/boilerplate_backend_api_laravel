@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AccountUpdateRequest;
 use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LogoutDeviceRequest;
+use App\Http\Resources\DeviceResource;
 use App\Http\Resources\ProfileResource;
 use App\Models\DeviceInfo;
 use Illuminate\Http\JsonResponse;
@@ -103,7 +104,7 @@ class AccountController extends Controller
             ->sparseFieldset()
             ->jsonPaginate();
 
-        return response()->json(['data' => $devices]);
+        return response()->json($devices);
     }
 
     public function logoutDevice(LogoutDeviceRequest $request): JsonResponse
