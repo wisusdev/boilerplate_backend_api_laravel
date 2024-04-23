@@ -2,7 +2,6 @@
 
 namespace App\JsonApi\Traits;
 
-use App\Http\Resources\CategoryResource;
 use App\JsonApi\Document;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
