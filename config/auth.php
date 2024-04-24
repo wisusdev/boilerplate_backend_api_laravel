@@ -129,4 +129,8 @@ return [
 
     'limit_auth_devices' => env('LIMIT_AUTH_DEVICES', 5),
 
+    'life_time_token' => env('LIFE_TIME_TOKEN', 15),
+    'life_time_refresh_token' => env('LIFE_TIME_REFRESH_TOKEN', 30),
+    'life_personal_access_token' => env('LIFE_PERSONAL_ACCESS_TOKEN', 6),
+
 ];
