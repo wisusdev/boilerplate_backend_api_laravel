@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\ForgotController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutController;
+use App\Http\Controllers\Api\Auth\RefreshTokenController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\Auth\SocialAuthController;
@@ -36,6 +37,7 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
     Route::get('/auth/email/verify/{id}/{hash}', [VerifyEmailController::class, 'verifyEmail'])->name('verification.verify');
     Route::get('/oauth/{driver}', [SocialAuthController::class, 'redirectToProvider'])->name('social.oauth');
     Route::get('/oauth/{driver}/callback', [SocialAuthController::class,'handleProviderCallback'])->name('social.callback');
+    Route::middleware(['auth:api'])->post('/auth/refresh-token', [RefreshTokenController::class])->name('auth.refresh-token');
 });
 
 Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
