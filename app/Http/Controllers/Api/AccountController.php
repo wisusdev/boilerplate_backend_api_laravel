@@ -90,7 +90,7 @@ class AccountController extends Controller
         }
 
         $user->devices()->delete();
-        $user->tokens()->delete();
+        $user->tokens()->revoke();
         $user->delete();
 
         return response()->json(['message' => 'Account deleted successfully']);
