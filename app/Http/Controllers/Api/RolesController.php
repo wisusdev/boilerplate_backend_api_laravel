@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\RolRequest;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -21,13 +22,8 @@ class RolesController extends Controller
         return RoleResource::collection($roles);
     }
 
-    public function store(Request $request)
+    public function store(RolRequest $request): RoleResource
     {
-        $request->validate([
-            'data.attributes.role.name' => ['required', 'string', 'unique:roles,name', 'max:255', 'min:3'],
-            'data.attributes.permissions' => ['array'],
-        ]);
-
         $role = Role::create($request->input('data.attributes.role'));
         $role->givePermissionTo($request->input('data.attributes.permissions'));
 
@@ -40,13 +36,8 @@ class RolesController extends Controller
     }
 
 
-    public function update(Request $request, Role $role): RoleResource
+    public function update(RolRequest $request, Role $role): RoleResource
     {
-        $request->validate([
-            'data.attributes.role.name' => ['required', 'string', 'max:255', 'min:3', 'unique:roles,name,' . $role->uuid . ',uuid'],
-            'data.attributes.permissions' => ['array'],
-        ]);
-
         $role->update($request->input('data.attributes.role'));
         $role->syncPermissions($request->input('data.attributes.permissions'));
 
