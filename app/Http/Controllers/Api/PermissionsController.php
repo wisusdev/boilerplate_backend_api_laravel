@@ -10,7 +10,7 @@ class PermissionsController extends Controller
 {
     public function index(): JsonResponse
     {
-        $permissions = Permission::get()->select(['uuid', 'name']);
+        $permissions = Permission::select('name')->get();
         return response()->json($permissions);
     }
 }
