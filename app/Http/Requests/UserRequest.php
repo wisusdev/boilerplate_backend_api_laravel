@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,20 +19,31 @@ class UserRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
-        return [
-            'data.attributes.username' => ['required', 'max:255', Rule::unique('users', 'username')],
-            'data.attributes.first_name' => ['required', 'max:255'],
-            'data.attributes.last_name' => ['required', 'max:255'],
-            'data.attributes.email' => ['required', 'max:255', Rule::unique('users', 'email')],
-            'data.attributes.password' => ['required', 'confirmed', 'min:8', 'max:128'],
+        $rules = [
+            'data.attributes.first_name' => ['required', 'string', 'max:255'],
+            'data.attributes.last_name' => ['required', 'string', 'max:255'],
+            'data.attributes.roles' => ['array'],
         ];
+
+        if ($this->isMethod('put') || $this->isMethod('patch')) {
+            $user = $this->route('user');
+            $rules['data.attributes.username'][] = ['required', 'string', 'min:3', 'max:255', Rule::unique('users', 'username')->ignore($user->id)];
+            $rules['data.attributes.email'][] = ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)];
+            $rules['data.attributes.password'] = ['nullable', 'confirmed', 'string', 'min:8', 'max:255', 'not_regex:/^$/'];
+        } else {
+            $rules['data.attributes.username'] = ['required', 'string', 'min:3', 'max:255', Rule::unique('users', 'username')];
+            $rules['data.attributes.email'] = ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')];
+            $rules['data.attributes.password'] = ['required', 'confirmed', 'string', 'min:8', 'max:255'];
+        }
+
+        return $rules;
     }
 
-    public function messages()
+    public function messages(): array
     {
         return [
             'data.attributes.username.required' => 'Username is required',
@@ -47,7 +59,9 @@ class UserRequest extends FormRequest
             'data.attributes.password.required' => 'Password is required',
             'data.attributes.password.confirmed' => 'Passwords do not match',
             'data.attributes.password.min' => 'Password is too short',
-            'data.attributes.password.max' => 'Password is too long'
+            'data.attributes.password.max' => 'Password is too long',
+            'data.attributes.password.string' => 'Password must be a string',
+            'data.attributes.roles.array' => 'Roles must be an array'
         ];
     }
 }
