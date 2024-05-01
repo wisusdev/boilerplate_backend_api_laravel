@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 
 class UserController extends Controller
 {
@@ -25,7 +25,7 @@ class UserController extends Controller
         $data = $request->validated();
         $user = User::create($data['data']['attributes']);
 
-        $user->assignRole('user');
+        $user->assignRole($data['data']['attributes']['roles']);
         $user->sendEmailVerificationNotification();
 
         return UserResource::make($user);
@@ -36,25 +36,36 @@ class UserController extends Controller
         return UserResource::make($user);
     }
 
-    public function update(Request $request, User $user): JsonResource
+    public function update(UserRequest $request, User $user): JsonResource
     {
-        $request->validate([
-            'data.attributes.username' => ['required', 'string', 'max:255'],
-            'data.attributes.first_name' => ['required', 'string', 'max:255'],
-            'data.attributes.last_name' => ['required', 'string', 'max:255'],
-            'data.attributes.email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id . ',id'],
-            'data.attributes.password' => ['nullable', 'string', 'min:8'],
-            'data.attributes.roles' => ['array'],
-        ]);
+        $data = [
+            'username' => $request->input('data.attributes.username'),
+            'first_name' => $request->input('data.attributes.first_name'),
+            'last_name' => $request->input('data.attributes.last_name'),
+            'email' => $request->input('data.attributes.email'),
+        ];
 
-        $user->update($request->input('data.attributes'));
+        if ($request->has('data.attributes.password') && !empty($request->input('data.attributes.password'))) {
+            $data['password'] = $request->input('data.attributes.password');
+        }
+
+        $user->update($data);
+
+        if($user->email !== $request->input('data.attributes.email')) {
+            $user->email_verified_at = null;
+            $user->save(['timestamps' => false]);
+            $user->sendEmailVerificationNotification();
+        }
+
         $user->syncRoles($request->input('data.attributes.roles'));
 
         return UserResource::make($user);
     }
 
-    public function destroy(User $user)
+    public function destroy(User $user): Response
     {
+        $user->devices()->delete();
+        $user->tokens()->revoke();
         $user->delete();
         return response()->noContent();
     }
