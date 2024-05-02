@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\DeviceInfo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,14 +16,22 @@ class LogoutController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->token()->revoke();
-        return response()->json(['message' => 'Successfully logged out']);
+        $user = $request->user();
+        $tokenId = $user->token()->id;
+        $user->token()->revoke();
+
+        $deviceInfo = DeviceInfo::where('session_token', $tokenId)->first();
+        if ($deviceInfo) {
+            $deviceInfo->delete();
+        }
+
+        return response()->json(['message' => 'message.loggedOut']);
     }
 
     public function logoutDevice(Request $request, $id): JsonResponse
     {
         $request->user()->revokeAccessToken($id);
-        return response()->json(['message' => 'Successfully logged out from this device']);
+        return response()->json(['message' => 'message.loggedOut']);
     }
 
     public function logoutAllDevices(Request $request): JsonResponse
@@ -31,7 +40,7 @@ class LogoutController extends Controller
             $token->delete();
         });
 
-        return response()->json(['message' => 'Successfully logged out from all devices']);
+        return response()->json(['message' => 'message.loggedOutAllDevices']);
     }
 
 
