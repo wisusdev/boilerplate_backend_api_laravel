@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,36 +19,46 @@ class RegisterRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
         return [
-            'data.username' => ['required', 'max:255', Rule::unique('users', 'username')],
-            'data.first_name' => ['required', 'max:255'],
-            'data.last_name' => ['required', 'max:255'],
-            'data.email' => ['required', 'max:255', Rule::unique('users', 'email')],
-            'data.password' => ['required', 'confirmed', 'min:8', 'max:128'],
+            'data' => ['required', 'array'],
+            'data.attributes' => ['required', 'array'],
+            'data.type' => ['required', 'string', 'in:users'],
+            'data.attributes.username' => ['required', 'max:255', Rule::unique('users', 'username')],
+            'data.attributes.first_name' => ['required', 'max:255'],
+            'data.attributes.last_name' => ['required', 'max:255'],
+            'data.attributes.email' => ['required', 'max:255', Rule::unique('users', 'email')],
+            'data.attributes.password' => ['required', 'confirmed', 'min:8', 'max:128'],
         ];
     }
 
-    public function messages()
+    public function messages(): array
     {
         return [
-            'data.username.required' => 'Username is required',
-            'data.username.unique' => 'Username is already taken',
-            'data.username.max' => 'Username is too long',
-            'data.first_name.required' => 'First name is required',
-            'data.first_name.max' => 'First name is too long',
-            'data.last_name.required' => 'Last name is required',
-            'data.last_name.max' => 'Last name is too long',
-            'data.email.required' => 'Email is required',
-            'data.email.unique' => 'Email is already taken',
-            'data.email.max' => 'Email is too long',
-            'data.password.required' => 'Password is required',
-            'data.password.confirmed' => 'Passwords do not match',
-            'data.password.min' => 'Password is too short',
-            'data.password.max' => 'Password is too long'
+            'data.required' => 'validation.dataRequired',
+            'data.array' => 'validation.dataArray',
+            'data.attributes.required' => 'validation.dataAttributesRequired',
+            'data.attributes.array' => 'validation.dataAttributesArray',
+            'data.type.required' => 'validation.dataTypeRequired',
+            'data.type.string' => 'validation.dataTypeString',
+            'data.type.in' => 'validation.dataTypeIn',
+            'data.attributes.username.required' => 'validation.usernameRequired',
+            'data.attributes.username.unique' => 'validation.usernameUnique',
+            'data.attributes.username.max' => 'validation.usernameMax',
+            'data.attributes.first_name.required' => 'validation.firstNameRequired',
+            'data.attributes.first_name.max' => 'validation.firstNameMax',
+            'data.attributes.last_name.required' => 'validation.lastNameRequired',
+            'data.attributes.last_name.max' => 'validation.lastNameMax',
+            'data.attributes.email.required' => 'validation.emailRequired',
+            'data.attributes.email.unique' => 'validation.emailUnique',
+            'data.attributes.email.max' => 'validation.emailMax',
+            'data.attributes.password.required' => 'validation.passwordRequired',
+            'data.attributes.password.confirmed' => 'validation.passwordConfirmed',
+            'data.attributes.password.min' => 'validation.passwordMin',
+            'data.attributes.password.max' => 'validation.passwordMax'
         ];
     }
 }
