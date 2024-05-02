@@ -17,11 +17,11 @@ class LoginController extends Controller
 
     public function login(LoginRequest $request): JsonResource
     {
-        $user = User::whereEmail($request->input('data.email'))->first();
+        $user = User::whereEmail($request->input('data.attributes.email'))->first();
 
-        if (!$user || !Hash::check($request->input('data.password'), $user->password)) {
+        if (!$user || !Hash::check($request->input('data.attributes.password'), $user->password)) {
             throw ValidationException::withMessages([
-                'email' => [__('auth.failed')]
+                'email' => ['validation.invalidCredentials']
             ]);
         }
 
@@ -37,7 +37,7 @@ class LoginController extends Controller
 
             if($tokenCount >= $limitAuthDevices) {
                 throw ValidationException::withMessages([
-                    'email' => ['limit_auth_devices']
+                    'email' => ['validation.limitAuthDevices']
                 ]);
             }
         }
