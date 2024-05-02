@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,24 +19,33 @@ class LoginRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
         return [
-            'data.email' => ['required', 'email', Rule::exists('users', 'email')],
-            'data.password' => ['required']
+            'data' => ['required', 'array'],
+            'data.attributes' => ['required', 'array'],
+            'data.type' => ['required', 'string', 'in:users'],
+            'data.attributes.email' => ['required', 'email', Rule::exists('users', 'email')],
+            'data.attributes.password' => ['required']
         ];
     }
 
     public function messages(): array
     {
         return [
-            'data.email.required' => 'Email is required',
-            'data.email.email' => 'Email is invalid',
-            'data.email.exists' => 'Email is not registered',
-            'data.password.required' => 'Password is required',
-            'data.device_name.required' => 'Device name is required'
+            'data.required' => 'validation.dataRequired',
+            'data.array' => 'validation.dataArray',
+            'data.attributes.required' => 'validation.dataAttributesRequired',
+            'data.attributes.array' => 'validation.dataAttributesArray',
+            'data.type.required' => 'validation.dataTypeRequired',
+            'data.type.string' => 'validation.dataTypeString',
+            'data.type.in' => 'validation.dataTypeIn',
+            'data.attributes.email.required' => 'validation.emailRequired',
+            'data.attributes.email.email' => 'validation.emailEmail',
+            'data.attributes.email.exists' => 'validation.emailExists',
+            'data.attributes.password.required' => 'validation.passwordRequired',
         ];
     }
 }
