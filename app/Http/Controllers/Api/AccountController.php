@@ -66,7 +66,7 @@ class AccountController extends Controller
 
         if (!Hash::check($request->input('data.attributes.current_password'), $user->password)) {
             throw ValidationException::withMessages([
-                'current_password' => ['Current password is incorrect'],
+                'current_password' => ['validation.passwordIncorrect'],
             ]);
         }
 
@@ -74,7 +74,7 @@ class AccountController extends Controller
             'password' => $request->input('data.attributes.password')
         ]);
 
-        return response()->json(['message' => 'Password changed successfully']);
+        return response()->json(['message' => 'message.passwordChangedSuccessfully']);
     }
 
     public function deleteAccount(Request $request, string $id): JsonResponse
@@ -93,7 +93,7 @@ class AccountController extends Controller
         $user->tokens()->revoke();
         $user->delete();
 
-        return response()->json(['message' => 'Account deleted successfully']);
+        return response()->json(['message' => 'message.accountDeletedSuccessfully']);
     }
 
     public function devicesAuthList(Request $request): JsonResponse
@@ -112,7 +112,7 @@ class AccountController extends Controller
         $deviceInfo = DeviceInfo::find($request->input('data.attributes.device_id'));
 
         if (!$deviceInfo || $deviceInfo->user_id != $request->user()->id) {
-            return response()->json(['message' => 'Device not found'], 404);
+            return response()->json(['message' => 'message.deviceNotFound'], 404);
         }
 
         $token = $request->user()->tokens()->where('id', $deviceInfo->session_token)->first();
@@ -122,7 +122,7 @@ class AccountController extends Controller
             $token->delete();
         }
 
-        return response()->json(['message' => 'Device logged out successfully']);
+        return response()->json(['message' => 'message.deviceLoggedOutSuccessfully']);
 
     }
 
