@@ -23,17 +23,17 @@ class VerifyEmailController extends Controller
 
         if (!$user) {
             throw ValidationException::withMessages([
-                'email' => ['User not found']
+                'email' => ['validation.invalidEmail']
             ]);
         }
 
         if ($user->hasVerifiedEmail()) {
-            return response()->json(['message' => 'Email already verified']);
+            return response()->json(['message' => 'message.emailAlreadyVerified']);
         }
 
         $user->markEmailAsVerified();
 
-        return response()->json(['message' => 'Email verified']);
+        return response()->json(['message' => 'message.emailVerified']);
     }
 
     /**
@@ -43,12 +43,12 @@ class VerifyEmailController extends Controller
     {
         if ($request->user()->hasVerifiedEmail()) {
             throw ValidationException::withMessages([
-                'email' => ['Email already verified']
+                'email' => ['validation.emailAlreadyVerified']
             ]);
         }
 
         $request->user()->sendEmailVerificationNotification();
 
-        return response()->json(['message' => 'Email verification link sent']);
+        return response()->json(['message' => 'message.emailVerificationSent']);
     }
 }
