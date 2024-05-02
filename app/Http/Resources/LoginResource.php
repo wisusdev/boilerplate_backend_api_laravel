@@ -26,11 +26,16 @@ class LoginResource extends JsonResource
                     'avatar' => $this->resource->user->avatar ? asset('storage' . $this->resource->user->avatar) : null,
                     'language' => $this->resource->user->language,
                 ],
+            ],
+            'relationships' => [
+                'roles' => $this->resource->user->roles->pluck('name'),
                 'permissions' => $this->resource->user->getAllPermissions()->pluck('name'),
-                'token' => $this->resource->token,
-                'token_type' => $this->resource->token_type,
-                'expires_at' => $this->resource->expires_at,
-            ]
+                'access' => [
+                    'token' => $this->resource->token,
+                    'token_type' => $this->resource->token_type,
+                    'expires_at' => $this->resource->expires_at,
+                ]
+            ],
         ];
     }
 }
