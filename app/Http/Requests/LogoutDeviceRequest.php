@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class LogoutDeviceRequest extends FormRequest
@@ -17,7 +18,7 @@ class LogoutDeviceRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
@@ -29,9 +30,9 @@ class LogoutDeviceRequest extends FormRequest
     public function messages()
     {
         return [
-            'data.attributes.device_id.required' => 'Device ID is required',
-            'data.attributes.device_id.string' => 'Device ID must be a string',
-            'data.attributes.device_id.exists' => 'Device ID does not exist',
+            'data.attributes.device_id.required' => 'validation.deviceIdIsRequired',
+            'data.attributes.device_id.string' => 'validation.deviceIdMustBeString',
+            'data.attributes.device_id.exists' => 'validation.deviceIdNotExists',
         ];
     }
 }
