@@ -27,7 +27,7 @@ class LogoutDeviceRequest extends FormRequest
         ];
     }
 
-    public function messages()
+    public function messages(): array
     {
         return [
             'data.attributes.device_id.required' => 'validation.deviceIdIsRequired',
