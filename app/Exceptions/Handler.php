@@ -7,6 +7,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -39,6 +40,10 @@ class Handler extends ExceptionHandler
         $this->renderable(function (AuthenticationException $e) {
             throw new JsonApi\AuthenticationException;
         });
+
+        $this->renderable(function (AccessDeniedHttpException $e) {
+            throw new JsonApi\UnauthorizedException;
+        });
     }
 
     protected function invalidJson($request, ValidationException $exception): JsonResponse
@@ -46,7 +51,6 @@ class Handler extends ExceptionHandler
         if(! $request->routeIs('api.v1.auth.login') && ! $request->routeIs('api.v1.auth.register')){
             return new JsonApiValidationErrorResponse($exception);
         }
-
         return parent::invalidJson($request, $exception);
     }
 }
