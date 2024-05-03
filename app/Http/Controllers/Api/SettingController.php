@@ -9,6 +9,12 @@ use Illuminate\Http\Request;
 
 class SettingController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:settings:index')->only('index');
+        $this->middleware('can:settings:update')->only('update');
+    }
+    
     public function index(): JsonResponse
     {
         $setting = Setting::all();

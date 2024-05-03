@@ -11,6 +11,15 @@ use Illuminate\Http\Response;
 
 class UserController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:users:index')->only('index');
+        $this->middleware('can:users:store')->only('store');
+        $this->middleware('can:users:show')->only('show');
+        $this->middleware('can:users:update')->only('update');
+        $this->middleware('can:users:delete')->only('destroy');
+    }
+
     public function index(): JsonResource
     {
         $users = User::query()
