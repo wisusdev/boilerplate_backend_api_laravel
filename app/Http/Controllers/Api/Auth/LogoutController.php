@@ -25,23 +25,14 @@ class LogoutController extends Controller
             $deviceInfo->delete();
         }
 
-        return response()->json(['message' => 'message.loggedOut']);
+        return response()->json([
+            'data' => [
+                'type' => 'users',
+                'attributes' => [
+                    'status' => true,
+                    'message' => 'message.loggedOut',
+                ],
+            ]
+        ]);
     }
-
-    public function logoutDevice(Request $request, $id): JsonResponse
-    {
-        $request->user()->revokeAccessToken($id);
-        return response()->json(['message' => 'message.loggedOut']);
-    }
-
-    public function logoutAllDevices(Request $request): JsonResponse
-    {
-        $request->user()->tokens->each(function ($token) {
-            $token->delete();
-        });
-
-        return response()->json(['message' => 'message.loggedOutAllDevices']);
-    }
-
-
 }
