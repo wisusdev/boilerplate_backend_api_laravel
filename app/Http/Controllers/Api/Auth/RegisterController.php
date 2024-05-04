@@ -18,8 +18,13 @@ class RegisterController extends Controller
         $user->sendEmailVerificationNotification();
 
         return response()->json([
-            'status' => true,
-            'message' => 'recordCreated',
+           'data' => [
+               'type' => 'users',
+               'attributes' => [
+                   'status' => true,
+                   'message' => 'message.recordCreated',
+               ],
+           ]
         ], 201);
     }
 }
