@@ -33,7 +33,15 @@ class ForgotController extends Controller
 			$message->subject('Reset your password');
 		});
 
-		return response()->json(['message' => 'message.resetPasswordEmailSent']);
+		return response()->json([
+            'data' => [
+                'type' => 'users',
+                'attributes' => [
+                    'status' => true,
+                    'message' => 'message.resetPasswordEmailSent',
+                ],
+            ]
+        ]);
 
 	}
 
@@ -68,6 +76,14 @@ class ForgotController extends Controller
 
 		DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
-        return response()->json(['message' => 'message.passwordResetSuccess']);
+        return response()->json([
+            'data' => [
+                'type' => 'users',
+                'attributes' => [
+                    'status' => true,
+                    'message' => 'message.passwordResetSuccess',
+                ],
+            ]
+        ]);
 	}
 }
