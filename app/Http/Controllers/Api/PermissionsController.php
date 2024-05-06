@@ -11,6 +11,12 @@ class PermissionsController extends Controller
     public function index(): JsonResponse
     {
         $permissions = Permission::select('name')->get();
-        return response()->json($permissions);
+        return response()->json([
+                'data' => [
+                    'type' => 'permissions',
+                    'attributes' => $permissions,
+                ]
+            ]
+        );
     }
 }
