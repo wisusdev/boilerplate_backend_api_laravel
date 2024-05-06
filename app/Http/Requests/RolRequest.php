@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RolRequest extends FormRequest
@@ -17,20 +18,23 @@ class RolRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
         $rules = [
-            'data.attributes.role.name' => ['required', 'string', 'max:50', 'min:3'],
+            'data' => ['required', 'array'],
+            'data.type' => ['required', 'string', 'in:roles'],
+            'data.attributes' => ['required', 'array'],
+            'data.attributes.name' => ['required', 'string', 'max:50', 'min:3'],
             'data.attributes.permissions' => ['array'],
         ];
 
         if ($this->isMethod('put') || $this->isMethod('patch')) {
             $role = $this->route('role');
-            $rules['data.attributes.role.name'][] = 'unique:roles,name,' . $role->uuid . ',uuid';
+            $rules['data.attributes.name'][] = 'unique:roles,name,' . $role->uuid . ',uuid';
         } else {
-            $rules['data.attributes.role.name'][] = 'unique:roles,name';
+            $rules['data.attributes.name'][] = 'unique:roles,name';
         }
 
         return $rules;
@@ -39,11 +43,14 @@ class RolRequest extends FormRequest
     public function messages(): array
     {
         $messages = [
-            'data.attributes.role.name.required' => 'El campo nombre es requerido',
-            'data.attributes.role.name.string' => 'El campo nombre debe ser un texto',
-            'data.attributes.role.name.max' => 'El campo nombre debe tener máximo 50 caracteres',
-            'data.attributes.role.name.min' => 'El campo nombre debe tener mínimo 3 caracteres',
-            'data.attributes.permissions.array' => 'El campo permisos debe ser un array',
+            'data.attributes.name.required' => 'validation.nameRequired',
+            'data.attributes.name.string' => 'validation.nameString',
+            'data.attributes.name.max' => 'validation.nameMax',
+            'data.attributes.name.min' => 'validation.nameMin',
+            'data.attributes.name.unique' => 'validation.nameUnique',
+            'data.attributes.permissions.required' => 'validation.permissionsRequired',
+            'data.attributes.permissions.array' => 'validation.permissionsArray',
+
         ];
 
         if ($this->isMethod('put') || $this->isMethod('patch')) {
