@@ -32,7 +32,9 @@ class RolesController extends Controller
 
     public function store(RolRequest $request): RoleResource
     {
-        $role = Role::create($request->input('data.attributes.role'));
+        $role = Role::create([
+            'name' => $request->input('data.attributes.name')
+        ]);
         $role->givePermissionTo($request->input('data.attributes.permissions'));
 
         return RoleResource::make($role);
@@ -46,7 +48,9 @@ class RolesController extends Controller
 
     public function update(RolRequest $request, Role $role): RoleResource
     {
-        $role->update($request->input('data.attributes.role'));
+        $role->update([
+            'name' => $request->input('data.attributes.name')
+        ]);
         $role->syncPermissions($request->input('data.attributes.permissions'));
 
         return RoleResource::make($role);
