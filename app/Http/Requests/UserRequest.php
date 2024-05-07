@@ -24,6 +24,7 @@ class UserRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
+            'data.type' => ['required', 'string', 'in:users'],
             'data.attributes.first_name' => ['required', 'string', 'max:255'],
             'data.attributes.last_name' => ['required', 'string', 'max:255'],
             'data.attributes.roles' => ['array'],
@@ -46,22 +47,22 @@ class UserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'data.attributes.username.required' => 'Username is required',
-            'data.attributes.username.unique' => 'Username is already taken',
-            'data.attributes.username.max' => 'Username is too long',
-            'data.attributes.first_name.required' => 'First name is required',
-            'data.attributes.first_name.max' => 'First name is too long',
-            'data.attributes.last_name.required' => 'Last name is required',
-            'data.attributes.last_name.max' => 'Last name is too long',
-            'data.attributes.email.required' => 'Email is required',
-            'data.attributes.email.unique' => 'Email is already taken',
-            'data.attributes.email.max' => 'Email is too long',
-            'data.attributes.password.required' => 'Password is required',
-            'data.attributes.password.confirmed' => 'Passwords do not match',
-            'data.attributes.password.min' => 'Password is too short',
-            'data.attributes.password.max' => 'Password is too long',
-            'data.attributes.password.string' => 'Password must be a string',
-            'data.attributes.roles.array' => 'Roles must be an array'
+            'data.attributes.username.required' => 'validation.usernameRequired',
+            'data.attributes.username.unique' => 'validation.usernameUnique',
+            'data.attributes.username.max' => 'validation.usernameMax',
+            'data.attributes.first_name.required' => 'validation.firstNameRequired',
+            'data.attributes.first_name.max' => 'validation.firstNameMax',
+            'data.attributes.last_name.required' => 'validation.lastNameRequired',
+            'data.attributes.last_name.max' => 'validation.lastNameMax',
+            'data.attributes.email.required' => 'validation.emailRequired',
+            'data.attributes.email.unique' => 'validation.emailUnique',
+            'data.attributes.email.max' => 'validation.emailMax',
+            'data.attributes.password.required' => 'validation.passwordRequired',
+            'data.attributes.password.confirmed' => 'validation.passwordConfirmed',
+            'data.attributes.password.min' => 'validation.passwordMin',
+            'data.attributes.password.max' => 'validation.passwordMax',
+            'data.attributes.password.string' => 'validation.passwordString',
+            'data.attributes.roles.array' => 'validation.rolesArray',
         ];
     }
 }
