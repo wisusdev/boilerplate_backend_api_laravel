@@ -23,6 +23,7 @@ class LogoutDeviceRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'data.type' => ['required', 'string', 'in:logout-device'],
             'data.attributes.device_id' => ['required', 'string', 'exists:device_infos,id'],
         ];
     }
@@ -30,9 +31,12 @@ class LogoutDeviceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'data.attributes.device_id.required' => 'validation.deviceIdIsRequired',
-            'data.attributes.device_id.string' => 'validation.deviceIdMustBeString',
-            'data.attributes.device_id.exists' => 'validation.deviceIdNotExists',
+            'data.type.required' => 'validation.dataTypeRequired',
+            'data.type.in' => 'validation.dataTypeIn',
+            'data.type.string' => 'validation.dataTypeString',
+            'data.attributes.device_id.required' => 'validation.deviceIdRequired',
+            'data.attributes.device_id.string' => 'validation.deviceIdString',
+            'data.attributes.device_id.exists' => 'validation.deviceIdExists',
         ];
     }
 }
