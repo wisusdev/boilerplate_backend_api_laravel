@@ -50,7 +50,7 @@ class AccountController extends Controller
             'language' => $request->input('data.attributes.language')
         ]);
 
-        if($user->email !== $request->input('data.attributes.email')) {
+        if ($user->email !== $request->input('data.attributes.email')) {
             $user->email_verified_at = null;
             $user->save(['timestamps' => false]);
             $user->sendEmailVerificationNotification();
@@ -74,18 +74,26 @@ class AccountController extends Controller
             'password' => $request->input('data.attributes.password')
         ]);
 
-        return response()->json(['message' => 'message.passwordChangedSuccessfully']);
+        return response()->json([
+            'data' => [
+                'type' => 'change-password',
+                'attributes' => [
+                    'status' => true,
+                    'message' => 'message.passwordChangedSuccessfully',
+                ],
+            ]
+        ]);
     }
 
     public function deleteAccount(Request $request, string $id): JsonResponse
     {
         $user = $request->user();
 
-        if($user->id != $id) {
+        if ($user->id != $id) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        if($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+        if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
             Storage::disk('public')->delete($user->avatar);
         }
 
@@ -96,7 +104,7 @@ class AccountController extends Controller
         return response()->json(['message' => 'message.accountDeletedSuccessfully']);
     }
 
-    public function devicesAuthList(Request $request): JsonResponse
+    public function devicesAuthList(Request $request): JsonResource
     {
         $userId = $request->user()->id;
 
@@ -104,7 +112,7 @@ class AccountController extends Controller
             ->sparseFieldset()
             ->jsonPaginate();
 
-        return response()->json($devices);
+        return DeviceResource::collection($devices);
     }
 
     public function logoutDevice(LogoutDeviceRequest $request): JsonResponse
@@ -122,7 +130,15 @@ class AccountController extends Controller
             $token->delete();
         }
 
-        return response()->json(['message' => 'message.deviceLoggedOutSuccessfully']);
+        return response()->json([
+            'data' => [
+                'type' => 'logout-device',
+                'attributes' => [
+                    'status' => true,
+                    'message' => 'message.deviceLoggedOutSuccessfully',
+                ],
+            ]
+        ]);
 
     }
 
