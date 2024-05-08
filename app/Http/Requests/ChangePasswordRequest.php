@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ChangePasswordRequest extends FormRequest
@@ -17,11 +18,12 @@ class ChangePasswordRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
         return [
+            'data.type' => ['required', 'string', 'in:change-password'],
             'data.attributes.password' => ['required', 'string', 'min:8', 'max:100', 'confirmed'],
             'data.attributes.current_password' => ['required', 'string', 'min:8', 'max:100'],
         ];
@@ -30,15 +32,18 @@ class ChangePasswordRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'data.attributes.password.required' => 'The password field is required.',
-            'data.attributes.password.string' => 'The password must be a string.',
-            'data.attributes.password.min' => 'The password must be at least 8 characters.',
-            'data.attributes.password.max' => 'The password must not be greater than 100 characters.',
-            'data.attributes.password.confirmed' => 'The password confirmation does not match.',
-            'data.attributes.current_password.required' => 'The current password field is required.',
-            'data.attributes.current_password.string' => 'The current password must be a string.',
-            'data.attributes.current_password.min' => 'The current password must be at least 8 characters.',
-            'data.attributes.current_password.max' => 'The current password must not be greater than 100 characters.',
+            'data.type.required' => 'validation.dataTypeRequired',
+            'data.type.in' => 'validation.dataTypeIn',
+            'data.type.string' => 'validation.dataTypeString',
+            'data.attributes.password.required' => 'validation.passwordRequired',
+            'data.attributes.password.string' => 'validation.passwordString',
+            'data.attributes.password.min' => 'validation.passwordMin',
+            'data.attributes.password.max' => 'validation.passwordMax',
+            'data.attributes.password.confirmed' => 'validation.passwordConfirmed',
+            'data.attributes.current_password.required' => 'validation.currentPasswordRequired',
+            'data.attributes.current_password.string' => 'validation.currentPasswordString',
+            'data.attributes.current_password.min' => 'validation.currentPasswordMin',
+            'data.attributes.current_password.max' => 'validation.currentPasswordMax',
         ];
     }
 }
