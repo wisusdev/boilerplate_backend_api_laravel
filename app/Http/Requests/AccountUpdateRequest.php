@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Rules\Base64ValidationRule;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class AccountUpdateRequest extends FormRequest
@@ -18,11 +19,12 @@ class AccountUpdateRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
         return [
+            'data.type' => ['required', 'string', 'in:profile'],
             'data.attributes.first_name' => ['required', 'string'],
             'data.attributes.last_name' => ['required', 'string'],
             'data.attributes.email' => ['required', 'email', 'unique:users,email,' . $this->user()->id],
@@ -34,14 +36,17 @@ class AccountUpdateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'data.attributes.first_name.required' => 'First name is required',
-            'data.attributes.last_name.required' => 'Last name is required',
-            'data.attributes.email.required' => 'Email is required',
-            'data.attributes.email.email' => 'Email is invalid',
-            'data.attributes.email.unique' => 'Email is already taken',
-            'data.attributes.avatar.string' => 'Avatar must be a string',
-            'data.attributes.language.required' => 'Language is required',
-            'data.attributes.language.in' => 'Language is invalid'
+            'data.type.required' => 'validation.dataTypeRequired',
+            'data.type.in' => 'validation.dataTypeIn',
+            'data.type.string' => 'validation.dataTypeString',
+            'data.attributes.first_name.required' => 'validation.firstNameRequired',
+            'data.attributes.last_name.required' => 'validation.lastNameRequired',
+            'data.attributes.email.required' => 'validation.emailRequired',
+            'data.attributes.email.email' => 'validation.emailEmail',
+            'data.attributes.email.unique' => 'validation.emailUnique',
+            'data.attributes.avatar.string' => 'validation.avatarString',
+            'data.attributes.language.required' => 'validation.languageRequired',
+            'data.attributes.language.in' => 'validation.languageIn'
         ];
     }
 }
