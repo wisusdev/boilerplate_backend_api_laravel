@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use App\JsonApi\JsonApiQueryBuilder;
-use App\JsonApi\JsonApiTestRespons;
+use App\JsonApi\JsonApiTestResponse;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +28,6 @@ class JsonApiServiceProvider extends ServiceProvider
 	{
 		Builder::mixin(new JsonApiQueryBuilder());
 
-		TestResponse::mixin(new JsonApiTestRespons());
+		TestResponse::mixin(new JsonApiTestResponse());
 	}
 }
