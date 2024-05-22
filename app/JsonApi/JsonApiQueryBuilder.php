@@ -23,7 +23,7 @@ class JsonApiQueryBuilder
 					$sortField = ltrim($sortField, '-');
 
 					if(!in_array($sortField, $allowedFields)){
-						throw new BadRequestHttpException("The sort field '{$sortField}' is not allowed in the '{$this->getResouceType()}' resource.");
+						throw new BadRequestHttpException("The sort field '{$sortField}' is not allowed in the '{$this->getResourceType()}' resource.");
 					}
 
 					$this->orderBy($sortField, $sortDirection);
@@ -41,7 +41,7 @@ class JsonApiQueryBuilder
 			foreach (request('filter', []) as $filter => $value) {
 
 				if(!in_array($filter, $allowedFilters)){
-					throw new BadRequestHttpException("The filter '{$filter}' is not allowed in the '{$this->getResouceType()}' resource.");
+					throw new BadRequestHttpException("The filter '{$filter}' is not allowed in the '{$this->getResourceType()}' resource.");
 				}
 
 				$this->hasNamedScope($filter) ? $this->{$filter}($value) : $this->where($filter, 'LIKE', "%{$value}%");
@@ -64,7 +64,7 @@ class JsonApiQueryBuilder
 
             foreach ($include as $include) {
 				if(!in_array($include, $allowedIncludes)){
-					throw new BadRequestHttpException("The include relationship '{$include}' is not allowed in the '{$this->getResouceType()}' resource.");
+					throw new BadRequestHttpException("The include relationship '{$include}' is not allowed in the '{$this->getResourceType()}' resource.");
 				}
                 $this->with($include);
             }
@@ -82,7 +82,7 @@ class JsonApiQueryBuilder
 				return $this;
 			}
 
-			$fields = explode(',', request('fields.' . $this->getResouceType()));
+			$fields = explode(',', request('fields.' . $this->getResourceType()));
 			$routeKeyName = $this->getModel()->getRouteKeyName();
 
 			if (!in_array($routeKeyName, $fields)) {
@@ -106,7 +106,7 @@ class JsonApiQueryBuilder
 		};
 	}
 
-	public function getResouceType(): Closure
+	public function getResourceType(): Closure
 	{
 		return function () {
 			/** @var Builder $this */
