@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
-            $table->uuid('user_id')->index();
-            $table->integer('package_id')->index();
+            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('package_id')->constrained()->onDelete('cascade');
             $table->date('start_date');
             $table->date('end_date');
             $table->date('trial_ends_at')->nullable();
@@ -24,9 +24,7 @@ return new class extends Migration
             $table->string('payment_method')->nullable();
             $table->string('payment_transaction_id')->nullable();
             $table->enum('status', ['approved', 'waiting', 'declined', 'cancel'])->default('waiting');
-
-            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('package_id')->constrained()->onDelete('cascade');
+            
             $table->timestamps();
         });
     }
