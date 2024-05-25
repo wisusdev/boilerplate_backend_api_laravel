@@ -18,7 +18,7 @@ class PackageController extends Controller
         return PackageResource::collection($packages);
     }
 
-    public function store(PackageRequest $request)
+    public function store(PackageRequest $request): PackageResource
     {
         $data = $request->validated();
         $package = Package::create($data['data']['attributes']);
