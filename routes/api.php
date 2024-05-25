@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\PermissionsController;
 use App\Http\Controllers\Api\RolesController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Middleware\ValidateJsonApiDocument;
 use Illuminate\Support\Facades\Route;
@@ -64,4 +65,7 @@ Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
 
     // Packages
     Route::apiResource('/packages', PackageController::class);
+
+    // Subscriptions
+    Route::apiResource('/subscriptions', SubscriptionController::class);
 });
