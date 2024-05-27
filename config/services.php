@@ -34,30 +34,42 @@ return [
     /* Social login */
     // https://developers.facebook.com/
     'facebook' => [
-        'client_id'     => env('FACEBOOK_CLIENT_ID'),
+        'client_id' => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
-        'redirect'      => config('app.frontend_url') . '/oauth/facebook/callback',
+        'redirect' => config('app.frontend_url') . '/oauth/facebook/callback',
     ],
 
     // https://developer.twitter.com/en/apps
     'twitter' => [
-        'client_id'     => env('TWITTER_CLIENT_ID'),
+        'client_id' => env('TWITTER_CLIENT_ID'),
         'client_secret' => env('TWITETR_CLIENT_SECRET'),
-        'redirect'      => config('app.frontend_url') . '/oauth/twitter/callback',
+        'redirect' => config('app.frontend_url') . '/oauth/twitter/callback',
     ],
 
     // https://console.cloud.google.com/apis/dashboard?pli=1
     'google' => [
-        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect'      => config('app.frontend_url') . '/oauth/google/callback',
+        'redirect' => config('app.frontend_url') . '/oauth/google/callback',
     ],
 
     // https://github.com/settings/developers
     'github' => [
-        'client_id'     => env('GITHUB_CLIENT_ID'),
+        'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
-        'redirect'      => config('app.frontend_url') . '/oauth/github/callback',
-    ]
+        'redirect' => config('app.frontend_url') . '/oauth/github/callback',
+    ],
+
+    'paypal' => [
+        'base_uri' => env('PAYPAL_BASE_URI'),
+        'client_id' => env('PAYPAL_CLIENT_ID'),
+        'client_secret' => env('PAYPAL_CLIENT_SECRET'),
+    ],
+
+    'stripe' => [
+        'base_uri' => env('STRIPE_BASE_URI'),
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+    ],
 
 ];
