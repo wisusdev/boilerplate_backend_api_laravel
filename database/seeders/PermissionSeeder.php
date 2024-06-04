@@ -16,6 +16,7 @@ class PermissionSeeder extends Seeder
         $permissions = [
             // setting
             'settings:index',
+            'settings:show',
             'settings:update',
 
             // role
@@ -31,6 +32,20 @@ class PermissionSeeder extends Seeder
             'users:show',
             'users:update',
             'users:delete',
+
+            // package
+            'packages:index',
+            'packages:store',
+            'packages:show',
+            'packages:update',
+            'packages:delete',
+
+            // subscription
+            'subscriptions:index',
+            'subscriptions:store',
+            'subscriptions:show',
+            'subscriptions:update',
+            'subscriptions:delete',
         ];
 
         foreach ($permissions as $permission) {
