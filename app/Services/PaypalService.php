@@ -14,33 +14,29 @@ class PaypalService
 
     public function __construct()
     {
-        $this->base_url = config('services.paypal.base_url');
+        $this->base_url = config('services.paypal.base_uri');
         $this->client_id = config('services.paypal.client_id');
         $this->client_secret = config('services.paypal.client_secret');
     }
 
-    /**
-     * @throws GuzzleException
-     */
     protected function getAccessToken(): string
     {
         $response = $this->makeRequest(
             'POST',
             $this->base_url . '/v1/oauth2/token',
-            [],
-            ['grant_type' => 'client_credentials',],
             [
-                'Content-Type' => 'application/x-www-form-urlencoded',
-                'Authorization' => 'Basic ' . base64_encode($this->client_id . ':' . $this->client_secret),
+                'grant_type' => 'client_credentials',
+                'return_unconsented_scopes' => 'true',
+            ],
+            [
+                'Content-Type: application/x-www-form-urlencoded',
+                'Authorization: Basic ' . base64_encode($this->client_id . ':' . $this->client_secret),
             ]
         );
 
         return json_decode($response)->access_token;
     }
 
-    /**
-     * @throws GuzzleException
-     */
     public function createProduct(string $productId, string $name, string $description, string $type = 'SERVICE', string $category = 'SOFTWARE'): object
     {
         $accessToken = $this->getAccessToken();
@@ -48,20 +44,20 @@ class PaypalService
         $response = $this->makeRequest(
             'POST',
             $this->base_url . '/v1/catalogs/products',
-            [],
             [
                 'id' => $productId,
                 'name' => $name,
                 'description' => $description,
                 'type' => $type,
                 'category' => $category,
-                'image_url' => 'https://example.com/path/to/image.jpg', // Deberías reemplazar esto con la URL de la imagen de tu producto
-                'home_url' => 'https://example.com/home', // Deberías reemplazar esto con la URL de inicio de tu producto
+                'image_url' => 'https://wisus.dev/wp-content/uploads/2022/05/984196.png', // Deberías reemplazar esto con la URL de la imagen de tu producto
+                'home_url' => 'https://wisus.dev/wp-content/uploads/2022/05/1053367.png', // Deberías reemplazar esto con la URL de inicio de tu producto
             ],
             [
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $accessToken,
-            ]
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $accessToken,
+            ],
+            true
         );
 
         return json_decode($response);
