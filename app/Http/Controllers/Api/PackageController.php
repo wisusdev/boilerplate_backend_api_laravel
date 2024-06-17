@@ -6,10 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PackageRequest;
 use App\Http\Resources\PackageResource;
 use App\Models\Package;
+use App\Services\PaypalService;
+use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PackageController extends Controller
 {
-    public function index()
+    public function index(): JsonResource
     {
         $packages = Package::query()
             ->sparseFieldset()
@@ -18,12 +23,35 @@ class PackageController extends Controller
         return PackageResource::collection($packages);
     }
 
+    /**
+     * @throws GuzzleException
+     * @throws ValidationException
+     */
     public function store(PackageRequest $request): PackageResource
     {
-        $data = $request->validated();
-        $package = Package::create($data['data']['attributes']);
+        try {
+            DB::beginTransaction();
 
-        return PackageResource::make($package);
+            $data = $request->validated();
+            $package = Package::create($data['data']['attributes']);
+
+            $paypalService = new PaypalService();
+            $paypalService->createProduct(
+                $package->id,
+                $package->name,
+                $package->description
+            );
+
+            DB::commit();
+
+            return PackageResource::make($package);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw ValidationException::withMessages([
+                'error' => ['errorAsOccurred']
+            ]);
+        }
     }
 
     public function show(Package $package): PackageResource
