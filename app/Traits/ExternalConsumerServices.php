@@ -11,25 +11,34 @@ trait ExternalConsumerServices
      * Make a request to an external service
      *
      * @param string $method
-     * @param string $requestUrl
-     * @param array $queryParams
-     * @param array $formParams
-     * @param array $headers
-     * @param bool $isJsonRequest
+     * @param string $requestUri
+     * @param array $body
+     * @param array $header
      * @return string
-     * @throws GuzzleException
      */
-    public function makeRequest(string $method, string $requestUrl, array $queryParams = [], array $formParams = [], array $headers = [], bool $isJsonRequest = false): string
+    public function makeRequest(string $method, string $requestUri, array $body = [], array $header = [], $isJson = false): string
     {
-        $client = new Client();
+        $curl = curl_init();
 
-        $response = $client->request($method, $requestUrl, [
-            'query' => $queryParams,
-            'form_params' => $formParams,
-            'headers' => $headers,
-            'json' => $isJsonRequest,
-        ]);
+        $curlOptions = [
+            CURLOPT_URL => $requestUri,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_POSTFIELDS => $isJson ? json_encode($body) : http_build_query($body),
+            CURLOPT_HTTPHEADER => $header,
+        ];
 
-        return $response->getBody()->getContents();
+        curl_setopt_array($curl, $curlOptions);
+
+        $response = curl_exec($curl);
+
+        curl_close($curl);
+
+        return $response;
     }
 }
