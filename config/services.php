@@ -72,4 +72,10 @@ return [
         'secret' => env('STRIPE_SECRET'),
     ],
 
+    'wompi' => [
+        'base_uri' => env('WOMPI_BASE_URI'),
+        'public_key' => env('WOMPI_PUBLIC_KEY'),
+        'private_key' => env('WOMPI_PRIVATE_KEY'),
+    ],
+
 ];
