@@ -8,11 +8,11 @@ use App\Http\Resources\SubscriptionResource;
 use App\Models\Package;
 use App\Models\Subscription;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class SubscriptionController extends Controller
 {
-    public function index(): AnonymousResourceCollection
+    public function index(): JsonResource
     {
         $subscriptions = Subscription::query()
             ->sparseFieldset()
