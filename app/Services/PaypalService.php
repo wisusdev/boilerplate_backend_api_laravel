@@ -63,9 +63,7 @@ class PaypalService
         return json_decode($response);
     }
 
-    /**
-     * @throws GuzzleException
-     */
+
     public function createSubscriptionPlan(int $packageId, string $name, string $description, int $intervalCount, string $interval, float $price): object
     {
         $accessToken = $this->getAccessToken();
