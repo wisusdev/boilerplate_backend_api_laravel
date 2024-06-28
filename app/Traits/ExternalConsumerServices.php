@@ -36,9 +36,11 @@ trait ExternalConsumerServices
         curl_setopt_array($curl, $curlOptions);
 
         $response = curl_exec($curl);
-
+		$curlInfo = curl_getinfo($curl);
         curl_close($curl);
 
-        return $response;
+		$responseArray = json_decode($response, true);
+		$responseArray['http_code'] = $curlInfo['http_code'];
+		return json_encode($responseArray);
     }
 }
