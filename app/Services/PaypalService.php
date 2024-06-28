@@ -63,6 +63,90 @@ class PaypalService
         return json_decode($response);
     }
 
+	public function updateProduct(string $productId, string $name, string $description)
+	{
+		$accessToken = $this->getAccessToken();
+
+		$response = $this->makeRequest(
+			'PATCH',
+			$this->base_url . '/v1/catalogs/products/' . $productId,
+			[
+				[
+					'op' => 'replace',
+					'path' => '/name',
+					'value' => $name,
+				],
+				[
+					'op' => 'replace',
+					'path' => '/description',
+					'value' => $description,
+				]
+			],
+			[
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $accessToken,
+			],
+			true
+		);
+
+		return json_decode($response);
+	}
+
+	public function createSubscription(string $subscriptionId, string $planId, string $name, string $description, string $status = 'ACTIVE'): object
+	{
+		$accessToken = $this->getAccessToken();
+
+		$response = $this->makeRequest(
+			'POST',
+			$this->base_url . '/v1/catalogs/subscriptions',
+			[
+				'id' => $subscriptionId,
+				'plan_id' => $planId,
+				'name' => $name,
+				'description' => $description,
+				'status' => $status,
+			],
+			[
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $accessToken,
+			],
+			true
+		);
+
+		return json_decode($response);
+	}
+
+	public function updateSubscription(string $subscriptionId, string $path, string $value): object
+	{
+		$accessToken = $this->getAccessToken();
+
+		$response = $this->makeRequest(
+			'PATCH',
+			$this->base_url . '/v1/catalogs/subscriptions/' . $subscriptionId,
+			[
+				'path' => $path,
+				'value' => $value,
+			],
+			[
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $accessToken,
+			],
+			true
+		);
+
+		return json_decode($response);
+	}
+
+	public function activateSubscription(string $subscriptionId): object
+	{
+		return $this->updateSubscription($subscriptionId, '/status', 'ACTIVE');
+	}
+
+	public function deactivateSubscription(string $subscriptionId): object
+	{
+		return $this->updateSubscription($subscriptionId, '/status', 'INACTIVE');
+	}
+
 
     public function createSubscriptionPlan(int $packageId, string $name, string $description, int $intervalCount, string $interval, float $price): object
     {
