@@ -59,13 +59,32 @@ class PackageController extends Controller
         return PackageResource::make($package);
     }
 
-    public function update(PackageRequest $request, Package $package): PackageResource
-    {
-        $data = $request->validated();
-        $package->update($data['data']['attributes']);
+	public function update(PackageRequest $request, Package $package): PackageResource
+	{
+		try {
+			DB::beginTransaction();
 
-        return PackageResource::make($package);
-    }
+			$data = $request->validated();
+			$package->update($data['data']['attributes']);
+
+			$paypalService = new PaypalService();
+			$paypalService->updateProduct(
+				$package->id,
+				$package->name,
+				$package->description
+			);
+
+			DB::commit();
+
+			return PackageResource::make($package);
+
+		} catch (\Exception $e) {
+			DB::rollBack();
+			throw ValidationException::withMessages([
+				'error' => ['errorAsOccurred']
+			]);
+		}
+	}
 
     public function destroy(Package $package): void
     {
