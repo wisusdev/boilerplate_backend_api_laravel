@@ -14,12 +14,32 @@ use Illuminate\Validation\ValidationException;
 
 class PackageController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:packages:index')->only('index');
+        $this->middleware('can:packages:store')->only('store');
+        $this->middleware('can:packages:show')->only('show');
+        $this->middleware('can:packages:update')->only('update');
+        $this->middleware('can:packages:delete')->only('destroy');
+    }
+
     public function index(): JsonResource
     {
         $packages = Package::query()
             ->sparseFieldset()
             ->jsonPaginate();
 
+        return PackageResource::collection($packages);
+    }
+
+    // Public methods
+    public function publicIndex(): JsonResource
+    {
+        $packages = Package::query()
+            ->where('active', true)
+            ->sparseFieldset()
+            ->jsonPaginate();
+            
         return PackageResource::collection($packages);
     }
 
