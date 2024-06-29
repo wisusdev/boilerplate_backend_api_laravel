@@ -42,6 +42,13 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
     Route::middleware(['auth:api'])->post('/auth/refresh-token', [RefreshTokenController::class])->name('auth.refresh-token');
 });
 
+// Public routes
+Route::withoutMiddleware([ValidateJsonApiDocument::class])->prefix('public')->group(function () {
+    // Packages
+    Route::get('/packages', [PackageController::class, 'publicIndex'])->name('packages.publicIndex');
+});
+
+// Protected routes
 Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
     // Users
     Route::apiResource('/users', UserController::class);
