@@ -46,6 +46,7 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
 Route::withoutMiddleware([ValidateJsonApiDocument::class])->prefix('public')->group(function () {
     // Packages
     Route::get('/packages', [PackageController::class, 'publicIndex'])->name('packages.publicIndex');
+	Route::get('/packages/{package}', [PackageController::class, 'publicShow'])->name('packages.publicShow');
 });
 
 // Protected routes
