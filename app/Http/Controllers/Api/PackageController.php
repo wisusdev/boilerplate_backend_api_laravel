@@ -32,17 +32,6 @@ class PackageController extends Controller
         return PackageResource::collection($packages);
     }
 
-    // Public methods
-    public function publicIndex(): JsonResource
-    {
-        $packages = Package::query()
-            ->where('active', true)
-            ->sparseFieldset()
-            ->jsonPaginate();
-            
-        return PackageResource::collection($packages);
-    }
-
     /**
      * @throws GuzzleException
      * @throws ValidationException
@@ -110,4 +99,20 @@ class PackageController extends Controller
     {
         $package->delete();
     }
+
+	// Public methods
+	public function publicIndex(): JsonResource
+	{
+		$packages = Package::query()
+			->where('active', true)
+			->sparseFieldset()
+			->jsonPaginate();
+
+		return PackageResource::collection($packages);
+	}
+
+	public function publicShow(Package $package): PackageResource
+	{
+		return PackageResource::make($package);
+	}
 }
