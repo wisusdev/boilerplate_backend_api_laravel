@@ -47,6 +47,8 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->prefix('public')->gr
     // Packages
     Route::get('/packages', [PackageController::class, 'publicIndex'])->name('packages.publicIndex');
 	Route::get('/packages/{package}', [PackageController::class, 'publicShow'])->name('packages.publicShow');
+	// Subscriptions
+	Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store');
 });
 
 // Protected routes
