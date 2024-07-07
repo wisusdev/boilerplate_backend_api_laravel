@@ -29,9 +29,7 @@ class SubscriptionRequest extends FormRequest
             'data.attributes.user_id' => ['required', 'exists:users,id'],
             'data.attributes.package_id' => ['required', 'exists:packages,id'],
             'data.attributes.created_by' => ['required', 'exists:users,id'],
-            'data.attributes.payment_method' => ['required', 'string'],
-            'data.attributes.payment_transaction_id' => ['required', 'string'],
-            'data.attributes.status' => ['required', 'string', 'in:approved,waiting,declined,cancel'],
+            'data.attributes.payment_method' => ['required', 'string']
         ];
     }
 
