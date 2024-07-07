@@ -83,4 +83,9 @@ class SubscriptionController extends Controller
     {
         $subscription->delete();
     }
+
+	public function publicStore(SubscriptionRequest $request): SubscriptionResource
+	{
+		return $this->store($request);
+	}
 }
