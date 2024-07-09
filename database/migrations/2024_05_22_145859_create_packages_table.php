@@ -15,12 +15,13 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('name');
             $table->text('description');
-            $table->integer('max_users');
+            $table->json('limits');
             $table->enum('interval', ['day', 'week', 'month', 'year']);
             $table->integer('interval_count');
             $table->decimal('price', 8, 2);
             $table->integer('trial_days')->default(0);
             $table->boolean('active')->default(true);
+			$table->json('metadata')->nullable();
             $table->foreignUuid('created_by')->constrained('users')->onDelete('cascade');
             $table->softDeletes();
             $table->timestamps();
