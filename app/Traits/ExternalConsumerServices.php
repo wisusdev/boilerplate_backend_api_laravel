@@ -7,16 +7,17 @@ use GuzzleHttp\Exception\GuzzleException;
 
 trait ExternalConsumerServices
 {
-    /**
-     * Make a request to an external service
-     *
-     * @param string $method
-     * @param string $requestUri
-     * @param array $body
-     * @param array $header
-     * @return string
-     */
-    public function makeRequest(string $method, string $requestUri, array $body = [], array $header = [], $isJson = false): string
+	/**
+	 * Make a request to an external service
+	 *
+	 * @param string $method
+	 * @param string $requestUri
+	 * @param array $body
+	 * @param array $header
+	 * @param bool $isJson
+	 * @return string
+	 */
+    public function makeRequest(string $method, string $requestUri, array $body = [], array $header = [], bool $isJson = false): string
     {
         $curl = curl_init();
 
@@ -41,6 +42,8 @@ trait ExternalConsumerServices
 
 		$responseArray = json_decode($response, true);
 		$responseArray['http_code'] = $curlInfo['http_code'];
+		logs()->info("response ", $responseArray);
+
 		return json_encode($responseArray);
     }
 }
