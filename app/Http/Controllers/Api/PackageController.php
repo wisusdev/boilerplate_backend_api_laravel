@@ -14,59 +14,89 @@ use Illuminate\Validation\ValidationException;
 
 class PackageController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('can:packages:index')->only('index');
-        $this->middleware('can:packages:store')->only('store');
-        $this->middleware('can:packages:show')->only('show');
-        $this->middleware('can:packages:update')->only('update');
-        $this->middleware('can:packages:delete')->only('destroy');
-    }
+	public function __construct()
+	{
+		$this->middleware('can:packages:index')->only('index');
+		$this->middleware('can:packages:store')->only('store');
+		$this->middleware('can:packages:show')->only('show');
+		$this->middleware('can:packages:update')->only('update');
+		$this->middleware('can:packages:delete')->only('destroy');
+	}
 
-    public function index(): JsonResource
-    {
-        $packages = Package::query()
-            ->sparseFieldset()
-            ->jsonPaginate();
+	public function index(): JsonResource
+	{
+		$packages = Package::query()
+			->sparseFieldset()
+			->jsonPaginate();
 
-        return PackageResource::collection($packages);
-    }
+		return PackageResource::collection($packages);
+	}
 
-    /**
-     * @throws GuzzleException
-     * @throws ValidationException
-     */
-    public function store(PackageRequest $request): PackageResource
-    {
-        try {
-            DB::beginTransaction();
+	/**
+	 * @throws GuzzleException
+	 * @throws ValidationException
+	 */
+	public function store(PackageRequest $request): PackageResource
+	{
+		try {
+			DB::beginTransaction();
 
-            $data = $request->validated();
-            $package = Package::create($data['data']['attributes']);
+			$attributes = $request->validated()['data']['attributes'];
 
-            $paypalService = new PaypalService();
-            $paypalService->createProduct(
-                $package->id,
-                $package->name,
-                $package->description
-            );
+			$package = Package::create($attributes);
 
-            DB::commit();
+			$paypalService = new PaypalService();
 
-            return PackageResource::make($package);
+			$paypalProduct = $paypalService->createProduct(
+				$package->id,
+				$package->name,
+				$package->description
+			);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw ValidationException::withMessages([
-                'error' => ['errorAsOccurred']
-            ]);
-        }
-    }
+			if ($paypalProduct->http_code !== 201) {
+				throw ValidationException::withMessages([
+					'error' => ['errorAsOccurred']
+				]);
+			}
 
-    public function show(Package $package): PackageResource
-    {
-        return PackageResource::make($package);
-    }
+			$paypalPlan = $paypalService->createSubscriptionPlan(
+				$package->id,
+				$package->name,
+				$package->description,
+				$package->interval_count,
+				$package->interval,
+				$package->price,
+			);
+
+			$package->update([
+				'metadata' => [
+					'paypal_product_id' => $paypalProduct->id,
+					'paypal_plan_id' => $paypalPlan->id,
+				]
+			]);
+
+			if ($paypalPlan->http_code !== 201) {
+				throw ValidationException::withMessages([
+					'error' => ['errorAsOccurred']
+				]);
+			}
+
+			DB::commit();
+
+			return PackageResource::make($package);
+		} catch (\Exception $e) {
+			DB::rollBack();
+			throw ValidationException::withMessages([
+				'error' => ['errorAsOccurred' => $e->getMessage()]
+			]);
+		}
+
+	}
+
+	public function show(Package $package): PackageResource
+	{
+		return PackageResource::make($package);
+	}
 
 	public function update(PackageRequest $request, Package $package): PackageResource
 	{
@@ -95,10 +125,10 @@ class PackageController extends Controller
 		}
 	}
 
-    public function destroy(Package $package): void
-    {
-        $package->delete();
-    }
+	public function destroy(Package $package): void
+	{
+		$package->delete();
+	}
 
 	// Public methods
 	public function publicIndex(): JsonResource
