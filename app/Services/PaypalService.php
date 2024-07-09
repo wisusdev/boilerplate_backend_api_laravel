@@ -19,23 +19,39 @@ class PaypalService
         $this->client_secret = config('services.paypal.client_secret');
     }
 
-    protected function getAccessToken(): string
-    {
-        $response = $this->makeRequest(
-            'POST',
-            $this->base_url . '/v1/oauth2/token',
-            [
-                'grant_type' => 'client_credentials',
-                'return_unconsented_scopes' => 'true',
-            ],
-            [
-                'Content-Type: application/x-www-form-urlencoded',
-                'Authorization: Basic ' . base64_encode($this->client_id . ':' . $this->client_secret),
-            ]
-        );
+	protected function getAccessToken(): string
+	{
+		// Verificar si el token ya existe en la sesión y aún es válido
+		$currentTime = time();
+		if (session()->has('paypal_access_token') && session()->has('paypal_token_expires') && $currentTime < session('paypal_token_expires')) {
+			return session('paypal_access_token');
+		}
 
-        return json_decode($response)->access_token;
-    }
+		// Solicitar un nuevo token a PayPal
+		$response = $this->makeRequest(
+			'POST',
+			$this->base_url . '/v1/oauth2/token',
+			[
+				'grant_type' => 'client_credentials',
+				'return_unconsented_scopes' => 'true',
+			],
+			[
+				'Content-Type: application/x-www-form-urlencoded',
+				'Authorization: Basic ' . base64_encode($this->client_id . ':' . $this->client_secret),
+			]
+		);
+
+		$responseBody = json_decode($response);
+
+		// Guardar el nuevo token y su tiempo de expiración en la sesión
+		$expiresIn = $responseBody->expires_in; // Tiempo en segundos hasta que el token expire
+		session([
+			'paypal_access_token' => $responseBody->access_token,
+			'paypal_token_expires' => $currentTime + $expiresIn - 300, // Restar 5 minutos para asegurar la validez
+		]);
+
+		return $responseBody->access_token;
+	}
 
     public function createProduct(string $productId, string $name, string $description, string $type = 'SERVICE', string $category = 'SOFTWARE'): object
     {
@@ -92,19 +108,28 @@ class PaypalService
 		return json_decode($response);
 	}
 
-	public function createSubscription(string $subscriptionId, string $planId, string $name, string $description, string $status = 'ACTIVE'): object
+	public function createSubscription(string $packageId, string $planId, string $name, string $email): object
 	{
 		$accessToken = $this->getAccessToken();
 
 		$response = $this->makeRequest(
 			'POST',
-			$this->base_url . '/v1/catalogs/subscriptions',
+			$this->base_url . '/v1/billing/subscriptions',
 			[
-				'id' => $subscriptionId,
 				'plan_id' => $planId,
-				'name' => $name,
-				'description' => $description,
-				'status' => $status,
+				'subscriber' => [
+					'name' => [
+						'given_name' => $name,
+					],
+					'email_address' => $email
+				],
+				'application_context' => [
+					'brand_name' => config('app.name'), // Deberías reemplazar esto con el nombre de tu marca
+					'shipping_preference' => 'NO_SHIPPING', // Puedes cambiar esto a GET_FROM_FILE si deseas obtener la dirección de envío del cliente
+					'user_action' => 'SUBSCRIBE_NOW', // Puedes cambiar esto a CONTINUE si deseas que el cliente continúe con la suscripción
+					'return_url' => config('app.frontend_url') . '/payment-success/' . $packageId, // Deberías reemplazar esto con la URL de retorno de tu aplicación
+					'cancel_url' => config('app.frontend_url') . '/payment-cancelled/', // Deberías reemplazar esto con la URL de cancelación de tu aplicación
+				]
 			],
 			[
 				'Content-Type: application/json',
@@ -148,15 +173,15 @@ class PaypalService
 	}
 
 
-    public function createSubscriptionPlan(int $packageId, string $name, string $description, int $intervalCount, string $interval, float $price): object
+    public function createSubscriptionPlan(string $packageId, string $name, string $description, int $intervalCount, string $interval, float $price): object
     {
         $accessToken = $this->getAccessToken();
 
         $response = $this->makeRequest(
             'POST',
             $this->base_url . '/v1/billing/plans',
-            [],
             [
+				'id' => $packageId,
                 'product_id' => $packageId, // Deberías reemplazar esto con el ID de tu producto
                 'name' => $name,
                 'description' => $description,
@@ -193,9 +218,10 @@ class PaypalService
                 ]
             ],
             [
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $accessToken,
-            ]
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $accessToken,
+            ],
+			true
         );
 
         return json_decode($response);
