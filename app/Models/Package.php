@@ -16,13 +16,14 @@ class Package extends Model
     protected $fillable = [
         'name',
         'description',
-        'max_users',
+        'limits',
         'interval',
         'interval_count',
         'price',
         'trial_days',
         'active',
         'created_by',
+		'metadata',
     ];
 
     public function subscriptions(): HasMany
