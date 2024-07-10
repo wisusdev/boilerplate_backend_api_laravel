@@ -42,7 +42,7 @@ trait ExternalConsumerServices
 
 		$responseArray = json_decode($response, true);
 		$responseArray['http_code'] = $curlInfo['http_code'];
-		logs()->info("response ", $responseArray);
+		logs()->info("response of $requestUri", $responseArray);
 
 		return json_encode($responseArray);
     }
