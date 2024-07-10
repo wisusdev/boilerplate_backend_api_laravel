@@ -12,25 +12,24 @@ class PackageResource extends JsonResource
      *
      * @return array<string, mixed>
      */
-    public function toArray(Request $request): array
-    {
-        return [
-            'type' => 'packages',
-            'id' => (string) $this->resource->getRouteKey(),
-            'attributes' => [
-                'name' => $this->resource->name,
-                'description' => $this->resource->description,
-                'limits' => json_decode($this->resource->limits),
-                'interval' => $this->resource->interval,
-                'interval_count' => $this->resource->interval_count,
-                'price' => $this->resource->price,
-                'trial_days' => $this->resource->trial_days,
-                'active' => $this->resource->active,
-                'created_by' => $this->resource->created_by,
-				'metadata' => json_decode($this->resource->metadata),
-                'created_at' => $this->resource->created_at,
-                'updated_at' => $this->resource->updated_at,
-            ],
-        ];
-    }
+	public function toArray(Request $request): array
+	{
+		return [
+			'type' => 'packages',
+			'id' => (string) $this->resource->getRouteKey(),
+			'attributes' => [
+				'name' => $this->resource->name,
+				'description' => $this->resource->description,
+				'limits' => $this->resource->limits,
+				'interval' => $this->resource->interval,
+				'interval_count' => $this->resource->interval_count,
+				'price' => $this->resource->price,
+				'trial_days' => $this->resource->trial_days,
+				'active' => $this->resource->active,
+				'created_by' => $this->resource->created_by,
+				'created_at' => $this->resource->created_at,
+				'updated_at' => $this->resource->updated_at,
+			],
+		];
+	}
 }
