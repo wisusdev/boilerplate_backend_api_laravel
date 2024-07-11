@@ -31,7 +31,7 @@ class SubscriptionController extends Controller
 		return new SubscriptionResource($subscription);
 	}
 
-	public function store(SubscriptionRequest $request):JsonResponse
+	public function store(SubscriptionRequest $request): SubscriptionResource|JsonResponse
 	{
 		try {
 			DB::beginTransaction();
@@ -56,6 +56,8 @@ class SubscriptionController extends Controller
 				$end_date = $start_date->addDays($package->trial_days);
 			}
 
+			$paymentMethod = $data['data']['attributes']['payment_method'];
+
 			$subscription = Subscription::create([
 				'user_id' => $data['data']['attributes']['user_id'],
 				'package_id' => $package->id,
@@ -65,9 +67,8 @@ class SubscriptionController extends Controller
 				'package_price' => $package->price,
 				'package_details' => $package->description,
 				'created_by' => $data['data']['attributes']['created_by'],
-				'payment_method' => $data['data']['attributes']['payment_method'],
+				'payment_method' => $paymentMethod,
 			]);
-
 
 			$paypalService = new PaypalService();
 
@@ -84,9 +85,23 @@ class SubscriptionController extends Controller
 				]);
 			}
 
+			$subscriptionLinks = collect($paypalSubscription->links);
+			$approve = $subscriptionLinks->where('rel', 'approve')->first();
+
 			DB::commit();
 
-			return response()->json($paypalSubscription);
+			if ($paymentMethod === 'paypal'){
+
+				$subscription->update([
+					'payment_transaction_id' => $paypalSubscription->id,
+				]);
+
+				return response()->json([
+					'approve_url' => $approve->href,
+				]);
+			}
+
+			return SubscriptionResource::make($subscription);
 
 		} catch (\Exception $e) {
 			DB::rollBack();
@@ -122,5 +137,10 @@ class SubscriptionController extends Controller
 	public function publicStore(SubscriptionRequest $request): JsonResponse
 	{
 		return $this->store($request);
+	}
+
+	public function validateSubscription(Request $request, Subscription $subscription)
+	{
+		dd($subscription);
 	}
 }
