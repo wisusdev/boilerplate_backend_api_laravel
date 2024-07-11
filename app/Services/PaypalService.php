@@ -226,4 +226,22 @@ class PaypalService
 
         return json_decode($response);
     }
+
+	public function validateSubscription(string $subscriptionId): object
+	{
+		$accessToken = $this->getAccessToken();
+
+		$response = $this->makeRequest(
+			'POST',
+			$this->base_url . '/v1/billing/subscriptions/' . $subscriptionId . '/validate',
+			[],
+			[
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $accessToken,
+			],
+			true
+		);
+
+		return json_decode($response);
+	}
 }
