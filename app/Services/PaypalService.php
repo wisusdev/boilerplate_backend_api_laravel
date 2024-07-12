@@ -227,13 +227,13 @@ class PaypalService
         return json_decode($response);
     }
 
-	public function validateSubscription(string $subscriptionId): object
+	public function subscriptionDetails(string $subscriptionId): object
 	{
 		$accessToken = $this->getAccessToken();
 
 		$response = $this->makeRequest(
-			'POST',
-			$this->base_url . '/v1/billing/subscriptions/' . $subscriptionId . '/validate',
+			'GET',
+			$this->base_url . '/v1/billing/subscriptions/' . $subscriptionId,
 			[],
 			[
 				'Content-Type: application/json',
