@@ -139,8 +139,37 @@ class SubscriptionController extends Controller
 		return $this->store($request);
 	}
 
-	public function validateSubscription(Request $request, Subscription $subscription)
+	/**
+	 * @throws ValidationException
+	 */
+	public function validateSubscription(Request $request, Subscription $subscription): JsonResponse
 	{
-		dd($subscription);
+		if($subscription['payment_method'] == 'paypal') {
+			$paypalService = new PaypalService();
+			$paypalSubscriptionDetail = $paypalService->subscriptionDetails($request['data']['attributes']['subscription_id']);
+
+			if($paypalSubscriptionDetail->http_code !== 200) {
+				throw ValidationException::withMessages([
+					'error' => ['errorAsOccurred']
+				]);
+			}
+
+			$paypalSubscriptionDetailStatus = $paypalSubscriptionDetail->status;
+
+			if ($paypalSubscriptionDetailStatus === 'ACTIVE') {
+				$subscription->update([
+					'status' => 'approved',
+				]);
+			} else {
+				$subscription->update([
+					'status' => 'declined',
+				]);
+			}
+		}
+
+		return response()->json([
+			'status' => $subscription['status'],
+		]);
+
 	}
 }
