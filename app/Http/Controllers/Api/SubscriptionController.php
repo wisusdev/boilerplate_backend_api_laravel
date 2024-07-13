@@ -73,7 +73,7 @@ class SubscriptionController extends Controller
 			$paypalService = new PaypalService();
 
 			$paypalSubscription = $paypalService->createSubscription(
-				$package->id,
+				$subscription->id,
 				$metadata->paypal_plan_id,
 				$user->first_name . ' ' . $user->last_name,
 				$user->email,
@@ -144,6 +144,12 @@ class SubscriptionController extends Controller
 	 */
 	public function validateSubscription(Request $request, Subscription $subscription): JsonResponse
 	{
+		if($subscription['status'] == 'approved' || $subscription['status'] == 'declined'){
+			return response()->json([
+				'status' => $subscription['status'],
+			]);
+		}
+
 		if($subscription['payment_method'] == 'paypal') {
 			$paypalService = new PaypalService();
 			$paypalSubscriptionDetail = $paypalService->subscriptionDetails($request['data']['attributes']['subscription_id']);
