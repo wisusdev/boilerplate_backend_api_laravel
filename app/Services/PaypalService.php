@@ -128,7 +128,7 @@ class PaypalService
 					'shipping_preference' => 'NO_SHIPPING', // Puedes cambiar esto a GET_FROM_FILE si deseas obtener la dirección de envío del cliente
 					'user_action' => 'SUBSCRIBE_NOW', // Puedes cambiar esto a CONTINUE si deseas que el cliente continúe con la suscripción
 					'return_url' => config('app.frontend_url') . '/payment-success/' . $subscriptionId, // Deberías reemplazar esto con la URL de retorno de tu aplicación
-					'cancel_url' => config('app.frontend_url') . '/payment-cancelled/', // Deberías reemplazar esto con la URL de cancelación de tu aplicación
+					'cancel_url' => config('app.frontend_url') . '/payment-cancelled/' . $subscriptionId, // Deberías reemplazar esto con la URL de cancelación de tu aplicación
 				]
 			],
 			[
