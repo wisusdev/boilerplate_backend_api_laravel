@@ -108,7 +108,7 @@ class PaypalService
 		return json_decode($response);
 	}
 
-	public function createSubscription(string $packageId, string $planId, string $name, string $email): object
+	public function createSubscription(string $subscriptionId, string $planId, string $name, string $email): object
 	{
 		$accessToken = $this->getAccessToken();
 
@@ -127,7 +127,7 @@ class PaypalService
 					'brand_name' => config('app.name'), // Deberías reemplazar esto con el nombre de tu marca
 					'shipping_preference' => 'NO_SHIPPING', // Puedes cambiar esto a GET_FROM_FILE si deseas obtener la dirección de envío del cliente
 					'user_action' => 'SUBSCRIBE_NOW', // Puedes cambiar esto a CONTINUE si deseas que el cliente continúe con la suscripción
-					'return_url' => config('app.frontend_url') . '/payment-success/' . $packageId, // Deberías reemplazar esto con la URL de retorno de tu aplicación
+					'return_url' => config('app.frontend_url') . '/payment-success/' . $subscriptionId, // Deberías reemplazar esto con la URL de retorno de tu aplicación
 					'cancel_url' => config('app.frontend_url') . '/payment-cancelled/', // Deberías reemplazar esto con la URL de cancelación de tu aplicación
 				]
 			],
