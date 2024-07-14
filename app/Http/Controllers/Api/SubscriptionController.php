@@ -31,14 +31,27 @@ class SubscriptionController extends Controller
 		return new SubscriptionResource($subscription);
 	}
 
+	/**
+	 * @throws ValidationException
+	 */
 	public function store(SubscriptionRequest $request): SubscriptionResource|JsonResponse
 	{
+		$data = $request->validated();
+
+		$userId = $data['data']['attributes']['user_id'];
+		$package = Package::find($data['data']['attributes']['package_id']);
+
+		if ($this->checkUserSubscription($userId, $package->id)) {
+			throw ValidationException::withMessages([
+				'error' => ['validation.subscriptionAlreadyExists']
+			]);
+		}
+
 		try {
 			DB::beginTransaction();
-			$data = $request->validated();
 
-			$package = Package::find($data['data']['attributes']['package_id']);
-			$user = User::find($data['data']['attributes']['user_id']);
+			$user = User::find($userId);
+
 			$metadata = json_decode($package->metadata);
 
 			$start_date = now();
@@ -59,7 +72,7 @@ class SubscriptionController extends Controller
 			$paymentMethod = $data['data']['attributes']['payment_method'];
 
 			$subscription = Subscription::create([
-				'user_id' => $data['data']['attributes']['user_id'],
+				'user_id' => $userId,
 				'package_id' => $package->id,
 				'start_date' => $start_date,
 				'end_date' => $end_date,
@@ -142,7 +155,7 @@ class SubscriptionController extends Controller
 	/**
 	 * @throws ValidationException
 	 */
-	public function validateSubscription(Request $request, Subscription $subscription): JsonResponse
+	public function validateSubscription(Subscription $subscription): JsonResponse
 	{
 		if($subscription['status'] == 'approved' || $subscription['status'] == 'declined'){
 			return response()->json([
@@ -151,31 +164,44 @@ class SubscriptionController extends Controller
 		}
 
 		if($subscription['payment_method'] == 'paypal') {
-			$paypalService = new PaypalService();
-			$paypalSubscriptionDetail = $paypalService->subscriptionDetails($request['data']['attributes']['subscription_id']);
-
-			if($paypalSubscriptionDetail->http_code !== 200) {
-				throw ValidationException::withMessages([
-					'error' => ['errorAsOccurred']
-				]);
-			}
-
-			$paypalSubscriptionDetailStatus = $paypalSubscriptionDetail->status;
-
-			if ($paypalSubscriptionDetailStatus === 'ACTIVE') {
-				$subscription->update([
-					'status' => 'approved',
-				]);
-			} else {
-				$subscription->update([
-					'status' => 'declined',
-				]);
-			}
+			$this->paypalActiveSubscription($subscription);
 		}
 
 		return response()->json([
 			'status' => $subscription['status'],
 		]);
 
+	}
+
+	private function paypalActiveSubscription(Subscription $subscription): void
+	{
+		$paypalService = new PaypalService();
+		$paypalSubscriptionDetail = $paypalService->subscriptionDetails($subscription['subscription_id']);
+
+		if($paypalSubscriptionDetail->http_code !== 200) {
+			throw ValidationException::withMessages([
+				'error' => ['errorAsOccurred']
+			]);
+		}
+
+		$paypalSubscriptionDetailStatus = $paypalSubscriptionDetail->status;
+
+		if ($paypalSubscriptionDetailStatus === 'ACTIVE') {
+			$subscription->update([
+				'status' => 'approved',
+			]);
+		} else {
+			$subscription->update([
+				'status' => 'declined',
+			]);
+		}
+	}
+
+	private function checkUserSubscription(string $userId, string $packageId)
+	{
+		return Subscription::where('user_id', $userId)
+			->where('package_id', $packageId)
+			->whereNotIn('status', ['cancel', 'declined'])
+			->exists();
 	}
 }
