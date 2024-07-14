@@ -8,6 +8,7 @@ use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LogoutDeviceRequest;
 use App\Http\Resources\DeviceResource;
 use App\Http\Resources\ProfileResource;
+use App\Http\Resources\SubscriptionResource;
 use App\Models\DeviceInfo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -141,5 +142,17 @@ class AccountController extends Controller
         ]);
 
     }
+
+	public function subscriptions(Request $request): JsonResource
+	{
+		$user = $request->user();
+
+		$subscriptions = $user->subscriptions()
+			->where('status', 'approved')
+			->sparseFieldset()
+			->jsonPaginate();
+
+		return SubscriptionResource::collection($subscriptions);
+	}
 
 }
