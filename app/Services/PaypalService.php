@@ -244,4 +244,24 @@ class PaypalService
 
 		return json_decode($response);
 	}
+
+	public function cancelSubscription(string $subscriptionId, string $reason): object
+	{
+		$accessToken = $this->getAccessToken();
+
+		$response = $this->makeRequest(
+			'POST',
+			$this->base_url . '/v1/billing/subscriptions/' . $subscriptionId . '/cancel',
+			[
+				'reason' => $reason
+			],
+			[
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $accessToken,
+			],
+			true
+		);
+
+		return json_decode($response);
+	}
 }
