@@ -10,6 +10,8 @@ use App\Http\Resources\DeviceResource;
 use App\Http\Resources\ProfileResource;
 use App\Http\Resources\SubscriptionResource;
 use App\Models\DeviceInfo;
+use App\Models\Subscription;
+use App\Services\PaypalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -153,6 +155,20 @@ class AccountController extends Controller
 			->jsonPaginate();
 
 		return SubscriptionResource::collection($subscriptions);
+	}
+
+	public function cancelSubscription(Request $request, Subscription $subscription): JsonResource
+	{
+		if($subscription['payment_method'] == 'paypal') {
+			$responseCancelSubscription = (new PaypalService())->cancelSubscription($subscription['id'], $request['data']['attributes']['reason']);
+			if ($responseCancelSubscription->http_code === 204){
+				$subscription->update([
+					'status' => 'cancel',
+				]);
+			}
+		}
+
+		return SubscriptionResource::make($subscription);
 	}
 
 }
