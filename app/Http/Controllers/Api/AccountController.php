@@ -160,7 +160,7 @@ class AccountController extends Controller
 	public function cancelSubscription(Request $request, Subscription $subscription): JsonResource
 	{
 		if($subscription['payment_method'] == 'paypal') {
-			$responseCancelSubscription = (new PaypalService())->cancelSubscription($subscription['id'], $request['data']['attributes']['reason']);
+			$responseCancelSubscription = (new PaypalService())->cancelSubscription($subscription['payment_transaction_id'], $request['data']['attributes']['reason']);
 			if ($responseCancelSubscription->http_code === 204){
 				$subscription->update([
 					'status' => 'cancel',
