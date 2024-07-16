@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('payment_method')->nullable();
             $table->string('payment_transaction_id')->nullable();
             $table->enum('status', ['approved', 'waiting', 'declined', 'cancel'])->default('waiting');
+			$table->json('metadata')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });
