@@ -47,9 +47,10 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->prefix('public')->gr
     // Packages
     Route::get('/packages', [PackageController::class, 'publicIndex'])->name('packages.publicIndex');
 	Route::get('/packages/{package}', [PackageController::class, 'publicShow'])->name('packages.publicShow');
+
 	// Subscriptions
-	Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store');
-	Route::patch('/subscriptions/validate/{subscription}', [SubscriptionController::class, 'validateSubscription'])->name('subscriptions.validate');
+	Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store')->middleware('auth:api');
+	Route::patch('/subscriptions/validate/{subscription}', [SubscriptionController::class, 'validateSubscription'])->name('subscriptions.validate')->middleware('auth:api');
 });
 
 // Protected routes
@@ -74,7 +75,7 @@ Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
     Route::withoutMiddleware(ValidateJsonApiDocument::class)->post('/account/logout-device', [AccountController::class, 'logoutDevice'])->name('profile.logout-device');
     Route::delete('/account/delete-account/{id}', [AccountController::class, 'deleteAccount'])->name('profile.delete-account');
 	Route::get('/account/subscriptions', [AccountController::class, 'subscriptions'])->name('profile.subscriptions');
-	Route::post('/account/subscriptions/cancel', [AccountController::class, 'cancelSubscription'])->name('profile.cancelSubscription');
+	Route::patch('/account/subscriptions/cancel/{subscription}', [AccountController::class, 'cancelSubscription'])->name('profile.cancelSubscription');
 
     // Packages
     Route::apiResource('/packages', PackageController::class);
