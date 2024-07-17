@@ -152,7 +152,6 @@ class AccountController extends Controller
 		$user = $request->user();
 
 		$subscriptions = $user->subscriptions()
-			->where('status', 'approved')
 			->sparseFieldset()
 			->jsonPaginate();
 
