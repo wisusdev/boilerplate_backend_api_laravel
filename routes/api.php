@@ -76,6 +76,7 @@ Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
     Route::delete('/account/delete-account/{id}', [AccountController::class, 'deleteAccount'])->name('profile.delete-account');
 	Route::get('/account/subscriptions', [AccountController::class, 'subscriptions'])->name('profile.subscriptions');
 	Route::patch('/account/subscriptions/cancel/{subscription}', [AccountController::class, 'cancelSubscription'])->name('profile.cancelSubscription');
+	Route::get('/account/subscriptions/invoice/{subscription}', [AccountController::class, 'invoiceSubscription'])->name('profile.invoiceSubscription');
 
     // Packages
     Route::apiResource('/packages', PackageController::class);
