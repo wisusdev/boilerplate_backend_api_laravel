@@ -12,9 +12,11 @@ use App\Http\Resources\SubscriptionResource;
 use App\Models\DeviceInfo;
 use App\Models\Subscription;
 use App\Services\PaypalService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -169,6 +171,13 @@ class AccountController extends Controller
 		}
 
 		return SubscriptionResource::make($subscription);
+	}
+
+	public function invoiceSubscription(Subscription $subscription): Response
+	{
+		$pdf = Pdf::loadView('invoices.subscriptions', ['subscription' => $subscription]);
+		$invoiceName = 'invoice-' . date('Y-m-d-h-m-s') . '.pdf';
+		return $pdf->download($invoiceName);
 	}
 
 }
