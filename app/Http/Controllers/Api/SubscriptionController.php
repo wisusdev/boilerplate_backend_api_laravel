@@ -28,7 +28,7 @@ class SubscriptionController extends Controller
 
 	public function show(Subscription $subscription): SubscriptionResource
 	{
-		return new SubscriptionResource($subscription);
+		return SubscriptionResource::make($subscription);
 	}
 
 	/**
@@ -176,7 +176,7 @@ class SubscriptionController extends Controller
 	private function paypalActiveSubscription(Subscription $subscription): void
 	{
 		$paypalService = new PaypalService();
-		$paypalSubscriptionDetail = $paypalService->subscriptionDetails($subscription['subscription_id']);
+		$paypalSubscriptionDetail = $paypalService->subscriptionDetails($subscription['payment_transaction_id']);
 
 		if($paypalSubscriptionDetail->http_code !== 200) {
 			throw ValidationException::withMessages([
