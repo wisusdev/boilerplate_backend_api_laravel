@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Aloha!</title>
+    <title>Web Care</title>
 
     <style type="text/css">
         * {
@@ -44,8 +44,8 @@
 
 <table width="100%">
     <tr>
-        <td><strong>From:</strong> Linblum - Barrio teatral</td>
-        <td><strong>To:</strong> Linblum - Barrio Comercial</td>
+        <td><strong>From:</strong> Web Care</td>
+        <td><strong>To:</strong> {{$data['userFullName']}}</td>
     </tr>
 
 </table>
@@ -55,52 +55,36 @@
 <table width="100%">
     <thead style="background-color: lightgray;">
     <tr>
-        <th>#</th>
         <th>Description</th>
         <th>Quantity</th>
-        <th>Unit Price $</th>
+        <th>Interval</th>
         <th>Total $</th>
     </tr>
     </thead>
     <tbody>
     <tr>
-        <th scope="row">1</th>
-        <td>Playstation IV - Black</td>
-        <td align="right">1</td>
-        <td align="right">1400.00</td>
-        <td align="right">1400.00</td>
-    </tr>
-    <tr>
-        <th scope="row">1</th>
-        <td>Metal Gear Solid - Phantom</td>
-        <td align="right">1</td>
-        <td align="right">105.00</td>
-        <td align="right">105.00</td>
-    </tr>
-    <tr>
-        <th scope="row">1</th>
-        <td>Final Fantasy XV - Game</td>
-        <td align="right">1</td>
-        <td align="right">130.00</td>
-        <td align="right">130.00</td>
+        <td>{{$data['package_name']}}</td>
+        <td align="right">{{$data['interval_count']}}</td>
+        <td align="right">{{$data['interval']}}</td>
+        <td align="right">{{$data['package_price']}}</td>
     </tr>
     </tbody>
 
     <tfoot>
     <tr>
-        <td colspan="3"></td>
+        <td colspan="2"></td>
         <td align="right">Subtotal $</td>
-        <td align="right">1635.00</td>
+        <td align="right">{{$data['package_price']}}</td>
     </tr>
     <tr>
-        <td colspan="3"></td>
+        <td colspan="2"></td>
         <td align="right">Tax $</td>
-        <td align="right">294.3</td>
+        <td align="right"></td>
     </tr>
     <tr>
-        <td colspan="3"></td>
+        <td colspan="2"></td>
         <td align="right">Total $</td>
-        <td align="right" class="gray">$ 1929.3</td>
+        <td align="right" class="gray">{{$data['package_price']}}</td>
     </tr>
     </tfoot>
 </table>

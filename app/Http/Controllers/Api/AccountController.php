@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -174,7 +175,15 @@ class AccountController extends Controller
 
 	public function invoiceSubscription(Subscription $subscription): Response
 	{
-		$pdf = Pdf::loadView('invoices.subscriptions', ['subscription' => $subscription]);
+		$data = [
+			'userFullName' => $subscription->user->first_name . ' ' . $subscription->user->last_name,
+			'package_name' => $subscription->package->name,
+			'interval_count' => $subscription->package->interval_count,
+			'interval' => $subscription->package->interval,
+			'package_price' => $subscription->package_price,
+		];
+
+		$pdf = Pdf::loadView('invoices.subscriptions', ['data' => $data]);
 		$invoiceName = 'invoice-' . date('Y-m-d-h-m-s') . '.pdf';
 		return $pdf->download($invoiceName);
 	}
