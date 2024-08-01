@@ -173,7 +173,7 @@ class PaypalService
 	}
 
 
-    public function createSubscriptionPlan(string $packageId, string $name, string $description, int $intervalCount, string $interval, float $price): object
+    public function createPlan(string $packageId, string $name, string $description, int $intervalCount, string $interval, float $price): object
     {
         $accessToken = $this->getAccessToken();
 
