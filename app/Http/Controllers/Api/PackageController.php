@@ -112,11 +112,10 @@ class PackageController extends Controller
 			$package->update($data['data']['attributes']);
 
 			$paypalService = new PaypalService();
-			$paypalService->updateProduct(
-				$package->id,
-				$package->name,
-				$package->description
-			);
+			$paypalService->updateProduct($package->id, $package->name, $package->description);
+
+			$stripeService = new StripeService();
+			$stripeService->updateProduct($package->name, $package->description, json_decode($package->metadata)->stripe->stripe_product_id);
 
 			DB::commit();
 
