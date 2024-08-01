@@ -7,6 +7,7 @@ use App\Http\Requests\PackageRequest;
 use App\Http\Resources\PackageResource;
 use App\Models\Package;
 use App\Services\PaypalService;
+use App\Services\StripeService;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
@@ -46,12 +47,7 @@ class PackageController extends Controller
 			$package = Package::create($attributes);
 
 			$paypalService = new PaypalService();
-
-			$paypalProduct = $paypalService->createProduct(
-				$package->id,
-				$package->name,
-				$package->description
-			);
+			$paypalProduct = $paypalService->createProduct($package->id, $package->name, $package->description);
 
 			if ($paypalProduct->http_code !== 201) {
 				throw ValidationException::withMessages([
@@ -59,19 +55,28 @@ class PackageController extends Controller
 				]);
 			}
 
-			$paypalPlan = $paypalService->createSubscriptionPlan(
-				$package->id,
-				$package->name,
-				$package->description,
-				$package->interval_count,
-				$package->interval,
-				$package->price,
-			);
+			$paypalPlan = $paypalService->createPlan($package->id, $package->name, $package->description, $package->interval_count, $package->interval, $package->price,);
+
+			$stripeService = new StripeService();
+			$stripeProduct = $stripeService->createProduct($package->name, $package->description);
+			if ($stripeProduct->http_code !== 200) {
+				throw ValidationException::withMessages([
+					'error' => ['errorAsOccurred']
+				]);
+			}
+
+			$stripePlan = $stripeService->createPlan($package->name, $stripeProduct->id, $package->price, 'usd', $package->interval);
 
 			$package->update([
 				'metadata' => [
-					'paypal_product_id' => $paypalProduct->id,
-					'paypal_plan_id' => $paypalPlan->id,
+					'paypal' => [
+						'paypal_product_id' => $paypalProduct->id,
+						'paypal_plan_id' => $paypalPlan->id,
+					],
+					'stripe' => [
+						'stripe_product_id' => $stripeProduct->id,
+						'stripe_plan_id' => $stripePlan->id,
+					]
 				]
 			]);
 
