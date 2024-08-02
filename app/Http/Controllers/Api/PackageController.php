@@ -55,7 +55,7 @@ class PackageController extends Controller
 				]);
 			}
 
-			$paypalPlan = $paypalService->createPlan($package->id, $package->name, $package->description, $package->interval_count, $package->interval, $package->price,);
+			$paypalPlan = $paypalService->createPlan($package->id, $package->name, $package->description, $package->interval_count, $package->interval, $package->price);
 
 			$stripeService = new StripeService();
 			$stripeProduct = $stripeService->createProduct($package->name, $package->description);
@@ -65,7 +65,7 @@ class PackageController extends Controller
 				]);
 			}
 
-			$stripePlan = $stripeService->createPlan($package->name, $stripeProduct->id, $package->price, 'usd', $package->interval);
+			$stripePrice = $stripeService->createPrice($stripeProduct->id, $package->price, 'usd', $package->interval, $package->interval_count);
 
 			$package->update([
 				'metadata' => [
@@ -75,7 +75,7 @@ class PackageController extends Controller
 					],
 					'stripe' => [
 						'stripe_product_id' => $stripeProduct->id,
-						'stripe_plan_id' => $stripePlan->id,
+						'stripe_price_id' => $stripePrice->id,
 					]
 				]
 			]);
