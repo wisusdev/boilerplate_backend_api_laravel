@@ -91,26 +91,48 @@ class StripeService
 		);
 	}
 
-	public function createCustomer(string $name, string $email, string $paymentMethod): string
-	{
-		return $this->makeRequest(
+	public function createPrice(string $productId, int $amount, string $currency, string $interval, int $intervalCount){
+		$response = $this->makeRequest(
 			'POST',
-			$this->base_url . '/v1/customers',
+			$this->base_url . '/v1/prices',
 			[
-				'name' => $name,
-				'email' => $email,
-				'invoice_settings[default_payment_method]' => $paymentMethod,
+				'currency' => $currency,
+				'unit_amount' => $this->convertToCents($amount), // 20.00 equivalent to 2000
+				'recurring[interval]' => $interval,
+				'recurring[interval_count]' => $intervalCount,
+				'product' => $productId,
 			],
 			[
 				'Content-Type: application/x-www-form-urlencoded',
 				'Authorization: Bearer ' . $this->client_secret,
 			],
 		);
+
+		return json_decode($response);
 	}
 
-	public function createSubscription($customerId, $paymentMethod, $priceId): string
+	public function createCustomer(string $name, string $email, string $paymentMethod): object
 	{
-		return $this->makeRequest(
+		$response = $this->makeRequest(
+			'POST',
+			$this->base_url . '/v1/customers',
+			[
+				'name' => $name,
+				'email' => $email,
+				'payment_method' => $paymentMethod,
+			],
+			[
+				'Content-Type: application/x-www-form-urlencoded',
+				'Authorization: Bearer ' . $this->client_secret,
+			]
+		);
+
+		return json_decode($response);
+	}
+
+	public function createSubscription($customerId, $paymentMethod, $priceId): object
+	{
+		$response = $this->makeRequest(
 			'POST',
 			$this->base_url . '/v1/subscriptions',
 			[
@@ -124,11 +146,12 @@ class StripeService
 				'expand' => ['latest_invoice.payment_intent']
 			],
 			[
-				'Content-Type: application/json',
+				'Content-Type: application/x-www-form-urlencoded',
 				'Authorization: Bearer ' . $this->client_secret,
-			],
-			true
+			]
 		);
+
+		return json_decode($response);
 	}
 
 	private function convertToCents($amount): int
