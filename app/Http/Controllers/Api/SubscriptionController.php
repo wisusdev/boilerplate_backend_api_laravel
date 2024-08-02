@@ -9,6 +9,7 @@ use App\Models\Package;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\PaypalService;
+use App\Services\StripeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -83,27 +84,22 @@ class SubscriptionController extends Controller
 				'payment_method' => $paymentMethod,
 			]);
 
-			$paypalService = new PaypalService();
-
-			$paypalSubscription = $paypalService->createSubscription(
-				$subscription->id,
-				$metadata->paypal_plan_id,
-				$user->first_name . ' ' . $user->last_name,
-				$user->email,
-			);
-
-			if ($paypalSubscription->http_code !== 201) {
-				throw ValidationException::withMessages([
-					'error' => ['errorAsOccurred']
-				]);
-			}
-
-			$subscriptionLinks = collect($paypalSubscription->links);
-			$approve = $subscriptionLinks->where('rel', 'approve')->first();
-
-			DB::commit();
+			$userName = $user->first_name . ' ' . $user->last_name;
 
 			if ($paymentMethod === 'paypal'){
+				$paypalService = new PaypalService();
+				$paypalSubscription = $paypalService->createSubscription($subscription->id, $metadata->paypal->paypal_plan_id, $userName, $user->email);
+
+				if ($paypalSubscription->http_code !== 201) {
+					throw ValidationException::withMessages([
+						'error' => ['errorAsOccurred']
+					]);
+				}
+
+				$subscriptionLinks = collect($paypalSubscription->links);
+				$approve = $subscriptionLinks->where('rel', 'approve')->first();
+
+				DB::commit();
 
 				$subscription->update([
 					'payment_transaction_id' => $paypalSubscription->id,
@@ -112,6 +108,47 @@ class SubscriptionController extends Controller
 				return response()->json([
 					'approve_url' => $approve->href,
 				]);
+			}
+
+			if($paymentMethod === 'stripe'){
+				$stripe_payment_method = $data['data']['attributes']['stripe_payment_method'];
+
+				$stripeService = new StripeService();
+				$stripeCustomer = $stripeService->createCustomer($userName, $user->email, $stripe_payment_method);
+
+				if ($stripeCustomer->http_code !== 200) {
+					throw ValidationException::withMessages([
+						'error' => ['errorAsOccurred']
+					]);
+				}
+
+				$stripeSubscription = $stripeService->createSubscription($stripeCustomer->id, $stripe_payment_method, $metadata->stripe->stripe_price_id);
+
+				DB::commit();
+				$subscription->update([
+					'payment_transaction_id' => $stripeSubscription->id,
+				]);
+
+				$stripePaymentIntent = $stripeSubscription->latest_invoice;
+
+				if($stripePaymentIntent->payment_intent->status === 'succeeded'){
+					$subscription->update([
+						'status' => 'approved',
+					]);
+
+					return response()->json([
+						'requires_action' => false,
+						'status' => $stripePaymentIntent->payment_intent->status,
+					]);
+				}
+
+				if($stripePaymentIntent->payment_intent->status === 'requires_action'){
+					return response()->json([
+						'requires_action' => true,
+						'payment_intent_client_secret' => $stripePaymentIntent->payment_intent->client_secret,
+					]);
+				}
+
 			}
 
 			return SubscriptionResource::make($subscription);
@@ -201,7 +238,7 @@ class SubscriptionController extends Controller
 	{
 		return Subscription::where('user_id', $userId)
 			->where('package_id', $packageId)
-			->whereNotIn('status', ['cancel', 'declined'])
+			->whereNotIn('status', ['cancel', 'declined', 'waiting'])
 			->exists();
 	}
 }
