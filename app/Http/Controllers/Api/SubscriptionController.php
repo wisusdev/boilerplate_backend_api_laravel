@@ -10,6 +10,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Services\PaypalService;
 use App\Services\StripeService;
+use App\Services\WompiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -240,5 +241,13 @@ class SubscriptionController extends Controller
 			->where('package_id', $packageId)
 			->whereNotIn('status', ['cancel', 'declined', 'waiting'])
 			->exists();
+	}
+
+	public function getWompiRegions(): JsonResponse
+	{
+		$wompiService = new WompiService();
+		$regions = $wompiService->getRegion();
+
+		return response()->json($regions);
 	}
 }
