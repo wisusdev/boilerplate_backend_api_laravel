@@ -51,10 +51,11 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->prefix('public')->gr
 	// Subscriptions
 	Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store')->middleware('auth:api');
 	Route::patch('/subscriptions/validate/{subscription}', [SubscriptionController::class, 'validateSubscription'])->name('subscriptions.validate')->middleware('auth:api');
+	Route::get('/wompi/regions', [SubscriptionController::class, 'getWompiRegions'])->name('wompi.getRegions')->middleware('auth:api');
 });
 
 // Protected routes
-Route::middleware(['auth:api'])->name('api.v1.')->group(function () {
+Route::middleware(['auth:api'])->group(function () {
     // Users
     Route::apiResource('/users', UserController::class);
 
