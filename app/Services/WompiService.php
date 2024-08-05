@@ -57,7 +57,7 @@ class WompiService
 		return json_decode($response);
 	}
 
-	public function createPaymentWithCard(array $data)
+	public function createPaymentWithCard(array $data, float $monto): object
 	{
 		$token = $this->getToken();
 
@@ -66,22 +66,22 @@ class WompiService
 			$this->base_url . '/TransaccionCompra/3DS',
 			[
 				"tarjetaCreditoDebido" => [
-					"numeroTarjeta" => $data['numeroTarjeta'],
-					"cvv" => $data['cvv'],
-					"mesVencimiento" => $data['mesVencimiento'],
-					"anioVencimiento" => $data['anioVencimiento'],
+					"numeroTarjeta" => str_replace(' ', '', $data['card_number']),
+					"cvv" => str_replace(' ', '', $data['cvv']),
+					"mesVencimiento" => $data['expiration_month'],
+					"anioVencimiento" => $data['expiration_year'],
 				],
-				"monto" => $data['monto'],
+				"monto" => $monto,
 				"urlRedirect" => config('app.frontend_url'),
-				"nombre" => $data['nombre'],
-				"apellido" => $data['apellido'],
+				"nombre" => $data['first_name'],
+				"apellido" => $data['last_name'],
 				"email" => $data['email'],
-				"ciudad" => $data['ciudad'],
-				"direccion" => $data['direccion'],
-				"idPais" => $data['idPais'],
-				"idRegion" => $data['idRegion'],
-				"codigoPostal" => $data['codigoPostal'],
-				"telefono" => $data['telefono'],
+				"idPais" => $data['country'],
+				"idRegion" => $data['state'],
+				"ciudad" => $data['city'],
+				"direccion" => $data['address'],
+				"codigoPostal" => $data['postal_code'],
+				"telefono" => $data['phone'],
 			],
 			[
 				'Content-Type: application/json',
