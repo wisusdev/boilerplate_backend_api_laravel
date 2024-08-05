@@ -152,6 +152,30 @@ class SubscriptionController extends Controller
 
 			}
 
+			if($paymentMethod === 'wompi') {
+				$dataWompi = $data['data']['attributes'];
+				$wompiService = new WompiService();
+				$wompiResponse = $wompiService->createPaymentWithCard($dataWompi, $package->price);
+
+				if ($wompiResponse->http_code !== 200) {
+					throw ValidationException::withMessages([
+						'error' => ['errorAsOccurred']
+					]);
+				}
+
+				DB::commit();
+
+				$subscription->update([
+					'payment_transaction_id' => $wompiResponse->idTransaccion,
+					'status' => 'approved',
+				]);
+
+				return response()->json([
+					'status' => 'approved',
+					'isReal' => $wompiResponse->esReal
+				]);
+			}
+
 			return SubscriptionResource::make($subscription);
 
 		} catch (\Exception $e) {
