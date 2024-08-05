@@ -22,7 +22,7 @@ class SubscriptionRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'data' => ['required', 'array'],
             'data.type' => ['required', 'string', 'in:subscriptions'],
             'data.attributes' => ['required', 'array'],
@@ -32,6 +32,28 @@ class SubscriptionRequest extends FormRequest
             'data.attributes.payment_method' => ['required', 'string'],
 			'data.attributes.stripe_payment_method' => ['string'],
         ];
+
+		if ($this->input('data.attributes.payment_method') === 'stripe') {
+			$rules['data.attributes.stripe_payment_method'] = ['string'];
+		}
+
+		if($this->input('data.attributes.payment_method') === 'wompi') {
+			$rules['data.attributes.card_number'] = ['string', 'required'];
+			$rules['data.attributes.expiration_month'] = ['numeric', 'required'];
+			$rules['data.attributes.expiration_year'] = ['numeric', 'required'];
+			$rules['data.attributes.cvv'] = ['numeric', 'required'];
+			$rules['data.attributes.first_name'] = ['string', 'required'];
+			$rules['data.attributes.last_name'] = ['string', 'required'];
+			$rules['data.attributes.email'] = ['email', 'required'];
+			$rules['data.attributes.country'] = ['string', 'required'];
+			$rules['data.attributes.state'] = ['string', 'required'];
+			$rules['data.attributes.city'] = ['string', 'required'];
+			$rules['data.attributes.address'] = ['string', 'required'];
+			$rules['data.attributes.postal_code'] = ['string'];
+			$rules['data.attributes.phone'] = ['string', 'required'];
+		}
+
+		return $rules;
     }
 
     public function messages(): array
