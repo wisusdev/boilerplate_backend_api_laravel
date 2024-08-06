@@ -34,7 +34,7 @@ class SubscriptionRequest extends FormRequest
         ];
 
 		if ($this->input('data.attributes.payment_method') === 'stripe') {
-			$rules['data.attributes.stripe_payment_method'] = ['string'];
+			$rules['data.attributes.payment_method_id'] = ['string'];
 		}
 
 		if($this->input('data.attributes.payment_method') === 'wompi') {

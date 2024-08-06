@@ -112,7 +112,7 @@ class SubscriptionController extends Controller
 			}
 
 			if($paymentMethod === 'stripe'){
-				$stripe_payment_method = $data['data']['attributes']['stripe_payment_method'];
+				$stripe_payment_method = $data['data']['attributes']['payment_method_id'];
 
 				$stripeService = new StripeService();
 				$stripeCustomer = $stripeService->createCustomer($userName, $user->email, $stripe_payment_method);
