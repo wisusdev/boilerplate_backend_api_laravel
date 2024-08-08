@@ -154,6 +154,21 @@ class StripeService
 		return json_decode($response);
 	}
 
+	public function cancelSubscription(string $subscriptionId, string $reason): object
+	{
+		$response = $this->makeRequest(
+			'DELETE',
+			$this->base_url . '/v1/subscriptions/' . $subscriptionId,
+			[],
+			[
+				'Content-Type: application/x-www-form-urlencoded',
+				'Authorization: Bearer ' . $this->client_secret,
+			]
+		);
+
+		return json_decode($response);
+	}
+
 	private function convertToCents($amount): int
 	{
 		$formattedAmount = number_format($amount, 2, '.', '');
