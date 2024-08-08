@@ -12,11 +12,13 @@ use App\Http\Resources\SubscriptionResource;
 use App\Models\DeviceInfo;
 use App\Models\Subscription;
 use App\Services\PaypalService;
+use App\Services\StripeService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -161,12 +163,28 @@ class AccountController extends Controller
 
 	public function cancelSubscription(Request $request, Subscription $subscription): JsonResource
 	{
+		DB::beginTransaction();
+
 		if($subscription['payment_method'] == 'paypal') {
 			$responseCancelSubscription = (new PaypalService())->cancelSubscription($subscription['payment_transaction_id'], $request['data']['attributes']['reason']);
 			if ($responseCancelSubscription->http_code === 204){
 				$subscription->update([
 					'status' => 'cancel',
 				]);
+
+				DB::commit();
+
+			}
+		}
+
+		if($subscription['payment_method'] == 'stripe') {
+			$responseCancelSubscription = (new StripeService())->cancelSubscription($subscription['payment_transaction_id'], $request['data']['attributes']['reason']);
+			if ($responseCancelSubscription->http_code === 200){
+				$subscription->update([
+					'status' => 'cancel',
+				]);
+
+				DB::commit();
 			}
 		}
 
