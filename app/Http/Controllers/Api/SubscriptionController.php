@@ -8,13 +8,16 @@ use App\Http\Resources\SubscriptionResource;
 use App\Models\Package;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Notifications\NewSubscription;
 use App\Services\PaypalService;
 use App\Services\StripeService;
 use App\Services\WompiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class SubscriptionController extends Controller
@@ -53,6 +56,7 @@ class SubscriptionController extends Controller
 			DB::beginTransaction();
 
 			$user = User::find($userId);
+			App::setLocale($user->language);
 
 			$metadata = json_decode($package->metadata);
 
@@ -137,6 +141,8 @@ class SubscriptionController extends Controller
 						'status' => 'approved',
 					]);
 
+					$user->notify(new NewSubscription($userName, $start_date, $package->name, $package->price));
+
 					return response()->json([
 						'requires_action' => false,
 						'status' => $stripePaymentIntent->payment_intent->status,
@@ -169,6 +175,8 @@ class SubscriptionController extends Controller
 					'payment_transaction_id' => $wompiResponse->idTransaccion,
 					'status' => 'approved',
 				]);
+
+				$user->notify(new NewSubscription($userName, $start_date, $package->name, $package->price));
 
 				return response()->json([
 					'status' => 'approved',
@@ -249,6 +257,10 @@ class SubscriptionController extends Controller
 		$paypalSubscriptionDetailStatus = $paypalSubscriptionDetail->status;
 
 		if ($paypalSubscriptionDetailStatus === 'ACTIVE') {
+			$user = $subscription->user;
+			App::setLocale($user->language);
+			$user->notify(new NewSubscription($user->first_name . ' ' . $user->last_name, $subscription->start_date, $subscription->package->name, $subscription->package->price));
+
 			$subscription->update([
 				'status' => 'approved',
 			]);
