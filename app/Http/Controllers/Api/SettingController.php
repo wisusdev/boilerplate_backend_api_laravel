@@ -17,15 +17,14 @@ class SettingController extends Controller
     
     public function index(): JsonResponse
     {
-        $setting = Setting::all();
-        return response()->json(['data' => $setting]);
+		$query = Setting::query()
+			->allowedFilters(['key'])
+			->sparseFieldset()
+			->first();
+
+		return response()->json(['data' => json_decode($query->value, true)]);
     }
 
-    public function show(string $key): JsonResponse
-    {
-        $setting = Setting::where('key', $key)->first();
-        return response()->json(['data' => $setting]);
-    }
 
     public function update(Request $request): JsonResponse
     {
