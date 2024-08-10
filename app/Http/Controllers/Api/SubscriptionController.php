@@ -90,6 +90,7 @@ class SubscriptionController extends Controller
 			]);
 
 			$userName = $user->first_name . ' ' . $user->last_name;
+			$currentMetadata = json_decode($subscription->metadata, true);
 
 			if ($paymentMethod === 'paypal'){
 				$paypalService = new PaypalService();
@@ -137,8 +138,10 @@ class SubscriptionController extends Controller
 				$stripePaymentIntent = $stripeSubscription->latest_invoice;
 
 				if($stripePaymentIntent->payment_intent->status === 'succeeded'){
+					$currentMetadata['recurrent_payment'] = true;
 					$subscription->update([
 						'status' => 'approved',
+						'metadata' => json_encode($currentMetadata),
 					]);
 
 					$user->notify(new NewSubscription($userName, $start_date, $package->name, $package->price));
@@ -171,9 +174,11 @@ class SubscriptionController extends Controller
 
 				DB::commit();
 
+				$currentMetadata['recurrent_payment'] = false;
 				$subscription->update([
 					'payment_transaction_id' => $wompiResponse->idTransaccion,
 					'status' => 'approved',
+					'metadata' => json_encode($currentMetadata),
 				]);
 
 				$user->notify(new NewSubscription($userName, $start_date, $package->name, $package->price));
@@ -258,12 +263,18 @@ class SubscriptionController extends Controller
 
 		if ($paypalSubscriptionDetailStatus === 'ACTIVE') {
 			$user = $subscription->user;
-			App::setLocale($user->language);
-			$user->notify(new NewSubscription($user->first_name . ' ' . $user->last_name, $subscription->start_date, $subscription->package->name, $subscription->package->price));
+
+			$currentMetadata = json_decode($subscription->metadata, true);
+			$currentMetadata['recurrent_payment'] = true;
 
 			$subscription->update([
 				'status' => 'approved',
+				'metadata' => json_encode($currentMetadata),
 			]);
+
+			App::setLocale($user->language);
+			$user->notify(new NewSubscription($user->first_name . ' ' . $user->last_name, $subscription->start_date, $subscription->package->name, $subscription->package->price));
+
 		} else {
 			$subscription->update([
 				'status' => 'declined',
