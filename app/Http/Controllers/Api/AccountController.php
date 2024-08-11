@@ -35,7 +35,6 @@ class AccountController extends Controller
         $user = $request->user();
 
         if ($request->has('data.attributes.avatar') && $request->input('data.attributes.avatar')) {
-            $destinationPath = '/uploads/' . date('Y') . '/' . date('m') . '/' . date('d');
 
             if (isset($user->avatar) && Storage::disk('public')->exists($user->avatar)) {
                 Storage::disk('public')->delete($user->avatar);
@@ -45,7 +44,7 @@ class AccountController extends Controller
             $avatar = str_replace('data:image/png;base64,', '', $avatar);
             $avatar = str_replace(' ', '+', $avatar);
             $avatar = base64_decode($avatar);
-            $avatarName = $destinationPath . '/avatar.webp';
+            $avatarName = config('app.destination_path') . '/avatar.webp';
             Storage::disk('public')->put($avatarName, $avatar);
         }
 
