@@ -20,7 +20,8 @@ class SettingSeeder extends Seeder
 		$settings = [
 			['key' => 'app', 'value' => json_encode([
 				"name" => config('app.name'),
-				"url" => config('app.url'),
+				"url_api" => config('app.url'),
+				"url_frontend" => config('app.frontend_url'),
 				"description" => "Laravel api, Angular frontend and Flutter mobile.",
 				"logo" => "logo.png",
 				"favicon" => "favicon.png",
