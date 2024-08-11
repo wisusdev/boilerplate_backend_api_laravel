@@ -60,6 +60,8 @@ return [
 
     'asset_url' => env('ASSET_URL'),
 
+	'destination_path' => '/uploads/' . date('Y') . '/' . date('m') . '/' . date('d'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
