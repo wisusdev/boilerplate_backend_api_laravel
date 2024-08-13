@@ -62,6 +62,10 @@ class SettingController extends Controller
 					$attributes->$file = $fileName;
 				}
 			}
+
+			if($fileApp === null) {
+				$attributes->$file = $settingsValue[$file] ?? null;
+			}
 		}
 
 		$setting->update([
