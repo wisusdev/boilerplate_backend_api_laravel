@@ -23,17 +23,6 @@ return new class extends Migration
 			$table->softDeletes();
             $table->timestamps();
         });
-
-		Schema::create('invoice_items', function (Blueprint $table) {
-			$table->uuid('id')->primary();
-			$table->foreignUuid('invoice_id')->constrained()->onDelete('cascade');
-			$table->string('description');
-			$table->integer('quantity');
-			$table->decimal('unit_price', 10, 2);
-			$table->decimal('total_price', 10, 2);
-			$table->json('metadata')->nullable();
-			$table->timestamps();
-		});
     }
 
     /**

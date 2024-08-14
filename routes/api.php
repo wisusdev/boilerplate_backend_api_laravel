@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\Auth\SocialAuthController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
+use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\PermissionsController;
 use App\Http\Controllers\Api\RolesController;
@@ -84,4 +85,7 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Subscriptions
     Route::apiResource('/subscriptions', SubscriptionController::class);
+
+	// Invoices
+	Route::apiResource('/invoices', InvoiceController::class);
 });
