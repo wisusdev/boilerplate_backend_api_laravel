@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('invoices', function (Blueprint $table) {
             $table->uuid('id')->primary();
 			$table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-			$table->uuid('created_by')->index();
+			$table->foreignUuid('created_by')->index();
 			$table->string('invoice_number');
 			$table->date('invoice_date');
 			$table->date('due_date')->nullable();
