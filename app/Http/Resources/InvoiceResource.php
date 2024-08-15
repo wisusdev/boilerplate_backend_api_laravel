@@ -14,6 +14,26 @@ class InvoiceResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+			'type' => 'invoices',
+			'id' => (string) $this->resource->getRouteKey(),
+			'attributes' => [
+				'user_id' => $this->resource->user_id,
+				'created_by' => $this->resource->created_by,
+				'invoice_number' => $this->resource->invoice_number,
+				'invoice_date' => $this->resource->invoice_date,
+				'due_date' => $this->resource->due_date,
+				'total_amount' => $this->resource->total_amount,
+				'status' => $this->resource->status,
+			],
+			'relationships' => [
+				'user' => [
+					'first_name' => $this->resource->user->first_name,
+					'last_name' => $this->resource->user->last_name,
+					'email' => $this->resource->user->email,
+				],
+				'items' => InvoiceItemResource::collection($this->resource->items),
+			],
+		];
     }
 }
