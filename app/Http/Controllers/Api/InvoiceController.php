@@ -31,14 +31,7 @@ class InvoiceController extends Controller
     public function store(InvoiceRequest $request): JsonResource
     {
 		$dataValidated = $request->validated();
-		$attributes = $dataValidated['data']['attributes'];
-
-		// Format the dates correctly
-		$attributes['invoice_date'] = Carbon::parse($attributes['invoice_date'])->format('Y-m-d');
-		$attributes['due_date'] = isset($attributes['due_date']) ? Carbon::parse($attributes['due_date'])->format('Y-m-d') : null;
-
-		$invoice = Invoice::create($attributes);
-		$invoice->items()->createMany($dataValidated['data']['items']);
+		$invoice = $this->createOrUpdateInvoice($dataValidated);
 
 		return InvoiceResource::make($invoice);
     }
@@ -58,15 +51,7 @@ class InvoiceController extends Controller
     public function update(InvoiceRequest $request, Invoice $invoice): InvoiceResource
 	{
 		$dataValidated = $request->validated();
-		$attributes = $dataValidated['data']['attributes'];
-
-		// Format the dates correctly
-		$attributes['invoice_date'] = Carbon::parse($attributes['invoice_date'])->format('Y-m-d');
-		$attributes['due_date'] = isset($attributes['due_date']) ? Carbon::parse($attributes['due_date'])->format('Y-m-d') : null;
-
-		$invoice->update($attributes);
-		$invoice->items()->delete();
-		$invoice->items()->createMany($dataValidated['data']['items']);
+		$invoice = $this->createOrUpdateInvoice($dataValidated, $invoice);
 
 		return InvoiceResource::make($invoice);
     }
@@ -79,4 +64,29 @@ class InvoiceController extends Controller
         $invoice->delete();
 		return response()->noContent();
     }
+
+	private function createOrUpdateInvoice(array $dataValidated, Invoice $invoice = null): Invoice
+	{
+		$attributes = $dataValidated['data']['attributes'];
+		$attributes = $this->formatDates($attributes);
+
+		if ($invoice) {
+			$invoice->update($attributes);
+			$invoice->items()->delete();
+		} else {
+			$invoice = Invoice::create($attributes);
+		}
+
+		$invoice->items()->createMany($dataValidated['data']['items']);
+
+		return $invoice;
+	}
+
+	private function formatDates(array $attributes): array
+	{
+		$attributes['invoice_date'] = Carbon::parse($attributes['invoice_date'])->format('Y-m-d');
+		$attributes['due_date'] = isset($attributes['due_date']) ? Carbon::parse($attributes['due_date'])->format('Y-m-d') : null;
+
+		return $attributes;
+	}
 }
