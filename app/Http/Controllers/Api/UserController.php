@@ -13,7 +13,7 @@ class UserController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('can:users:index')->only('index');
+        $this->middleware('can:users:index,can:invoices:store')->only('index');
         $this->middleware('can:users:store')->only('store');
         $this->middleware('can:users:show')->only('show');
         $this->middleware('can:users:update')->only('update');
@@ -23,6 +23,8 @@ class UserController extends Controller
     public function index(): JsonResource
     {
         $users = User::query()
+			->allowedFilters(['first_name', 'last_name', 'email', 'username'])
+			->allowedSorts(['id', 'first_name', 'last_name', 'email', 'username'])
             ->sparseFieldset()
             ->jsonPaginate();
 
