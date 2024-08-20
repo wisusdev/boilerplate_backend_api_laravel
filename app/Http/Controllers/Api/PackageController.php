@@ -27,6 +27,8 @@ class PackageController extends Controller
 	public function index(): JsonResource
 	{
 		$packages = Package::query()
+			->allowedFilters(['name', 'description', 'interval', 'interval_count', 'price', 'trial_days', 'active'])
+			->allowedSorts(['id', 'name', 'interval', 'interval_count', 'price', 'trial_days', 'active'])
 			->sparseFieldset()
 			->jsonPaginate();
 
