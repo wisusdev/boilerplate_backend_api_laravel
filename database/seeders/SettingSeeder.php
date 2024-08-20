@@ -36,36 +36,38 @@ class SettingSeeder extends Seeder
 				"currency_symbol" => "$",
 				"decimal_separator" => ".",
 				"thousands_separator" => ",",
-				"paypal" => [
-					"mode" => "sandbox",
-					"client_id" => "",
-					"client_secret" => "",
-					"active" => true
+				"payment_methods" => [
+					"paypal" => [
+						"enabled" => true,
+						"mode" => "sandbox",
+						"client_id" => "",
+						"client_secret" => ""
+					],
+					"stripe" => [
+						"enabled" => true,
+						"mode" => "sandbox",
+						"key" => "",
+						"secret" => ""
+					],
+					"wompi" => [
+						"enabled" => true,
+						"mode" => "sandbox",
+						"key" => "",
+						"secret" => ""
+					],
+					"serfinsa" => [
+						"enabled" => false,
+						"mode" => "sandbox",
+						"key" => "",
+						"secret" => ""
+					],
+					"n1co" => [
+						"enabled" => false,
+						"mode" => "sandbox",
+						"key" => "",
+						"secret" => ""
+					]
 				],
-				"stripe" => [
-					"mode" => "sandbox",
-					"key" => "",
-					"secret" => "",
-					"active" => false
-				],
-				"wompi" => [
-					"mode" => "sandbox",
-					"key" => "",
-					"secret" => "",
-					"active" => false
-				],
-				"serfinsa" => [
-					"mode" => "sandbox",
-					"key" => "",
-					"secret" => "",
-					"active" => false
-				],
-				"n1co" => [
-					"mode" => "sandbox",
-					"key" => "",
-					"secret" => "",
-					"active" => false
-				]
 			])],
 
 			['key' => 'taxes', 'value' => json_encode([
@@ -78,20 +80,24 @@ class SettingSeeder extends Seeder
 				"cost" => 5
 			])],
 
-			['key' => 'social_login', 'value' => json_encode([
+			['key' => 'social_auth_services', 'value' => json_encode([
 				"facebook" => [
+					"enabled" => false,
 					"client_id" => "",
 					"client_secret" => ""
 				],
 				"google" => [
+					"enabled" => false,
 					"client_id" => "",
 					"client_secret" => ""
 				],
 				"twitter" => [
+					"enabled" => false,
 					"client_id" => "",
 					"client_secret" => ""
 				],
 				"linkedin" => [
+					"enabled" => false,
 					"client_id" => "",
 					"client_secret" => ""
 				]
