@@ -20,7 +20,7 @@ class PackageSeeder extends Seeder
             [
                 'name' => 'Basic',
                 'description' => 'Basic package',
-                'max_users' => 1,
+                'limits' => "{\"max_users\": 10, \"max_groups\": 3}",
                 'interval' => 'month',
                 'interval_count' => 1,
                 'price' => 10.00,
@@ -31,7 +31,7 @@ class PackageSeeder extends Seeder
             [
                 'name' => 'Pro',
                 'description' => 'Pro package',
-                'max_users' => 5,
+                'limits' => "{\"max_users\": 10, \"max_groups\": 3}",
                 'interval' => 'month',
                 'interval_count' => 1,
                 'price' => 50.00,
@@ -42,7 +42,7 @@ class PackageSeeder extends Seeder
             [
                 'name' => 'Enterprise',
                 'description' => 'Enterprise package',
-                'max_users' => 10,
+                'limits' => "{\"max_users\": 10, \"max_groups\": 3}",
                 'interval' => 'month',
                 'interval_count' => 1,
                 'price' => 100.00,
