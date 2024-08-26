@@ -28,18 +28,22 @@ class InvoiceRequest extends FormRequest
 			'data.attributes' => ['required', 'array'],
 			'data.attributes.user_id' => ['required', 'exists:users,id'],
 			'data.attributes.created_by' => ['required', 'exists:users,id'],
-			'data.attributes.invoice_number' => ['required', 'string'],
 			'data.attributes.invoice_date' => ['required', 'date'],
 			'data.attributes.due_date' => ['nullable', 'date'],
 			'data.attributes.total_amount' => ['required', 'numeric'],
 			'data.attributes.status' => ['required', 'string', 'in:paid,unpaid,partial'],
+			'data.attributes.payment_method' => ['required', 'string', 'in:paypal,stripe,wompi'],
+			'data.attributes.order_confirmation' => ['required', 'boolean'],
+			'data.attributes.generate_invoice' => ['required', 'boolean'],
+			'data.attributes.send_email' => ['required', 'boolean'],
 
-			'data.items' => ['required', 'array'],
-			'data.items.*.description' => ['required', 'string'],
-			'data.items.*.quantity' => ['required', 'numeric'],
-			'data.items.*.unit_price' => ['required', 'numeric'],
-			'data.items.*.total_price' => ['required', 'numeric'],
-			'data.items.*.metadata' => ['nullable', 'json'],
+			'data.attributes.items' => ['required', 'array'],
+			'data.attributes.items.*.item_id' => ['required', 'string'],
+			'data.attributes.items.*.type' => ['required', 'string', 'in:products,packages'],
+			'data.attributes.items.*.description' => ['required', 'string'],
+			'data.attributes.items.*.quantity' => ['required', 'numeric'],
+			'data.attributes.items.*.unit_price' => ['required', 'numeric'],
+			'data.attributes.items.*.total_price' => ['required', 'numeric']
         ];
     }
 }
