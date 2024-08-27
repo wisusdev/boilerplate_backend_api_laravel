@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InvoiceItem extends Model
 {
@@ -14,6 +13,8 @@ class InvoiceItem extends Model
 
 	protected $fillable = [
 		'invoice_id',
+		'item_id',
+		'type',
 		'description',
 		'quantity',
 		'unit_price',
