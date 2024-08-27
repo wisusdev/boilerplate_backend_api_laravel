@@ -15,7 +15,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
 			$table->foreignUuid('user_id')->constrained()->onDelete('cascade');
 			$table->foreignUuid('created_by')->index();
-			$table->string('invoice_number');
+			$table->string('invoice_number')->unique();
 			$table->date('invoice_date');
 			$table->date('due_date')->nullable();
 			$table->decimal('total_amount', 10, 2);
