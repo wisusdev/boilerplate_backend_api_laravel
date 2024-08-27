@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\InvoiceRequest;
 use App\Http\Resources\InvoiceResource;
 use App\Models\Invoice;
+use App\Models\User;
+use App\Notifications\NewInvoice;
 use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\App;
 
 class InvoiceController extends Controller
 {
@@ -31,7 +34,8 @@ class InvoiceController extends Controller
     public function store(InvoiceRequest $request): JsonResource
     {
 		$dataValidated = $request->validated();
-		$invoice = $this->createOrUpdateInvoice($dataValidated);
+		$attributes = $dataValidated['data']['attributes'];
+		$invoice = $this->createOrUpdateInvoice($attributes);
 
 		return InvoiceResource::make($invoice);
     }
@@ -51,7 +55,8 @@ class InvoiceController extends Controller
     public function update(InvoiceRequest $request, Invoice $invoice): InvoiceResource
 	{
 		$dataValidated = $request->validated();
-		$invoice = $this->createOrUpdateInvoice($dataValidated, $invoice);
+		$attributes = $dataValidated['data']['attributes'];
+		$invoice = $this->createOrUpdateInvoice($attributes, $invoice);
 
 		return InvoiceResource::make($invoice);
     }
@@ -65,9 +70,8 @@ class InvoiceController extends Controller
 		return response()->noContent();
     }
 
-	private function createOrUpdateInvoice(array $dataValidated, Invoice $invoice = null): Invoice
+	private function createOrUpdateInvoice(array $attributes, Invoice $invoice = null): Invoice
 	{
-		$attributes = $dataValidated['data']['attributes'];
 		$attributes = $this->formatDates($attributes);
 
 		if ($invoice) {
@@ -77,7 +81,14 @@ class InvoiceController extends Controller
 			$invoice = Invoice::create($attributes);
 		}
 
-		$invoice->items()->createMany($dataValidated['data']['items']);
+		$invoice->items()->createMany($attributes['items']);
+
+		if(isset($attributes['send_email'])) {
+			$user = User::find($attributes['user_id']);
+			App::setLocale($user->language);
+			$fullNames = $user->first_name . ' ' . $user->last_name;
+			$user->notify(new NewInvoice($fullNames, $invoice->total_amount, $invoice->items->toArray(), $invoice->id));
+		}
 
 		return $invoice;
 	}
