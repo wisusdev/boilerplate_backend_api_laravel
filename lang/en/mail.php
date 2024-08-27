@@ -10,4 +10,9 @@ return [
 	'support_contact' => 'If you have any questions or need assistance, please contact our support team.',
 	'regards' => 'Regards,',
 	'new_subscription_subject' => 'Welcome :name! Your subscription to :plan is confirmed',
+	'pending_payment_intro' => 'You have pending payments for the following items:',
+	'pending_payment_total' => 'Total amount due: :total',
+	'pending_payment_cta' => 'Please make the payment at your earliest convenience.',
+	'new_invoice_subject' => 'New invoice created',
+	'pending_payment_link' => 'View Invoice',
 ];
