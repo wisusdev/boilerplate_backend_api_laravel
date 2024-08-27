@@ -32,4 +32,14 @@ class Invoice extends Model
 	{
 		return $this->belongsTo(User::class);
 	}
+
+	protected static function boot(): void
+	{
+		parent::boot();
+
+		static::creating(function ($invoice) {
+			$latestInvoice = self::latest('created_at')->first();
+			$invoice->invoice_number = $latestInvoice ? $latestInvoice->invoice_number + 1 : 1;
+		});
+	}
 }
