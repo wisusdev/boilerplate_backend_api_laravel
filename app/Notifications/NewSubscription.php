@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -46,7 +45,7 @@ class NewSubscription extends Notification
 
 		return $mailMessage
 			->subject(__('mail.new_subscription_subject', ['name' => $this->name, 'plan' => $this->plan_name]))
-			->view('mail.new_subscription', [
+			->view('mail.invoices.new_subscription', [
 			'name' => $this->name,
 			'start_date' => $this->start_date,
 			'plan_name' => $this->plan_name,
