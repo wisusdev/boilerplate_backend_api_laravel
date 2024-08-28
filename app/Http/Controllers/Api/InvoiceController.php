@@ -21,6 +21,8 @@ class InvoiceController extends Controller
     public function index(): JsonResource
     {
         $invoices = Invoice::query()
+			->allowedFilters(['user_id', 'created_by', 'invoice_number', 'invoice_date', 'due_date', 'total_amount', 'status'])
+			->allowedSorts(['id', 'user_id', 'created_by', 'invoice_number', 'invoice_date', 'due_date', 'total_amount', 'status'])
 			->sparseFieldset()
 			->jsonPaginate();
 
