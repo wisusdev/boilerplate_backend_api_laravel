@@ -19,6 +19,7 @@ class InvoiceItemResource extends JsonResource
 			'id' => (string) $this->resource->getRouteKey(),
 			'attributes' => [
 				'invoice_id' => $this->resource->invoice_id,
+				'name' => $this->resource->name,
 				'description' => $this->resource->description,
 				'quantity' => $this->resource->quantity,
 				'unit_price' => $this->resource->unit_price,
