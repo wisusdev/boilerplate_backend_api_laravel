@@ -16,6 +16,7 @@ return new class extends Migration
 			$table->foreignUuid('invoice_id')->constrained()->onDelete('cascade');
 			$table->string('item_id');
 			$table->string('type'); // product, package
+			$table->string('name');
 			$table->string('description');
 			$table->integer('quantity');
 			$table->decimal('unit_price', 10, 2);
