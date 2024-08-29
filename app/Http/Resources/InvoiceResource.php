@@ -25,6 +25,8 @@ class InvoiceResource extends JsonResource
 				'due_date' => $this->resource->due_date,
 				'total_amount' => $this->resource->total_amount,
 				'status' => $this->resource->status,
+				'payment_method' => $this->resource->payment_method,
+				'send_email' => $this->resource->send_email,
 			],
 		];
 
