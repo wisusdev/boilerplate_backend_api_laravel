@@ -21,6 +21,8 @@ class Invoice extends Model
 		'due_date',
 		'total_amount',
 		'status',
+		'payment_method',
+		'send_email',
 	];
 
 	public function items(): HasMany
