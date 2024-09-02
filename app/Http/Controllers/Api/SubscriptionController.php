@@ -8,7 +8,7 @@ use App\Http\Resources\SubscriptionResource;
 use App\Models\Package;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Notifications\NewSubscription;
+use App\Notifications\SubscriptionNotification;
 use App\Services\PaypalService;
 use App\Services\StripeService;
 use App\Services\WompiService;
@@ -144,7 +144,7 @@ class SubscriptionController extends Controller
 						'metadata' => json_encode($currentMetadata),
 					]);
 
-					$user->notify(new NewSubscription($userName, $start_date, $package->name, $package->price));
+					$user->notify(new SubscriptionNotification($userName, $start_date, $package->name, $package->price));
 
 					return response()->json([
 						'requires_action' => false,
@@ -181,7 +181,7 @@ class SubscriptionController extends Controller
 					'metadata' => json_encode($currentMetadata),
 				]);
 
-				$user->notify(new NewSubscription($userName, $start_date, $package->name, $package->price));
+				$user->notify(new SubscriptionNotification($userName, $start_date, $package->name, $package->price));
 
 				return response()->json([
 					'status' => 'approved',
@@ -273,7 +273,7 @@ class SubscriptionController extends Controller
 			]);
 
 			App::setLocale($user->language);
-			$user->notify(new NewSubscription($user->first_name . ' ' . $user->last_name, $subscription->start_date, $subscription->package->name, $subscription->package->price));
+			$user->notify(new SubscriptionNotification($user->first_name . ' ' . $user->last_name, $subscription->start_date, $subscription->package->name, $subscription->package->price));
 
 		} else {
 			$subscription->update([
