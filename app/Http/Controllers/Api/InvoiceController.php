@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\InvoiceChangeStatusRequest;
 use App\Http\Requests\InvoiceRequest;
 use App\Http\Resources\InvoiceResource;
 use App\Models\Invoice;
 use App\Models\User;
-use App\Notifications\NewInvoice;
+use App\Notifications\InvoiceNotification;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\App;
@@ -85,11 +88,11 @@ class InvoiceController extends Controller
 
 		$invoice->items()->createMany($attributes['items']);
 
-		if(isset($attributes['send_email'])) {
+		if($attributes['send_email']) {
 			$user = User::find($attributes['user_id']);
 			App::setLocale($user->language);
-			$fullNames = $user->first_name . ' ' . $user->last_name;
-			$user->notify(new NewInvoice($fullNames, $invoice->total_amount, $invoice->items->toArray(), $invoice->id));
+			$fullNames = "{$user->first_name} {$user->last_name}";
+			$user->notify(new InvoiceNotification($fullNames, $invoice->total_amount, $invoice->items->toArray(), $invoice->id));
 		}
 
 		return $invoice;
@@ -101,5 +104,40 @@ class InvoiceController extends Controller
 		$attributes['due_date'] = isset($attributes['due_date']) ? Carbon::parse($attributes['due_date'])->format('Y-m-d') : null;
 
 		return $attributes;
+	}
+
+	public function changeStatus(InvoiceChangeStatusRequest $request, Invoice $invoice): JsonResource
+	{
+		$dataValidated = $request->validated();
+		$status = $dataValidated['data']['attributes']['status'];
+		$invoice->update(['status' => $status]);
+		return InvoiceResource::make($invoice);
+	}
+
+	public function download(Invoice $invoice): Response
+	{
+		$data = [
+			'userFullName' => $invoice->user->first_name . ' ' . $invoice->user->last_name,
+			"email" => $invoice->user->email,
+			'invoice_number' => $invoice->invoice_number,
+			'invoice_date' => $invoice->invoice_date,
+			'due_date' => $invoice->due_date,
+			'total_amount' => $invoice->total_amount,
+			'items' => $invoice->items->toArray(),
+		];
+
+		$pdf = Pdf::loadView('download.invoice', ['data' => $data]);
+		$invoiceName = 'invoice-' . date('Y-m-d-h-m-s') . '.pdf';
+		return $pdf->download($invoiceName);
+	}
+
+	public function resend(Invoice $invoice): JsonResource
+	{
+		$user = User::find($invoice->user_id);
+		App::setLocale($user->language);
+		$fullNames = "{$user->first_name} {$user->last_name}";
+		$user->notify(new InvoiceNotification($fullNames, $invoice->total_amount, $invoice->items->toArray(), $invoice->id));
+
+		return InvoiceResource::make($invoice);
 	}
 }
