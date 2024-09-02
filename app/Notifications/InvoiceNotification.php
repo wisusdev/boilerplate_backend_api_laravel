@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class NewInvoice extends Notification
+class InvoiceNotification extends Notification
 {
     use Queueable;
 
@@ -48,7 +48,7 @@ class NewInvoice extends Notification
         $mailMessage = new MailMessage();
 
 		return $mailMessage
-			->subject(__('mail.new_invoice_subject', ['name' => $this->name]))
+			->subject(__('mail.invoice_subject', ['name' => $this->name]))
 			->view('mail.invoices.invoice', [
 			'name' => $this->name,
 			'items' => $this->items,
