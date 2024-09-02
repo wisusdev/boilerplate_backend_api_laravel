@@ -3,30 +3,28 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class NewInvoice extends Notification
+class NewSubscription extends Notification
 {
     use Queueable;
 
-	private string $name;
-	private array $items;
-	private float $total;
-
-	private string $invoiceId;
+	private $name;
+	private $start_date;
+	private $plan_name;
+	private $price;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct($name, $total, $items, $invoiceId)
-    {
-        $this->name = $name;
-		$this->items = $items;
-		$this->total = $total;
-		$this->invoiceId = $invoiceId;
-    }
+	public function __construct($name, $start_date, $plan_name, $price)
+	{
+		$this->name = $name;
+		$this->start_date = $start_date;
+		$this->plan_name = $plan_name;
+		$this->price = $price;
+	}
 
     /**
      * Get the notification's delivery channels.
@@ -43,17 +41,15 @@ class NewInvoice extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-		$url = config('app.frontend_url') . '/account/invoices/show/' . $this->invoiceId;
-
         $mailMessage = new MailMessage();
 
 		return $mailMessage
-			->subject(__('mail.new_invoice_subject', ['name' => $this->name]))
-			->view('mail.invoices.new_invoice', [
+			->subject(__('mail.new_subscription_subject', ['name' => $this->name, 'plan' => $this->plan_name]))
+			->view('mail.invoices.subscription', [
 			'name' => $this->name,
-			'items' => $this->items,
-			'total' => $this->total,
-			'url' => $url
+			'start_date' => $this->start_date,
+			'plan_name' => $this->plan_name,
+			'price' => $this->price
 		]);
     }
 
