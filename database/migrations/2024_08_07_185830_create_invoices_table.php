@@ -19,7 +19,7 @@ return new class extends Migration
 			$table->date('invoice_date');
 			$table->date('due_date')->nullable();
 			$table->decimal('total_amount', 10, 2);
-			$table->enum('status', ['paid', 'unpaid', 'partial', 'canceled'])->default('unpaid');
+			$table->enum('status', ['paid', 'unpaid', 'partial', 'canceled', 'refunded'])->default('unpaid');
 			$table->string('payment_method')->nullable();
 			$table->boolean('send_email')->default(false);
 			$table->softDeletes();
