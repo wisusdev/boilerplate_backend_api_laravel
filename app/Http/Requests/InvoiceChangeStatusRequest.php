@@ -27,7 +27,7 @@ class InvoiceChangeStatusRequest extends FormRequest
 			'data.type' => 'required|string|in:invoices',
 			'data.id' => 'required|string',
 			'data.attributes' => 'required|array',
-			'data.attributes.status' => 'required|string|in:paid,unpaid,partial,cancelled,refunded',
+			'data.attributes.status' => 'required|string|in:paid,unpaid,partial,canceled,refunded',
         ];
     }
 }
