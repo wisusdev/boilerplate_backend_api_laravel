@@ -87,7 +87,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::apiResource('/subscriptions', SubscriptionController::class);
 
 	// Invoices
-    Route::patch('/invoices/{invoice}/changeStatus', [InvoiceController::class, 'changeStatus'])->name('invoices.changeStatus');
+    Route::patch('/invoices/{invoice}/status', [InvoiceController::class, 'status'])->name('invoices.status');
     Route::get('/invoices/{invoice}/download', [InvoiceController::class, 'download'])->name('invoices.download');
     Route::get('/invoices/{invoice}/resend', [InvoiceController::class, 'resend'])->name('invoices.resend');
 	Route::apiResource('/invoices', InvoiceController::class);

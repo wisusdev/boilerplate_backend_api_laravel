@@ -106,7 +106,7 @@ class InvoiceController extends Controller
 		return $attributes;
 	}
 
-	public function changeStatus(InvoiceChangeStatusRequest $request, Invoice $invoice): JsonResource
+	public function status(InvoiceChangeStatusRequest $request, Invoice $invoice): JsonResource
 	{
 		$dataValidated = $request->validated();
 		$status = $dataValidated['data']['attributes']['status'];
