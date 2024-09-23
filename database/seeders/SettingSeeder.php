@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Setting;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -23,8 +22,8 @@ class SettingSeeder extends Seeder
 				"url_api" => config('app.url'),
 				"url_frontend" => config('app.frontend_url'),
 				"description" => "Laravel api, Angular frontend and Flutter mobile.",
-				"logo" => "logo.png",
-				"favicon" => "favicon.png",
+				"logo" => "",
+				"favicon" => "",
 				"email" => "info@wisus.dev",
 				"phone" => "+503 1234-5678",
 				"address" => "1234 Main St, San Salvador, El Salvador",
@@ -51,18 +50,6 @@ class SettingSeeder extends Seeder
 					],
 					"wompi" => [
 						"enabled" => true,
-						"mode" => "sandbox",
-						"key" => "",
-						"secret" => ""
-					],
-					"serfinsa" => [
-						"enabled" => false,
-						"mode" => "sandbox",
-						"key" => "",
-						"secret" => ""
-					],
-					"n1co" => [
-						"enabled" => false,
 						"mode" => "sandbox",
 						"key" => "",
 						"secret" => ""
