@@ -30,7 +30,6 @@ class SubscriptionRequest extends FormRequest
             'data.attributes.package_id' => ['required', 'exists:packages,id'],
             'data.attributes.created_by' => ['required', 'exists:users,id'],
             'data.attributes.payment_method' => ['required', 'string'],
-			'data.attributes.stripe_payment_method' => ['string'],
         ];
 
 		if ($this->input('data.attributes.payment_method') === 'stripe') {
