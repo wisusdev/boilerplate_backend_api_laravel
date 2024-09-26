@@ -30,7 +30,7 @@ class SettingSeeder extends Seeder
 				"timezone" => "America/El_Salvador",
 			])],
 
-			['key' => 'payment_info', 'value' => json_encode([
+			['key' => 'payment_gateway', 'value' => json_encode([
 				"currency" => "USD",
 				"currency_symbol" => "$",
 				"decimal_separator" => ".",
