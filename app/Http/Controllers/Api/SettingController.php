@@ -6,20 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SettingRequest;
 use App\Http\Resources\SettingResource;
 use App\Models\Setting;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Imagick\Driver;
 
 class SettingController extends Controller
 {
-    public function __construct()
+	public function index(Request $request): SettingResource
     {
-        $this->middleware('can:settings:index')->only('index');
-        $this->middleware('can:settings:update')->only('update');
-    }
-    
-    public function index(): SettingResource
-    {
+		$key = $this->convertToCamelCase($request->input('filter.key'));
+
+		$this->authorize($key, Setting::class);
+
 		$query = Setting::query()
 			->allowedFilters(['key'])
 			->sparseFieldset()
@@ -31,6 +30,10 @@ class SettingController extends Controller
 
 	public function update(SettingRequest $request, Setting $setting): SettingResource
 	{
+		$key = $this->convertToCamelCase($setting->key);
+
+		$this->authorize($key, $setting);
+
 		$dataValidated = $request->validated();
 		$attributes = (object) $dataValidated['data']['attributes'];
 		$settingsValue = json_decode($setting->value, true);
@@ -73,5 +76,9 @@ class SettingController extends Controller
 		]);
 
 		return SettingResource::make($setting);
+	}
+
+	function convertToCamelCase(string $string): string {
+		return lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $string))));
 	}
 }
