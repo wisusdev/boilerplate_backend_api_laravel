@@ -20,7 +20,7 @@ class PermissionSeeder extends Seeder
 			'settings:taxes',
 			'settings:shipping',
 			'settings:social_auth_services',
-			'settings:email',
+			'settings:mail',
 			'settings:push_notification',
 			'settings:payment_gateway',
 
