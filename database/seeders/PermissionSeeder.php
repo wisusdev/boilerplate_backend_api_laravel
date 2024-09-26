@@ -15,12 +15,17 @@ class PermissionSeeder extends Seeder
     {
         $permissions = [
             // setting
-            'settings:index',
-            'settings:show',
-            'settings:update',
+            'settings:app',
+			'settings:taxes',
+			'settings:shipping',
+			'settings:social_auth_services',
+			'settings:email',
+			'settings:push_notification',
+			'settings:payment_gateway',
 
             // role
             'roles:index',
+			'roles:create',
             'roles:store',
             'roles:show',
             'roles:update',
@@ -28,6 +33,7 @@ class PermissionSeeder extends Seeder
 
             // user
             'users:index',
+			'users:create',
             'users:store',
             'users:show',
             'users:update',
@@ -35,6 +41,7 @@ class PermissionSeeder extends Seeder
 
             // package
             'packages:index',
+			'packages:create',
             'packages:store',
             'packages:show',
             'packages:update',
@@ -42,10 +49,19 @@ class PermissionSeeder extends Seeder
 
             // subscription
             'subscriptions:index',
+			'subscriptions:create',
             'subscriptions:store',
             'subscriptions:show',
             'subscriptions:update',
             'subscriptions:delete',
+
+			// invoice
+			'invoices:index',
+			'invoices:create',
+			'invoices:store',
+			'invoices:show',
+			'invoices:update',
+			'invoices:delete',
         ];
 
         foreach ($permissions as $permission) {
