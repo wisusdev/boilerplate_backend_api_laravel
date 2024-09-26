@@ -27,4 +27,10 @@ class InvoiceItem extends Model
 	{
 		return $this->belongsTo(Invoice::class);
 	}
+
+	public function package(): BelongsTo
+	{
+		return $this->belongsTo(Package::class, 'item_id');
+	}
+
 }
