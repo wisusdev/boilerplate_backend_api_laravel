@@ -32,9 +32,9 @@ class SettingPolicy
 		return $user->hasPermissionTo('settings:social_auth_services');
 	}
 
-	public function email(User $user): bool
+	public function mail(User $user): bool
 	{
-		return $user->hasPermissionTo('settings:email');
+		return $user->hasPermissionTo('settings:mail');
 	}
 
 	public function pushNotification(User $user): bool
