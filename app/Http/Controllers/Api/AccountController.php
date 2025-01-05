@@ -11,6 +11,7 @@ use App\Http\Resources\ProfileResource;
 use App\Http\Resources\SubscriptionResource;
 use App\Models\DeviceInfo;
 use App\Models\Subscription;
+use App\Notifications\PasswordChangeNotification;
 use App\Services\PaypalService;
 use App\Services\StripeService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -79,6 +80,8 @@ class AccountController extends Controller
         $user->update([
             'password' => $request->input('data.attributes.password')
         ]);
+
+        $user->notify(new PasswordChangeNotification());
 
         return response()->json([
             'data' => [
