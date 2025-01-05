@@ -30,17 +30,17 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Auth
-Route::withoutMiddleware([ValidateJsonApiDocument::class])->group(function () {
-    Route::post('/auth/login', [LoginController::class, 'login'])->name('auth.login');
-    Route::post('/auth/logout', [LogoutController::class, 'logout'])->name('auth.logout');
-    Route::post('/auth/register', [RegisterController::class, 'register'])->name('auth.register');
-    Route::post('/auth/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot');
-    Route::post('/auth/reset-password', [ForgotController::class, 'reset'])->name('auth.reset');
-    Route::post('/auth/email/resend', [VerifyEmailController::class, 'resend'])->name('verification.send');
-    Route::get('/auth/email/verify/{id}/{hash}', [VerifyEmailController::class, 'verifyEmail'])->name('verification.verify');
+Route::withoutMiddleware([ValidateJsonApiDocument::class])->prefix('auth')->group(function () {
+    Route::post('/login', [LoginController::class, 'login'])->name('auth.login');
+    Route::post('/register', [RegisterController::class, 'register'])->name('auth.register');
+    Route::post('/logout', [LogoutController::class, 'logout'])->name('auth.logout');
+    Route::post('/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot');
+    Route::post('/reset-password', [ForgotController::class, 'reset'])->name('auth.reset');
+    Route::post('/email/resend', [VerifyEmailController::class, 'resend'])->name('verification.send');
+    Route::get('/email/verify/{id}/{hash}', [VerifyEmailController::class, 'verifyEmail'])->name('verification.verify');
     Route::get('/oauth/{driver}', [SocialAuthController::class, 'redirectToProvider'])->name('social.oauth');
     Route::get('/oauth/{driver}/callback', [SocialAuthController::class,'handleProviderCallback'])->name('social.callback');
-    Route::middleware(['auth:api'])->post('/auth/refresh-token', [RefreshTokenController::class])->name('auth.refresh-token');
+    Route::middleware(['auth:api'])->post('/refresh-token', [RefreshTokenController::class])->name('auth.refresh-token');
 });
 
 // Public routes
