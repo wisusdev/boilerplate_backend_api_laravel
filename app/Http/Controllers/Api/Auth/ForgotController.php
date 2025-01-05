@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Notifications\ForgotPassword;
 
 class ForgotController extends Controller
 {
@@ -18,7 +19,7 @@ class ForgotController extends Controller
     {
 		$email = $request->input('data.attributes.email');
         $user = User::whereEmail($email)->first();
-		$token = Str::random(10);
+		$token = Str::random(60); // Asegúrate de que el token sea lo suficientemente largo
 
 		DB::table('password_reset_tokens')->updateOrInsert(['email' => $email], [
 			'token' => $token,
@@ -28,10 +29,7 @@ class ForgotController extends Controller
 		$url = config('app.frontend_url').'/auth/reset-password?token='.$token;
 
 		// Send email
-		Mail::send('mail.password_reset', ['url' => $url, 'name' => $user->first_name], function ($message) use ($email) {
-			$message->to($email);
-			$message->subject('Reset your password');
-		});
+		$user->notify(new ForgotPassword($url, $user->first_name));
 
 		return response()->json([
             'data' => [
@@ -58,7 +56,7 @@ class ForgotController extends Controller
 		}
 
 		// Validate expire token
-		if (!$passwordReset->created_at >= now()) {
+		if ($passwordReset->created_at < now()) {
             throw ValidationException::withMessages([
                 'token' => ['validation.tokenExpired'],
             ]);
