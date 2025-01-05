@@ -11,6 +11,9 @@ use App\Http\Resources\ProfileResource;
 use App\Http\Resources\SubscriptionResource;
 use App\Models\DeviceInfo;
 use App\Models\Subscription;
+use App\Models\User;
+use App\Notifications\DeleteAccountConfirmationNotification;
+use App\Notifications\VerifyDeleteAccountNotification;
 use App\Notifications\PasswordChangeNotification;
 use App\Services\PaypalService;
 use App\Services\StripeService;
@@ -22,6 +25,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AccountController extends Controller
@@ -94,20 +98,70 @@ class AccountController extends Controller
         ]);
     }
 
-    public function deleteAccount(Request $request, string $id): JsonResponse
-    {
-        $user = $request->user();
+	public function deleteAccount(Request $request): JsonResponse
+	{
+		$user = $request->user();
+		$token = Str::random(60);
 
-        if ($user->id != $id) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
+		DB::table('password_reset_tokens')->updateOrInsert(['email' => $user->email], [
+			'token' => $token,
+			'created_at' => now()->addHours(6)
+		]);
+
+		$url = config('app.frontend_url').'/account/delete-account-verify?token='.$token;
+
+		// Send email
+		$user->notify(new VerifyDeleteAccountNotification($url, $user->first_name));
+
+		return response()->json([
+			'data' => [
+				'type' => 'delete-account',
+				'attributes' => [
+					'status' => true,
+					'message' => 'message.deleteAccountEmailSent',
+				],
+			]
+		]);
+	}
+
+    public function deleteAccountVerify(Request $request): JsonResponse
+    {
+		$token = $request->input('data.attributes.token');
+		$account = DB::table('password_reset_tokens')->where('token', $token)->first();
+
+		// verify
+		if (!$account) {
+			throw ValidationException::withMessages([
+				'token' => ['validation.tokenInvalid'],
+			]);
+		}
+
+		// Validate expire token
+		if ($account->created_at < now()) {
+			throw ValidationException::withMessages([
+				'token' => ['validation.tokenExpired'],
+			]);
+		}
+
+		$user = User::whereEmail($account->email)->first();
+
+		if (!$user) {
+			throw ValidationException::withMessages([
+				'token' => ['validation.userNotFound'],
+			]);
+		}
 
         if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
             Storage::disk('public')->delete($user->avatar);
         }
 
+		DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+
+		// Send email to user
+		$user->notify(new DeleteAccountConfirmationNotification());
+
         $user->devices()->delete();
-        $user->tokens()->revoke();
+        $user->tokens()->delete();
         $user->delete();
 
         return response()->json(['message' => 'message.accountDeletedSuccessfully']);
