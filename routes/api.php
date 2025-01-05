@@ -75,7 +75,8 @@ Route::middleware(['auth:api'])->group(function () {
     Route::patch('/account/change-password', [AccountController::class, 'changePassword'])->name('profile.change-password');
     Route::get('/account/devices-auth-list', [AccountController::class, 'devicesAuthList'])->name('profile.devices-auth-list');
     Route::withoutMiddleware(ValidateJsonApiDocument::class)->post('/account/logout-device', [AccountController::class, 'logoutDevice'])->name('profile.logout-device');
-    Route::delete('/account/delete-account/{id}', [AccountController::class, 'deleteAccount'])->name('profile.delete-account');
+	Route::post('/account/delete-account', [AccountController::class, 'deleteAccount'])->name('profile.delete-account');
+    Route::delete('/account/delete-account-verify', [AccountController::class, 'deleteAccountVerify'])->name('profile.delete-account-verify');
 	Route::get('/account/subscriptions', [AccountController::class, 'subscriptions'])->name('profile.subscriptions');
 	Route::patch('/account/subscriptions/cancel/{subscription}', [AccountController::class, 'cancelSubscription'])->name('profile.cancelSubscription');
 	Route::get('/account/subscriptions/invoice/{subscription}', [AccountController::class, 'invoiceSubscription'])->name('profile.invoiceSubscription');
