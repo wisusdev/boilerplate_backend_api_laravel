@@ -47,7 +47,7 @@ class VerifyEmailController extends Controller
             ]);
         }
 
-        $request->user()->sendEmailVerificationNotification();
+        $request->user()->notify(new VerifyEmail());
 
         return response()->json(['message' => 'message.emailVerificationSent']);
     }
