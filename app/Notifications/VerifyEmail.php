@@ -26,12 +26,13 @@ class VerifyEmail extends Notification
 
         $url = config('app.frontend_url') . str_replace('/api/v1', '', $this->verificationUrl($notifiable));
 
-        $mailMessage = new MailMessage();
-
-        return $mailMessage->view('mail.email_verify', [
-            'name' => $name,
-            'url' => $url
-        ]);
+        return (new MailMessage)
+            ->subject('Verify Email Address')
+            ->greeting('Hello!')
+            ->line('Hello ' . $name . ',')
+            ->line('Please click the button below to verify your email address.')
+            ->action('Verify Email Address', $url)
+            ->line('If you did not create an account, no further action is required.');
     }
 
     protected function verificationUrl($notifiable): string
