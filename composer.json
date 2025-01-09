@@ -13,12 +13,13 @@
         "laravel/framework": "^11.0",
         "laravel/passport": "^12.0",
         "laravel/socialite": "^5.11",
-        "laravel/telescope": "^5.0",
+        "laravel/telescope": "^5.2",
         "laravel/tinker": "^2.8",
         "predis/predis": "^2.2",
         "spatie/laravel-permission": "^6.3"
     },
     "require-dev": {
+        "barryvdh/laravel-debugbar": "^3.14",
         "fakerphp/faker": "^1.9.1",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.18",
