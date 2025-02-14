@@ -43,18 +43,6 @@ Route::withoutMiddleware([ValidateJsonApiDocument::class])->prefix('auth')->grou
     Route::middleware(['auth:api'])->post('/refresh-token', [RefreshTokenController::class])->name('auth.refresh-token');
 });
 
-// Public routes
-Route::withoutMiddleware([ValidateJsonApiDocument::class])->prefix('public')->group(function () {
-    // Packages
-    Route::get('/packages', [PackageController::class, 'publicIndex'])->name('packages.publicIndex');
-	Route::get('/packages/{package}', [PackageController::class, 'publicShow'])->name('packages.publicShow');
-
-	// Subscriptions
-	Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store')->middleware('auth:api');
-	Route::patch('/subscriptions/validate/{subscription}', [SubscriptionController::class, 'validateSubscription'])->name('subscriptions.validate')->middleware('auth:api');
-	Route::get('/wompi/regions', [SubscriptionController::class, 'getWompiRegions'])->name('wompi.getRegions')->middleware('auth:api');
-});
-
 // Protected routes
 Route::middleware(['auth:api'])->group(function () {
     // Users
@@ -80,18 +68,4 @@ Route::middleware(['auth:api'])->group(function () {
 	Route::get('/account/subscriptions', [AccountController::class, 'subscriptions'])->name('profile.subscriptions');
 	Route::patch('/account/subscriptions/cancel/{subscription}', [AccountController::class, 'cancelSubscription'])->name('profile.cancelSubscription');
 	Route::get('/account/subscriptions/invoice/{subscription}', [AccountController::class, 'invoiceSubscription'])->name('profile.invoiceSubscription');
-
-    // Packages
-    Route::apiResource('/packages', PackageController::class);
-
-    // Subscriptions
-    Route::apiResource('/subscriptions', SubscriptionController::class);
-
-	// Invoices
-    Route::patch('/invoices/{invoice}/status', [InvoiceController::class, 'changeInvoiceStatus'])->name('invoices.status');
-    Route::get('/invoices/{invoice}/download', [InvoiceController::class, 'download'])->name('invoices.download');
-    Route::get('/invoices/{invoice}/resend', [InvoiceController::class, 'resendInvoiceNotification'])->name('invoices.resend');
-	Route::patch('/invoices/{invoice}/payment', [InvoiceController::class, 'paymentInvoice'])->name('invoices.payment');
-
-	Route::apiResource('/invoices', InvoiceController::class);
 });
