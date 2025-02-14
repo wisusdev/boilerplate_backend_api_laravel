@@ -41,33 +41,6 @@ class PermissionSeeder extends Seeder
 			'users:edit',
             'users:update',
             'users:delete',
-
-            // package
-            'packages:index',
-			'packages:create',
-            'packages:store',
-            'packages:show',
-			'packages:edit',
-            'packages:update',
-            'packages:delete',
-
-            // subscription
-            'subscriptions:index',
-			'subscriptions:create',
-            'subscriptions:store',
-            'subscriptions:show',
-			'subscriptions:edit',
-            'subscriptions:update',
-            'subscriptions:delete',
-
-			// invoice
-			'invoices:index',
-			'invoices:create',
-			'invoices:store',
-			'invoices:show',
-			'invoices:edit',
-			'invoices:update',
-			'invoices:delete',
         ];
 
         foreach ($permissions as $permission) {
