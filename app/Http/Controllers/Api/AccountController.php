@@ -8,9 +8,7 @@ use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LogoutDeviceRequest;
 use App\Http\Resources\DeviceResource;
 use App\Http\Resources\ProfileResource;
-use App\Http\Resources\SubscriptionResource;
 use App\Models\DeviceInfo;
-use App\Models\Subscription;
 use App\Models\User;
 use App\Notifications\DeleteAccountConfirmationNotification;
 use App\Notifications\VerifyDeleteAccountNotification;
@@ -202,63 +200,5 @@ class AccountController extends Controller
                 ],
             ]
         ]);
-
     }
-
-	public function subscriptions(Request $request): JsonResource
-	{
-		$user = $request->user();
-
-		$subscriptions = $user->subscriptions()
-			->sparseFieldset()
-			->jsonPaginate();
-
-		return SubscriptionResource::collection($subscriptions);
-	}
-
-	public function cancelSubscription(Request $request, Subscription $subscription): JsonResource
-	{
-		DB::beginTransaction();
-
-		if($subscription['payment_method'] == 'paypal') {
-			$responseCancelSubscription = (new PaypalService())->cancelSubscription($subscription['payment_transaction_id'], $request['data']['attributes']['reason']);
-			if ($responseCancelSubscription->http_code === 204){
-				$subscription->update([
-					'status' => 'cancel',
-				]);
-
-				DB::commit();
-
-			}
-		}
-
-		if($subscription['payment_method'] == 'stripe') {
-			$responseCancelSubscription = (new StripeService())->cancelSubscription($subscription['payment_transaction_id'], $request['data']['attributes']['reason']);
-			if ($responseCancelSubscription->http_code === 200){
-				$subscription->update([
-					'status' => 'cancel',
-				]);
-
-				DB::commit();
-			}
-		}
-
-		return SubscriptionResource::make($subscription);
-	}
-
-	public function invoiceSubscription(Subscription $subscription): Response
-	{
-		$data = [
-			'userFullName' => $subscription->user->first_name . ' ' . $subscription->user->last_name,
-			'package_name' => $subscription->package->name,
-			'interval_count' => $subscription->package->interval_count,
-			'interval' => $subscription->package->interval,
-			'package_price' => $subscription->package_price,
-		];
-
-		$pdf = Pdf::loadView('invoices.subscriptions', ['data' => $data]);
-		$invoiceName = 'invoice-' . date('Y-m-d-h-m-s') . '.pdf';
-		return $pdf->download($invoiceName);
-	}
-
 }
