@@ -62,7 +62,4 @@ Route::middleware(['auth:api'])->group(function () {
     Route::withoutMiddleware(ValidateJsonApiDocument::class)->post('/account/logout-device', [AccountController::class, 'logoutDevice'])->name('profile.logout-device');
 	Route::post('/account/delete-account', [AccountController::class, 'deleteAccount'])->name('profile.delete-account');
     Route::delete('/account/delete-account-verify', [AccountController::class, 'deleteAccountVerify'])->name('profile.delete-account-verify');
-	Route::get('/account/subscriptions', [AccountController::class, 'subscriptions'])->name('profile.subscriptions');
-	Route::patch('/account/subscriptions/cancel/{subscription}', [AccountController::class, 'cancelSubscription'])->name('profile.cancelSubscription');
-	Route::get('/account/subscriptions/invoice/{subscription}', [AccountController::class, 'invoiceSubscription'])->name('profile.invoiceSubscription');
 });
