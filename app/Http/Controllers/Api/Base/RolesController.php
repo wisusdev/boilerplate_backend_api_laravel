@@ -1,27 +1,25 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Base;
 
-use App\Http\Requests\RolRequest;
-use App\Models\Role;
 use App\Http\Controllers\Controller;
+use Illuminate\Auth\Access\AuthorizationException;
+use App\Http\Requests\RolRequest;
 use App\Http\Resources\RoleResource;
+use App\Models\Role;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 
 class RolesController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('can:roles:index')->only('index');
-        $this->middleware('can:roles:store')->only('store');
-        $this->middleware('can:roles:show')->only('show');
-        $this->middleware('can:roles:update')->only('update');
-        $this->middleware('can:roles:delete')->only('destroy');
-    }
-
+    /**
+     * @throws AuthorizationException
+     */
     public function index(): JsonResource
     {
+        $this->authorize('index', Role::class);
+
         $roles = Role::query()
             ->sparseFieldset()
             ->jsonPaginate();
@@ -29,8 +27,13 @@ class RolesController extends Controller
         return RoleResource::collection($roles);
     }
 
+    /**
+     * @throws AuthorizationException
+     */
     public function store(RolRequest $request): RoleResource
     {
+        $this->authorize('store', Role::class);
+
         $role = Role::create([
             'name' => $request->input('data.attributes.name')
         ]);
@@ -39,14 +42,22 @@ class RolesController extends Controller
         return RoleResource::make($role);
     }
 
+    /**
+     * @throws AuthorizationException
+     */
     public function show(Role $role): JsonResource
     {
+        $this->authorize('show', $role);
         return RoleResource::make($role);
     }
 
 
+    /**
+     * @throws AuthorizationException
+     */
     public function update(RolRequest $request, Role $role): RoleResource
     {
+        $this->authorize('update', $role);
         $role->update([
             'name' => $request->input('data.attributes.name')
         ]);
@@ -55,8 +66,21 @@ class RolesController extends Controller
         return RoleResource::make($role);
     }
 
-    public function destroy(Role $role): Response
+    /**
+     * @throws AuthorizationException
+     */
+    public function destroy(Role $role): JsonResponse | Response
     {
+        $this->authorize('delete', $role);
+
+        if ($role->name === 'super-admin' || $role->name === 'admin') {
+            return response()->json(['message' => 'Cannot delete the ' . $role->name . ' role'], 403);
+        }
+
+        if ($role->users()->count() > 0) {
+            return response()->json(['message' => 'Cannot delete a role that has users assigned'], 403);
+        }
+
         $role->delete();
         return response()->noContent();
     }
