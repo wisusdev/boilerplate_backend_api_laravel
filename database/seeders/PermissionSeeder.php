@@ -14,31 +14,25 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            // setting
-			'settings:index',
-            'settings:app',
-			'settings:taxes',
-			'settings:shipping',
-			'settings:social_auth_services',
-			'settings:mail',
-			'settings:push_notification',
-			'settings:payment_gateway',
-
             // role
             'roles:index',
-			'roles:create',
+            'roles:create',
             'roles:store',
             'roles:show',
-			'roles:edit',
+            'roles:edit',
             'roles:update',
             'roles:delete',
 
+            // permission
+            'permissions:index',
+            'permissions:by-role',
+
             // user
             'users:index',
-			'users:create',
+            'users:create',
             'users:store',
             'users:show',
-			'users:edit',
+            'users:edit',
             'users:update',
             'users:delete',
         ];
