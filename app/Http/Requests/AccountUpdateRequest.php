@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Rules\Base64ValidationRule;
+use App\Rules\Base64FileValidationRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -28,7 +28,7 @@ class AccountUpdateRequest extends FormRequest
             'data.attributes.first_name' => ['required', 'string'],
             'data.attributes.last_name' => ['required', 'string'],
             'data.attributes.email' => ['required', 'email', 'unique:users,email,' . $this->user()->id],
-            'data.attributes.avatar' => ['nullable', 'string', new Base64ValidationRule()],
+            'data.attributes.avatar' => ['nullable', 'string', new Base64FileValidationRule(['image/jpeg', 'image/png', 'image/gif', 'image/webp'], 2048)],
             'data.attributes.language' => ['required', 'string', 'in:en,es']
         ];
     }
