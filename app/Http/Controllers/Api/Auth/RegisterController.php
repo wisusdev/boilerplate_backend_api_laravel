@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
-use App\Http\Requests\RegisterRequest;
 use App\Models\User;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\RegisterRequest;
+use Illuminate\Validation\ValidationException;
 
 class RegisterController extends Controller
 {
+    /**
+     * @throws ValidationException
+     */
     public function register(RegisterRequest $request): JsonResponse
     {
         $data = $request->validated();

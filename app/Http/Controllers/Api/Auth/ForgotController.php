@@ -6,12 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ForgotRequest;
 use App\Http\Requests\ResetPasswordRequest;
 use App\Models\User;
+use App\Notifications\ForgotPassword;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use App\Notifications\ForgotPassword;
 
 class ForgotController extends Controller
 {

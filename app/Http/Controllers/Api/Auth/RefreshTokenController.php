@@ -8,10 +8,13 @@ use Illuminate\Http\Request;
 
 class RefreshTokenController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
+    public function refreshToken(Request $request): JsonResponse
     {
+        // Revocar el token actual
         $request->user()->token()->revoke();
-        $token = $request->user()->createToken('Refresh Token');
+
+        // Crear un nuevo token
+        $token = $request->user()->createToken('API Token');
 
         $response = [
             'token' => $token->accessToken,
