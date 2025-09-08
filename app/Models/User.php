@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -19,45 +19,95 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
-        'username',
+        'user_type',
+        'business_id',
+        'crm_contact_id',
         'first_name',
         'last_name',
+        'username',
         'email',
         'password',
         'avatar',
         'language',
+        'contact_no',
+        'address',
+        'max_sales_discount_percent',
+        'allow_login',
+        'essentials_department_id',
+        'essentials_designation_id',
+        'essentials_salary',
+        'essentials_pay_period',
+        'essentials_pay_cycle',
+        'status',
+        'is_cmmsn_agnt',
+        'cmmsn_percent',
+        'selected_contacts',
+        'dob',
+        'gender',
+        'marital_status',
+        'blood_group',
+        'contact_number',
+        'alt_number',
+        'family_number',
+        'fb_link',
+        'twitter_link',
+        'social_media_1',
+        'social_media_2',
+        'permanent_address',
+        'current_address',
+        'guardian_name',
+        'custom_field_1',
+        'custom_field_2',
+        'custom_field_3',
+        'custom_field_4',
+        'bank_details',
+        'id_proof_name',
+        'id_proof_number',
+        'location_id',
+        'is_enable_service_staff_pin',
+        'service_staff_pin',
+        'available_at',
+        'paused_at',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $hidden = [
         'password',
         'remember_token',
+        'service_staff_pin',
     ];
 
     /**
-     * The attributes that should be cast.
+     * Get the attributes that should be cast.
      *
-     * @var array<string, string>
+     * @return array<string, string>
      */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-    ];
-
-    public function sendEmailVerificationNotification(): void
+    protected function casts(): array
     {
-        $this->notify(new VerifyEmail());
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'max_sales_discount_percent' => 'decimal:5',
+            'essentials_salary' => 'decimal:22,4',
+            'cmmsn_percent' => 'decimal:4',
+            'available_at' => 'datetime',
+            'paused_at' => 'datetime',
+            'dob' => 'date',
+        ];
     }
 
-    public function getResourceType(): string
+    /**
+     * Get the businesses owned by the user.
+     */
+    public function businesses()
     {
-        return 'users';
+        return $this->hasMany(Business::class, 'owner_id');
     }
 }
