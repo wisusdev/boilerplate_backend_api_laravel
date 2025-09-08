@@ -28,8 +28,8 @@ class LoginResource extends JsonResource
                 ],
             ],
             'relationships' => [
-                'roles' => $this->resource->user->roles->pluck('name'),
-                'permissions' => $this->resource->user->getAllPermissions()->pluck('name'),
+                'roles' => $this->resource->user->roles ? $this->resource->user->roles->pluck('name') : null,
+                'permissions' => $this->resource->user->permissions ? $this->resource->user->permissions->pluck('name') : null,
                 'access' => [
                     'token' => $this->resource->token,
                     'token_type' => $this->resource->token_type,
