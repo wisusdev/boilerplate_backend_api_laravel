@@ -15,7 +15,7 @@ return new class extends Migration
             $table->increments('id');
             $table->unsignedInteger('business_id')->index('cash_registers_business_id_foreign');
             $table->integer('location_id')->nullable()->index();
-            $table->uuid('user_id')->nullable()->index('cash_registers_user_id_foreign');
+            $table->unsignedInteger('user_id')->nullable()->index('cash_registers_user_id_foreign');
             $table->enum('status', ['close', 'open'])->default('open');
             $table->dateTime('closed_at')->nullable();
             $table->decimal('closing_amount', 22, 4)->default(0);

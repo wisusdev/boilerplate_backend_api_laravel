@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('units', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('business_id')->index('units_business_id_foreign');
-            $table->uuid('created_by')->index('units_created_by_foreign');
+            $table->unsignedInteger('created_by')->index('units_created_by_foreign');
             $table->boolean('is_active')->default(true);
             $table->string('actual_name', 191);
             $table->string('short_name', 191);

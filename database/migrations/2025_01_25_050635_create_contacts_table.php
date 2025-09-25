@@ -39,7 +39,7 @@ return new class extends Migration
             $table->integer('pay_term_number')->nullable();
             $table->enum('pay_term_type', ['days', 'months'])->nullable();
             $table->decimal('credit_limit', 22, 4)->nullable();
-            $table->uuid('created_by')->index('contacts_created_by_foreign');
+            $table->unsignedInteger('created_by')->index('contacts_created_by_foreign');
             $table->decimal('balance', 22, 4)->default(0);
             $table->integer('total_rp')->default(0)->comment('rp is the short form of reward points');
             $table->integer('total_rp_used')->default(0)->comment('rp is the short form of reward points');

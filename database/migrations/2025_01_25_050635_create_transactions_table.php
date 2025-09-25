@@ -67,12 +67,12 @@ return new class extends Migration
             $table->decimal('final_total', 22, 4)->default(0);
             $table->unsignedInteger('expense_category_id')->nullable()->index();
             $table->integer('expense_sub_category_id')->nullable();
-            $table->uuid('expense_for')->nullable()->index('transactions_expense_for_foreign');
+            $table->unsignedInteger('expense_for')->nullable()->index('transactions_expense_for_foreign');
             $table->integer('commission_agent')->nullable()->index();
             $table->string('document', 191)->nullable();
             $table->boolean('is_direct_sale')->default(false);
             $table->boolean('is_suspend')->default(false);
-            $table->uuid('created_by')->index();
+            $table->unsignedInteger('created_by')->index();
             $table->string('prefer_payment_method', 191)->nullable();
             $table->integer('prefer_payment_account')->nullable();
             $table->text('sales_order_ids')->nullable();

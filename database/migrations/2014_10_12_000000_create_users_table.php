@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-			$table->uuid('id')->primary();
+			$table->increments('id');
 			$table->string('user_type', 191)->default('user')->index();
 			$table->unsignedInteger('business_id')->nullable()->index('users_business_id_foreign');
 			$table->unsignedInteger('crm_contact_id')->nullable()->index('users_crm_contact_id_foreign');

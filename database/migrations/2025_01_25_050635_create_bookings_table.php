@@ -21,7 +21,7 @@ return new class extends Migration
             $table->unsignedInteger('location_id')->index();
             $table->dateTime('booking_start');
             $table->dateTime('booking_end');
-            $table->uuid('created_by')->index('bookings_created_by_foreign');
+            $table->unsignedInteger('created_by')->index('bookings_created_by_foreign');
             $table->string('booking_status', 191)->index();
             $table->text('booking_note')->nullable();
             $table->timestamps();

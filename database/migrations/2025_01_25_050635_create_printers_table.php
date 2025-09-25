@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('ip_address', 191)->nullable();
             $table->string('port', 191)->nullable();
             $table->string('path', 191)->nullable();
-            $table->uuid('created_by');
+            $table->unsignedInteger('created_by');
             $table->timestamps();
         });
     }

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('brands', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('business_id')->index('brands_business_id_foreign');
-            $table->uuid('created_by')->index('brands_created_by_foreign');
+            $table->unsignedInteger('created_by')->index('brands_created_by_foreign');
             $table->string('name', 191);
             $table->text('description')->nullable();
             $table->string('slug', 191)->nullable();

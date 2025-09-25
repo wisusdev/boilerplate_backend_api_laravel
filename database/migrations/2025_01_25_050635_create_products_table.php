@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedInteger('sub_category_id')->nullable()->index('products_sub_category_id_foreign');
             $table->unsignedInteger('tax')->nullable()->index('products_tax_foreign');
             $table->unsignedInteger('unit_id')->nullable()->index('products_unit_id_foreign');
-            $table->uuid('created_by')->index('products_created_by_foreign');
+            $table->unsignedInteger('created_by')->index('products_created_by_foreign');
             $table->string('name', 191)->index();
             $table->enum('type', ['single', 'variable', 'modifier', 'combo'])->nullable()->index();
             $table->integer('secondary_unit_id')->nullable()->index();

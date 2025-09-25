@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('tax_rates', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('business_id')->index('tax_rates_business_id_foreign');
-            $table->uuid('created_by')->index('tax_rates_created_by_foreign');
+            $table->unsignedInteger('created_by')->index('tax_rates_created_by_foreign');
             $table->string('name', 191);
             $table->double('amount');
             $table->boolean('is_tax_group')->default(false);

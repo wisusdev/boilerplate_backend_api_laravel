@@ -17,7 +17,7 @@ return new class extends Migration
 
             $table->unsignedInteger('currency_id')->index('business_currency_id_foreign')->comment('Moneda predeterminada para el negocio');
             $table->unsignedInteger('default_sales_tax')->nullable()->index('business_default_sales_tax_foreign')->comment('Impuesto predeterminado para las ventas');
-            $table->uuid('owner_id')->index('business_owner_id_foreign')->comment('Propietario del negocio');
+            $table->unsignedInteger('owner_id')->index('business_owner_id_foreign')->comment('Propietario del negocio');
             $table->unsignedInteger('purchase_currency_id')->nullable()->comment('Moneda en la que se realiza la compra de productos');
             $table->unsignedInteger('transaction_edit_days')->default(30)->comment('Días permitidos para editar una transacción');
             $table->unsignedInteger('stock_expiry_alert_days')->default(30)->comment('Días para alertar sobre la expiración de stock');
@@ -71,7 +71,7 @@ return new class extends Migration
             $table->enum('time_format', ['12', '24'])->default('24');
             $table->text('ref_no_prefixes')->nullable();
             $table->char('theme_color', 20)->nullable();
-            $table->uuid('created_by')->nullable();
+            $table->unsignedInteger('created_by')->nullable();
             $table->boolean('enable_rp')->default(false)->comment('rp is the short form of reward points');
             $table->string('rp_name', 191)->nullable()->comment('rp is the short form of reward points');
             $table->decimal('amount_for_unit_rp', 22, 4)->default(1)->comment('rp is the short form of reward points');
