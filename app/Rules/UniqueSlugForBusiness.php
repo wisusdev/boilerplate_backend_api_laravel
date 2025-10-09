@@ -11,12 +11,14 @@ class UniqueSlugForBusiness implements ValidationRule
     protected string $table;
     protected ?int $businessId;
     protected ?int $ignoreId;
+	protected string $whereNull;
 
-    public function __construct(string $table, ?int $businessId = null, ?int $ignoreId = null)
+    public function __construct(string $table, ?int $businessId = null, ?int $ignoreId = null, $ignore = null, $whereNull = 'deleted_at')
     {
         $this->table = $table;
         $this->businessId = $businessId;
         $this->ignoreId = $ignoreId;
+		$this->whereNull = $whereNull;
     }
 
     /**
@@ -35,6 +37,10 @@ class UniqueSlugForBusiness implements ValidationRule
         if ($this->ignoreId) {
             $query->where('id', '!=', $this->ignoreId);
         }
+
+		if ($this->whereNull) {
+			$query->whereNull($this->whereNull);
+		}
 
         if ($query->exists()) {
             $fail('Ya existe un registro con este slug en el negocio.');
