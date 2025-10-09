@@ -82,12 +82,25 @@ class JsonApiQueryBuilder
 				return $this;
 			}
 
-			$fields = explode(',', request('fields.' . $this->getResourceType()));
+			$fields = explode(separator: ',', string: request(key: 'fields.' . $this->getResourceType()));
 			$routeKeyName = $this->getModel()->getRouteKeyName();
-
 			if (!in_array($routeKeyName, $fields)) {
 				$fields[] = $routeKeyName;
 			}
+
+			// Add foreign keys to ensure relationships work correctly
+			$model = $this->getModel();
+			$fillable = $model->getFillable();
+
+			if (in_array('business_id', $fillable) && !in_array('business_id', $fields)) {
+				$fields[] = 'business_id';
+			}
+
+			/*foreach ($fillable as $field) {
+				if (str_ends_with($field, '_id') && !in_array($field, $fields)) {
+					$fields[] = $field;
+				}
+			}*/
 
 			return $this->addSelect($fields);
 		};

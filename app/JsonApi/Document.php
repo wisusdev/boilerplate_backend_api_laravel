@@ -3,6 +3,7 @@
 namespace App\JsonApi;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
 
 class Document extends Collection
 {
@@ -51,12 +52,23 @@ class Document extends Collection
 
     public function relationshipLinks(array $relationships): self
     {
-        foreach ($relationships as $key => $value) {
-            $this->items['data']['relationships'][$value]['links'] = [
-                'self' => route("api.v1.{$this->items['data']['type']}.relationships.{$value}", $this->items['data']['id']),
-                'related' => route("api.v1.{$this->items['data']['type']}.{$value}", $this->items['data']['id']),
-            ];
+        foreach ($relationships as $rel) {
+            $links = [];
+            
+            $selfRoute = "{$this->items['data']['type']}.relationships.{$rel['name']}";
+            if (Route::has($selfRoute)) {
+                $links['self'] = route($selfRoute, $this->items['data']['id']);
+            }
+            
+            if (Route::has($rel['route'])) {
+                $links['related'] = route($rel['route'], $rel['params']);
+            }
+            
+            if (!empty($links)) {
+                $this->items['data']['relationships'][$rel['name']]['links'] = $links;
+            }
         }
+        
         return $this;
     }
 }
