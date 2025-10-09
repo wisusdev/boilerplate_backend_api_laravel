@@ -10,6 +10,7 @@ use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
 class Handler extends ExceptionHandler
 {
@@ -30,7 +31,7 @@ class Handler extends ExceptionHandler
     public function register(): void
     {
         $this->renderable(function (NotFoundHttpException $e) {
-            throw new JsonApi\NotFoundHttpException;
+            throw new JsonApi\NotFoundHttpException($e->getMessage());
         });
 
         $this->renderable(function (BadRequestHttpException $e) {
@@ -38,11 +39,15 @@ class Handler extends ExceptionHandler
         });
 
         $this->renderable(function (AuthenticationException $e) {
-            throw new JsonApi\AuthenticationException;
+            throw new JsonApi\AuthenticationException($e->getMessage());
         });
 
         $this->renderable(function (AccessDeniedHttpException $e) {
             throw new JsonApi\UnauthorizedException;
+        });
+
+        $this->renderable(function (RouteNotFoundException $e) {
+            throw new JsonApi\RouteNotFoundException($e->getMessage());
         });
     }
 
