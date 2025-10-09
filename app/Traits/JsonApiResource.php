@@ -33,7 +33,7 @@ trait JsonApiResource
             ->attributes($this->filterAttributes($this->toJsonApi()))
             ->relationshipLinks($this->getRelationshipLinks())
             ->links([
-                'self' => route('api.v1.' .  $this->resource->getResourceType() . '.show', $this->getRouteParameters())
+                'self' => route('api.v1.' . $this->resource->getResourceType() . '.show', $this->getRouteParameters())
             ])->get('data');
     }
 
@@ -52,7 +52,7 @@ trait JsonApiResource
         return $this->resource;
     }
 
-    public function withResponse($request, $response)
+    public function withResponse($request, $response): void
     {
         $response->header(
             'Location',
