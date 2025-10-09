@@ -32,7 +32,7 @@ class BusinessLocationController extends Controller
             ->allowedIncludes(['business'])
             ->allowedFilters(['name', 'is_active', 'business_id'])
             ->allowedSorts(['id', 'name', 'created_at'])
-            ->sparseFieldset(['business_id'])
+            ->sparseFieldset()
             ->jsonPaginate();
 
         return BusinessLocationResource::collection($locations);

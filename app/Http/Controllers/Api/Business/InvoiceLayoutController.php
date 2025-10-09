@@ -28,7 +28,7 @@ class InvoiceLayoutController extends Controller
             ->allowedIncludes(['business'])
             ->allowedFilters(['name', 'design', 'is_default', 'show_logo', 'show_business_name'])
             ->allowedSorts(['id', 'name', 'design', 'is_default', 'created_at'])
-            ->sparseFieldset(['business_id'])
+            ->sparseFieldset()
             ->jsonPaginate();
 
         return InvoiceLayoutResource::collection($invoiceLayouts);
@@ -66,7 +66,7 @@ class InvoiceLayoutController extends Controller
 
         $invoiceLayout = InvoiceLayout::where('id', $invoiceLayout->id)
             ->allowedIncludes(['business'])
-            ->sparseFieldset(['business_id'])
+            ->sparseFieldset()
             ->firstOrFail();
 
         return InvoiceLayoutResource::make($invoiceLayout);

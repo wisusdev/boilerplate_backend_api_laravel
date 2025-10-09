@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use OpenApi\Attributes as OA;
+use Throwable;
 
 class BrandController extends Controller
 {
@@ -31,7 +31,7 @@ class BrandController extends Controller
             ->allowedIncludes(['business', 'creator', 'products'])
             ->allowedFilters(['name', 'business_id'])
             ->allowedSorts(['id', 'name', 'created_at'])
-            ->sparseFieldset(['business_id'])
+            ->sparseFieldset()
             ->jsonPaginate();
 
         return BrandResource::collection($brands);
@@ -40,7 +40,7 @@ class BrandController extends Controller
     /**
      * Store a newly created brand in storage.
      *
-     * @throws AuthorizationException
+     * @throws AuthorizationException|Throwable
      */
     public function store(BrandRequest $request, Business $business): BrandResource
     {
@@ -76,7 +76,7 @@ class BrandController extends Controller
     /**
      * Update the specified brand in storage.
      *
-     * @throws AuthorizationException
+     * @throws AuthorizationException|Throwable
      */
     public function update(BrandRequest $request, Business $business, Brand $brand): BrandResource
     {

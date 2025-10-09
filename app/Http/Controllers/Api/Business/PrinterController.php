@@ -8,6 +8,7 @@ use App\Http\Resources\PrinterResource;
 use App\Models\Business;
 use App\Models\Printer;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 
@@ -25,9 +26,8 @@ class PrinterController extends Controller
             ->allowedIncludes(['business'])
             ->allowedFilters(['name', 'connection_type', 'capability_profile'])
             ->allowedSorts(['id', 'name', 'connection_type', 'capability_profile'])
-            ->sparseFieldset(['business_id'])
+            ->sparseFieldset()
             ->jsonPaginate();
-
 
         return PrinterResource::collection($printers);
     }
@@ -83,6 +83,6 @@ class PrinterController extends Controller
     {
         $this->authorize('delete', $printer);
         $printer->delete();
-        return response()->noContent();
+	    return response()->noContent();
     }
 }

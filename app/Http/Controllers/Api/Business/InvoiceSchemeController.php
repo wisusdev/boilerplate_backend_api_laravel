@@ -28,7 +28,7 @@ class InvoiceSchemeController extends Controller
             ->allowedIncludes(['business'])
             ->allowedFilters(['name', 'scheme_type', 'number_type', 'prefix', 'is_default'])
             ->allowedSorts(['id', 'name', 'prefix', 'scheme_type', 'is_default'])
-            ->sparseFieldset(['business_id'])
+            ->sparseFieldset()
             ->jsonPaginate();
 
         return InvoiceSchemeResource::collection($invoiceSchemes);
@@ -65,7 +65,7 @@ class InvoiceSchemeController extends Controller
 
         $invoiceScheme = InvoiceScheme::where('id', $invoiceScheme->id)
             ->allowedIncludes(['business'])
-            ->sparseFieldset(['business_id'])
+            ->sparseFieldset()
             ->firstOrFail();
 
         return InvoiceSchemeResource::make($invoiceScheme);
