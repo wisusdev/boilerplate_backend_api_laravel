@@ -47,16 +47,16 @@ class BusinessLocationResource extends JsonResource
         ];
     }
 
-    public function getRelationshipLinks(): array
-    {
-        $links = [];
-
-        if ($this->resource->business_id) {
-            $links['business'] = route('businesses.show', $this->resource->business_id);
-        }
-
-        return $links;
-    }
+	public function getRelationshipLinks(): array
+	{
+		return [
+			[
+				'name' => 'business',
+				'route' => 'businesses.show',
+				'params' => $this->resource->business
+			]
+		];
+	}
 
     public function getIncludes(): array
     {
@@ -64,4 +64,12 @@ class BusinessLocationResource extends JsonResource
             BusinessResource::make($this->resource->business)
         ];
     }
+
+	protected function getRouteParameters(): array
+	{
+		return [
+			'business' => $this->resource->business,
+			'business_location' => $this->resource
+		];
+	}
 }

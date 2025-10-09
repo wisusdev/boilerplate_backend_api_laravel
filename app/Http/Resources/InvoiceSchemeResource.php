@@ -29,31 +29,29 @@ class InvoiceSchemeResource extends JsonResource
         ];
     }
 
-    public function getResourceLinks(): array
-    {
-        return [
-            'self' => route('invoice-schemes.show',[
-                'business' => $this->business_id,
-                'invoice_scheme' => $this->resource->getRouteKey(),
-            ]),
-        ];
-    }
-
     public function getRelationshipLinks(): array
     {
-        $links = [];
-
-        if ($this->resource->business_id) {
-            $links['business'] = route('businesses.show', $this->resource->business_id);
-        }
-
-        return $links;
+        return [
+            [
+                'name' => 'business',
+                'route' => 'businesses.show',
+                'params' => $this->resource->business
+            ]
+        ];
     }
 
     public function getIncludes(): array
     {
         return [
             BusinessResource::make($this->resource->business)
+        ];
+    }
+
+    protected function getRouteParameters()
+    {
+        return [
+            'business' => $this->resource->business,
+            'invoice_scheme' => $this->resource
         ];
     }
 }

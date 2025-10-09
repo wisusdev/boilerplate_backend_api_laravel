@@ -102,31 +102,29 @@ class InvoiceLayoutResource extends JsonResource
         ];
     }
 
-    public function getResourceLinks(): array
-    {
-        return [
-            'self' => route('invoice-layouts.show', [
-                'business' => $this->business_id,
-                'invoice_layout' => $this->resource->getRouteKey(),
-            ]),
-        ];
-    }
-
     public function getRelationshipLinks(): array
     {
-        $links = [];
-
-        if ($this->resource->business_id) {
-            $links['business'] = route('businesses.show', $this->resource->business_id);
-        }
-
-        return $links;
+        return [
+            [
+                'name' => 'business',
+                'route' => 'businesses.show',
+                'params' => $this->resource->business
+            ]
+        ];
     }
 
     public function getIncludes(): array
     {
         return [
             BusinessResource::make($this->resource->business)
+        ];
+    }
+
+    protected function getRouteParameters(): array
+    {
+        return [
+            'business' => $this->resource->business,
+            'invoice_layout' => $this->resource
         ];
     }
 }
