@@ -94,6 +94,11 @@ class InvoiceLayout extends Model
         'letter_head',
     ];
 
+    public function getResourceType(): string
+    {
+        return 'invoice-layouts';
+    }
+
     public function business()
     {
         return $this->belongsTo(Business::class, 'business_id');

@@ -25,7 +25,7 @@ class InvoiceScheme extends Model
 
     public function getResourceType(): string
     {
-        return 'invoice_schemes';
+        return 'invoice-schemes';
     }
 
     public function business(): BelongsTo
