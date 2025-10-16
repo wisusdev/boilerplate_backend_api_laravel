@@ -44,7 +44,23 @@ class JsonApiQueryBuilder
 					throw new BadRequestHttpException("The filter '{$filter}' is not allowed in the '{$this->getResourceType()}' resource.");
 				}
 
-				$this->hasNamedScope($filter) ? $this->{$filter}($value) : $this->where($filter, 'LIKE', "%{$value}%");
+				$value = match ($value) {
+					'true' => true,
+					'false' => false,
+					'null' => null,
+					default => $value,
+				};
+
+				if ($this->hasNamedScope($filter)) {
+					$this->{$filter}($value);
+				} else {
+					if (is_string($value)) {
+						$this->where($filter, 'LIKE', "%{$value}%");
+					} else {
+						$this->where($filter, $value);
+					}
+				}
+
 			}
 
 			return $this;
@@ -60,9 +76,9 @@ class JsonApiQueryBuilder
                 return $this;
             }
 
-            $include = explode(',', request()->input('include'));
+            $includes = explode(',', request()->input('include'));
 
-            foreach ($include as $include) {
+            foreach ($includes as $include) {
 				if(!in_array($include, $allowedIncludes)){
 					throw new BadRequestHttpException("The include relationship '{$include}' is not allowed in the '{$this->getResourceType()}' resource.");
 				}
@@ -92,15 +108,15 @@ class JsonApiQueryBuilder
 			$model = $this->getModel();
 			$fillable = $model->getFillable();
 
-			if (in_array('business_id', $fillable) && !in_array('business_id', $fields)) {
+			/*if (in_array('business_id', $fillable) && !in_array('business_id', $fields)) {
 				$fields[] = 'business_id';
-			}
+			}*/
 
-			/*foreach ($fillable as $field) {
+			foreach ($fillable as $field) {
 				if (str_ends_with($field, '_id') && !in_array($field, $fields)) {
 					$fields[] = $field;
 				}
-			}*/
+			}
 
 			return $this->addSelect($fields);
 		};
