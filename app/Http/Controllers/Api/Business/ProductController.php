@@ -10,9 +10,11 @@ use App\Models\Business;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
+use Throwable;
 
 class ProductController extends Controller
 {
@@ -23,7 +25,7 @@ class ProductController extends Controller
      */
     public function index(): JsonResource
     {
-        $this->authorize('viewAny', Product::class);
+        $this->authorize('index', Product::class);
 
         $products = Product::query()
             ->with(['business', 'category', 'brand', 'unit', 'variations'])
@@ -39,6 +41,7 @@ class ProductController extends Controller
      * Store a newly created product in storage.
      *
      * @throws AuthorizationException
+     * @throws Throwable
      */
     public function store(ProductRequest $request, Business $business): ProductResource
     {
@@ -52,6 +55,7 @@ class ProductController extends Controller
             if (isset($productData['image'])) {
                 $productData['image'] = $this->handleImageUpload($productData['image']);
             }
+	        $productData['sku'] = $this->generateUniqueSku($productData['business_id'], $productData['name']);
 
             $product = Product::create($productData);
 
@@ -75,7 +79,7 @@ class ProductController extends Controller
      */
     public function show(Business $business, Product $product): ProductResource
     {
-        $this->authorize('view', $product);
+        $this->authorize('show', $product);
 
         $product->load([
             'business',
@@ -125,12 +129,13 @@ class ProductController extends Controller
         return ProductResource::make($product->load(['business', 'category', 'brand', 'unit', 'variations']));
     }
 
-    /**
-     * Remove the specified product from storage.
-     *
-     * @throws AuthorizationException
-     */
-    public function destroy(Product $product): JsonResponse
+	/**
+	 * Remove the specified product from storage.
+	 *
+	 * @throws AuthorizationException
+	 * @throws Throwable
+	 */
+    public function destroy(Business $business, Product $product): Response
     {
         $this->authorize('delete', $product);
 
@@ -147,7 +152,7 @@ class ProductController extends Controller
             $product->delete();
         });
 
-        return response()->json([], 204);
+        return response()->noContent();
     }
 
     /**

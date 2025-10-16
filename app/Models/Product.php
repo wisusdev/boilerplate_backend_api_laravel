@@ -64,6 +64,11 @@ class Product extends Model
         'not_for_selling',
     ];
 
+	public function getResourceType(): string
+    {
+        return 'products';
+    }
+
     public function variations(): HasMany
     {
         return $this->hasMany(Variation::class, 'product_id');

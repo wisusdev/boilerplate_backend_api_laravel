@@ -5,14 +5,16 @@ namespace App\Http\Controllers\Api\Business;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CategoryRequest;
 use App\Http\Resources\CategoryResource;
+use App\Http\Resources\ProductResource;
 use App\Models\Business;
 use App\Models\Category;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use OpenApi\Attributes as OA;
+use Throwable;
 
 class CategoryController extends Controller
 {
@@ -23,13 +25,13 @@ class CategoryController extends Controller
      */
     public function index(Business $business): JsonResource
     {
-        $this->authorize('viewAny', Category::class);
+        $this->authorize('index', Category::class);
 
         $categories = Category::query()
             ->where('business_id', $business->id)
-            ->with(['business', 'parent', 'subcategories', 'creator'])
-            ->allowedFilters(['name', 'category_type', 'parent_id'])
-            ->allowedSorts(['id', 'name', 'category_type', 'created_at'])
+	        ->allowedIncludes(['business', 'parent', 'subcategories', 'creator'])
+            ->allowedFilters(['name', 'category_type', 'parent_id', 'is_active'])
+            ->allowedSorts(['id', 'name', 'category_type', 'created_at', 'is_active'])
             ->sparseFieldset()
             ->jsonPaginate();
 
@@ -39,11 +41,11 @@ class CategoryController extends Controller
     /**
      * Store a newly created category in storage.
      *
-     * @throws AuthorizationException
+     * @throws AuthorizationException|Throwable
      */
     public function store(CategoryRequest $request, Business $business): CategoryResource
     {
-        $this->authorize('create', Category::class);
+        $this->authorize('create', [Category::class]);
 
         $data = $request->validated();
         $categoryData = $data['data']['attributes'];
@@ -61,7 +63,7 @@ class CategoryController extends Controller
             return Category::create($categoryData);
         });
 
-        return CategoryResource::make($category->load(['business', 'parent', 'subcategories', 'creator']));
+        return CategoryResource::make($category);
     }
 
     /**
@@ -71,24 +73,22 @@ class CategoryController extends Controller
      */
     public function show(Business $business, Category $category): CategoryResource
     {
-        $this->authorize('view', $category);
+        $this->authorize('show', $category);
 
-        $category->load([
-            'business',
-            'parent',
-            'subcategories.products',
-            'products',
-            'creator'
-        ]);
+        $category = Category::where('id', $category->id)
+	        ->allowedIncludes(['business', 'parent', 'subcategories', 'creator'])
+	        ->sparseFieldset()
+	        ->firstOrFail();
 
         return CategoryResource::make($category);
     }
 
-    /**
-     * Update the specified category in storage.
-     *
-     * @throws AuthorizationException
-     */
+	/**
+	 * Update the specified category in storage.
+	 *
+	 * @throws AuthorizationException
+	 * @throws Throwable
+	 */
     public function update(CategoryRequest $request, Business $business, Category $category): CategoryResource
     {
         $this->authorize('update', $category);
@@ -99,14 +99,14 @@ class CategoryController extends Controller
         DB::transaction(function () use ($category, $categoryData) {
             // Actualizar slug si se cambió el nombre
             if (isset($categoryData['name']) && $categoryData['name'] !== $category->name) {
-                $slug = isset($categoryData['slug']) ? $categoryData['slug'] : str()->slug($categoryData['name']);
+                $slug = $categoryData['slug'] ?? str()->slug($categoryData['name']);
                 $categoryData['slug'] = $this->generateUniqueSlug($slug, $category->business_id, $category->id);
             }
 
             $category->update($categoryData);
         });
 
-        return CategoryResource::make($category->load(['business', 'parent', 'subcategories', 'creator']));
+        return CategoryResource::make($category);
     }
 
     /**
@@ -114,7 +114,7 @@ class CategoryController extends Controller
      *
      * @throws AuthorizationException
      */
-    public function destroy(Business $business, Category $category): JsonResponse
+    public function destroy(Business $business, Category $category): Response|JsonResponse
     {
         $this->authorize('delete', $category);
 
@@ -146,7 +146,7 @@ class CategoryController extends Controller
 
         $category->delete();
 
-        return response()->json([], 204);
+        return response()->noContent();
     }
 
     /**
@@ -192,7 +192,7 @@ class CategoryController extends Controller
             ->sparseFieldset()
             ->jsonPaginate();
 
-        return \App\Http\Resources\ProductResource::collection($products);
+        return ProductResource::collection($products);
     }
 
     /**

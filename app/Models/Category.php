@@ -15,14 +15,19 @@ class Category extends Model
     protected $fillable = [
         'name',
         'business_id',
-        'created_by',
-        'short_code',
-        'parent_id',
-        'category_type',
-        'description',
-        'slug',
-        'is_active',
+	    'parent_id',
+	    'is_active',
+	    'short_code',
+	    'created_by',
+	    'category_type',
+	    'description',
+	    'slug'
     ];
+
+	public function getResourceType(): string
+	{
+		return 'categories';
+	}
 
     public function products(): HasMany
     {

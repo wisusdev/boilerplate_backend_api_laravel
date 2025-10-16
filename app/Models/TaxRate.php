@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TaxRate extends Model
@@ -18,6 +19,11 @@ class TaxRate extends Model
         'is_tax_group',
         'for_tax_group',
     ];
+
+	public function getResourceType(): string
+    {
+        return 'tax-rates';
+    }
 
     public function transaction_sell_lines()
     {
@@ -39,12 +45,12 @@ class TaxRate extends Model
         return $this->hasMany(Business::class, 'default_sales_tax');
     }
 
-    public function business()
+    public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class);
     }
 
-    public function creator()
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }

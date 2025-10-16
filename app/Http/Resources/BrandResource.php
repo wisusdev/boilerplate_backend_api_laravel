@@ -40,7 +40,7 @@ class BrandResource extends JsonResource
     public function getIncludes(): array
     {
         return [
-            BusinessResource::make($this->resource->business)
+	        $this->whenLoaded('business', BusinessResource::make($this->resource->business))
         ];
     }
 

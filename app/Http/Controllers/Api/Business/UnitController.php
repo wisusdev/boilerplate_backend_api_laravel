@@ -15,8 +15,10 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use OpenApi\Attributes as OA;
+use Throwable;
 
 class UnitController extends Controller
 {
@@ -26,33 +28,36 @@ class UnitController extends Controller
      */
     public function index(Business $business): JsonResource
     {
-        $this->authorize('viewAny', [Unit::class, $business]);
+        $this->authorize('index', [Unit::class, $business]);
 
         $units = Unit::query()
             ->where('business_id', $business->id)
-            ->allowedFilters(['is_active', 'actual_name', 'short_name', 'allow_decimal', 'base_unit_id', 'base_unit_multiplier'])
-            ->allowedSorts(['business_id', 'created_by', 'is_active', 'actual_name', 'short_name', 'allow_decimal', 'base_unit_id', 'base_unit_multiplier'])
+	        ->allowedIncludes(['business', 'creator'])
+            ->allowedFilters(['is_active', 'name', 'short_name', 'allow_decimal', 'base_unit_id', 'base_unit_multiplier'])
+            ->allowedSorts(['id', 'business_id', 'created_by', 'is_active', 'name', 'short_name', 'allow_decimal', 'base_unit_id', 'base_unit_multiplier'])
             ->sparseFieldset()
             ->jsonPaginate();
 
         return UnitResource::collection($units);
     }
 
-    /**
-     * Store a newly created unit.
-     */
+	/**
+	 * Store a newly created unit.
+	 * @throws Throwable
+	 */
     public function store(UnitRequest $request, Business $business): UnitResource
     {
         Gate::authorize('create', [Unit::class, $business]);
 
         $validatedData = $request->validated();
         $attributes = $validatedData['data']['attributes'];
+		$attributes['business_id'] = $business->id;
 
-        $unit = Unit::create($attributes);
+        $unit = DB::transaction(function () use ($attributes) {
+			return Unit::create($attributes);
+        });
 
-        $unit->load(['business', 'creator']);
-
-        return new UnitResource($unit);
+        return UnitResource::make($unit);
     }
 
     /**
@@ -60,21 +65,20 @@ class UnitController extends Controller
      */
     public function show(Business $business, Unit $unit): UnitResource
     {
-        Gate::authorize('view', $unit);
+        Gate::authorize('show', $unit);
 
-        $unit->load(['business', 'creator']);
+        $unit = Unit::where('id','=', $unit->id)
+	        ->allowedIncludes(['business', 'creator'])
+	        ->sparseFieldset()
+	        ->firstOrFail();
 
-        // Incluir count de productos si se solicita
-        if (request()->filled('include') && str_contains(request()->input('include'), 'products_count')) {
-            $unit->loadCount('products');
-        }
-
-        return new UnitResource($unit);
+        return UnitResource::make($unit);
     }
 
-    /**
-     * Update the specified unit.
-     */
+	/**
+	 * Update the specified unit.
+	 * @throws Throwable
+	 */
     public function update(UnitRequest $request, Business $business, Unit $unit): UnitResource
     {
         Gate::authorize('update', $unit);
@@ -82,22 +86,37 @@ class UnitController extends Controller
         $validatedData = $request->validated();
         $attributes = $validatedData['data']['attributes'];
 
-        $unit->update($attributes);
+        DB::transaction(function () use ($unit, $attributes) {
+			$unit->update($attributes);
+        });
 
-        $unit->load(['business', 'creator']);
-
-        return new UnitResource($unit);
+        return UnitResource::make($unit);
     }
 
-    /**
-     * Remove the specified unit from storage.
-     * @throws AuthorizationException
-     */
-    public function destroy(Business $business, Unit $unit): Response
+	/**
+	 * Remove the specified unit from storage.
+	 * @throws AuthorizationException
+	 * @throws Throwable
+	 */
+    public function destroy(Business $business, Unit $unit): Response|JsonResponse
     {
         $this->authorize('delete', $unit);
 
-        $unit->delete();
+        if ($unit->products()->exists()) {
+			return response()->json([
+				'errors' => [
+					[
+						'status' => '400',
+						'title' => 'Bad Request',
+						'detail' => "No se puede eliminar la unidad {$unit->name} porque tiene productos asociados."
+					]
+				]
+			], 400);
+		}
+
+		DB::transaction(function () use ($unit) {
+			$unit->delete();
+		});
 
         return response()->noContent();
     }
@@ -113,7 +132,7 @@ class UnitController extends Controller
         $unit->restore();
         $unit->load(['business', 'creator']);
 
-        return new UnitResource($unit);
+        return UnitResource::make($unit);
     }
 
     /**

@@ -15,15 +15,15 @@ class UnitFactory extends Factory
     protected $model = Unit::class;
 
     private static array $units = [
-        ['actual_name' => 'Pieza', 'short_name' => 'pz', 'allow_decimal' => false],
-        ['actual_name' => 'Kilogramo', 'short_name' => 'kg', 'allow_decimal' => true],
-        ['actual_name' => 'Gramo', 'short_name' => 'g', 'allow_decimal' => true],
-        ['actual_name' => 'Litro', 'short_name' => 'L', 'allow_decimal' => true],
-        ['actual_name' => 'Mililitro', 'short_name' => 'ml', 'allow_decimal' => true],
-        ['actual_name' => 'Metro', 'short_name' => 'm', 'allow_decimal' => true],
-        ['actual_name' => 'Centímetro', 'short_name' => 'cm', 'allow_decimal' => true],
-        ['actual_name' => 'Caja', 'short_name' => 'cj', 'allow_decimal' => false],
-        ['actual_name' => 'Paquete', 'short_name' => 'paq', 'allow_decimal' => false],
+        ['name' => 'Pieza', 'short_name' => 'pz', 'allow_decimal' => false],
+        ['name' => 'Kilogramo', 'short_name' => 'kg', 'allow_decimal' => true],
+        ['name' => 'Gramo', 'short_name' => 'g', 'allow_decimal' => true],
+        ['name' => 'Litro', 'short_name' => 'L', 'allow_decimal' => true],
+        ['name' => 'Mililitro', 'short_name' => 'ml', 'allow_decimal' => true],
+        ['name' => 'Metro', 'short_name' => 'm', 'allow_decimal' => true],
+        ['name' => 'Centímetro', 'short_name' => 'cm', 'allow_decimal' => true],
+        ['name' => 'Caja', 'short_name' => 'cj', 'allow_decimal' => false],
+        ['name' => 'Paquete', 'short_name' => 'paq', 'allow_decimal' => false],
     ];
 
     /**
@@ -37,7 +37,7 @@ class UnitFactory extends Factory
 
         return [
             'business_id' => Business::inRandomOrder()->first()->id ?? Business::factory(),
-            'actual_name' => $unit['actual_name'],
+            'name' => $unit['name'],
             'short_name' => $unit['short_name'],
             'allow_decimal' => $unit['allow_decimal'],
             'base_unit_id' => null,
@@ -53,7 +53,7 @@ class UnitFactory extends Factory
     public function piece(): static
     {
         return $this->state(fn (array $attributes) => [
-            'actual_name' => 'Pieza',
+            'name' => 'Pieza',
             'short_name' => 'pz',
             'allow_decimal' => false,
         ]);
@@ -65,7 +65,7 @@ class UnitFactory extends Factory
     public function kilogram(): static
     {
         return $this->state(fn (array $attributes) => [
-            'actual_name' => 'Kilogramo',
+            'name' => 'Kilogramo',
             'short_name' => 'kg',
             'allow_decimal' => true,
         ]);
@@ -77,7 +77,7 @@ class UnitFactory extends Factory
     public function liter(): static
     {
         return $this->state(fn (array $attributes) => [
-            'actual_name' => 'Litro',
+            'name' => 'Litro',
             'short_name' => 'L',
             'allow_decimal' => true,
         ]);

@@ -89,7 +89,7 @@ class BrandController extends Controller
             $brand->update($brandData);
         });
 
-        return BrandResource::make($brand->load(['business', 'creator', 'products']));
+        return BrandResource::make($brand);
     }
 
     /**

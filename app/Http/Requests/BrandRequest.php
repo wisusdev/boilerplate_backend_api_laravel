@@ -24,7 +24,11 @@ class BrandRequest extends FormRequest
             'data.attributes' => 'required|array',
 
             // Campos obligatorios
-	        'data.attributes.name' => ['required', 'string', 'max:191', Rule::unique('brands', 'name')->where('business_id', $businessId)->whereNull('deleted_at')->ignore($brandId)],
+	        'data.attributes.name' => ['required', 'string', 'max:191', Rule::unique('brands', 'name')
+		        ->where('business_id', $businessId)
+		        ->whereNull('deleted_at')
+		        ->ignore($brandId)],
+
             'data.attributes.slug' => ['required', 'string', 'max:191', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', new UniqueSlugForBusiness('brands', $businessId, $brandId)],
 
             // Campos opcionales

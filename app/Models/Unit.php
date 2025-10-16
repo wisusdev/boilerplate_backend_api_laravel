@@ -17,12 +17,17 @@ class Unit extends Model
         'business_id',
         'created_by',
         'is_active',
-        'actual_name',
+        'name',
         'short_name',
         'allow_decimal',
         'base_unit_id',
         'base_unit_multiplier',
     ];
+
+	public function getResourceType(): string
+    {
+        return 'units';
+    }
 
     protected $dates = [
         'deleted_at',
@@ -145,7 +150,7 @@ class Unit extends Model
             'business_id' => 'integer',
             'created_by' => 'integer',
             'is_active' => 'boolean',
-            'actual_name' => 'string',
+            'name' => 'string',
             'short_name' => 'string',
             'allow_decimal' => 'boolean',
             'base_unit_id' => 'integer',

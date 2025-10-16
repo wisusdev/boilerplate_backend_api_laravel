@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,14 +19,15 @@ class CategoryRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
         $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
         $categoryId = $isUpdate ? $this->route('category')->id : null;
+	    $businessId = $this->input('data.attributes.business_id');
 
-        return [
+        $data = [
             'data' => 'required|array',
             'data.type' => 'required|string|in:categories',
             'data.attributes' => 'required|array',
@@ -38,9 +40,8 @@ class CategoryRequest extends FormRequest
             'data.attributes.category_type' => ['required', 'string', Rule::in(['product', 'service', 'expense'])],
             'data.attributes.description' => 'nullable|string|max:1000',
             'data.attributes.slug' => ['nullable', 'string', 'max:191', 'regex:/^[a-z0-9-]+$/', Rule::unique('categories', 'slug')
-                    ->where('business_id', $this->input('data.attributes.business_id'))
-                    ->ignore($categoryId)
-            ],
+                    ->where('business_id', $businessId)
+                    ->ignore($categoryId)],
             'data.attributes.created_by' => ['nullable', 'integer', Rule::exists('users', 'id')],
 
             // Relaciones
@@ -55,6 +56,17 @@ class CategoryRequest extends FormRequest
             'data.relationships.parent.data.type' => 'sometimes|string|in:categories',
             'data.relationships.parent.data.id' => 'sometimes|string',
         ];
+
+	    if ($this->isMethod('post')) {
+		    $data['data.attributes.business_id'] = 'required|integer|exists:businesses,id';
+		    $data['data.attributes.created_by'] = 'required|integer|exists:users,id';
+	    } else if ($this->isMethod('put') || $this->isMethod('patch')) {
+		    $data['data.id'] = 'required|integer|exists:categories,id';
+		    $data['data.attributes.business_id'] = 'prohibited'; // El ID del negocio no debe actualizarse
+		    $data['data.attributes.created_by'] = 'sometimes|integer|exists:users,id';
+	    }
+
+		return $data;
     }
 
     /**

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedInteger('business_id')->index('units_business_id_foreign');
             $table->unsignedInteger('created_by')->index('units_created_by_foreign');
             $table->boolean('is_active')->default(true);
-            $table->string('actual_name', 191);
+            $table->string('name', 191);
             $table->string('short_name', 191);
             $table->boolean('allow_decimal');
             $table->integer('base_unit_id')->nullable()->index();

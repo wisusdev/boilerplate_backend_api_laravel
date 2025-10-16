@@ -11,8 +11,8 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use OpenApi\Attributes as OA;
 
 class TaxRateController extends Controller
 {
@@ -23,33 +23,38 @@ class TaxRateController extends Controller
      */
     public function index(Request $request, Business $business): JsonResource
     {
-        $this->authorize('viewAny', [TaxRate::class, $business]);
+        $this->authorize('index', TaxRate::class);
 
         $taxRates = TaxRate::query()
             ->where('business_id', $business->id)
+	        ->allowedIncludes(['business', 'creator'])
             ->allowedFilters(['name', 'is_tax_group'])
-            ->allowedSorts(['name', 'amount', 'created_at'])
+            ->allowedSorts(['id', 'name', 'amount', 'created_at'])
             ->sparseFieldset()
             ->jsonPaginate();
 
         return TaxRateResource::collection($taxRates);
     }
 
-    /**
-     * Store a newly created tax rate in storage.
-     *
-     * @throws AuthorizationException
-     */
+	/**
+	 * Store a newly created tax rate in storage.
+	 *
+	 * @throws AuthorizationException
+	 * @throws \Throwable
+	 */
     public function store(TaxRateRequest $request, Business $business): JsonResource
     {
-        $this->authorize('create', [TaxRate::class, $business]);
+        $this->authorize('create', TaxRate::class);
 
-        $taxRate = $business->taxRates()->create([
-            ...$request->validated()['data']['attributes'],
-            'created_by' => request()->user()->id,
-        ]);
+        $data = $request->validated();
+		$taxRateData = $data['data']['attributes'];
+		$taxRateData['business_id'] = $business->id;
 
-        return new TaxRateResource($taxRate);
+		$taxRate = DB::transaction(function () use ($taxRateData) {
+			return TaxRate::create($taxRateData);
+		});
+
+        return TaxRateResource::make($taxRate);
     }
 
     /**
@@ -59,9 +64,14 @@ class TaxRateController extends Controller
      */
     public function show(Business $business, TaxRate $taxRate): JsonResource
     {
-        $this->authorize('view', [$taxRate, $business]);
+        $this->authorize('view', [$taxRate]);
 
-        return new TaxRateResource($taxRate);
+		$taxRate = TaxRate::where('id', $taxRate->id)
+			->allowedIncludes(['business', 'creator'])
+			->sparseFieldset()
+			->firstOrFail();
+
+        return TaxRateResource::make($taxRate);
     }
 
     /**
@@ -71,11 +81,16 @@ class TaxRateController extends Controller
      */
     public function update(TaxRateRequest $request, Business $business, TaxRate $taxRate): JsonResource
     {
-        $this->authorize('update', [$taxRate, $business]);
+        $this->authorize('update', $taxRate);
 
-        $taxRate->update($request->validated()['data']['attributes']);
+		$data = $request->validated();
+		$taxRateData = $data['data']['attributes'];
 
-        return new TaxRateResource($taxRate);
+		DB::transaction(function () use ($taxRate, $taxRateData) {
+			$taxRate->update($taxRateData);
+		});
+
+        return TaxRateResource::make($taxRate);
     }
 
     /**
@@ -83,22 +98,52 @@ class TaxRateController extends Controller
      *
      * @throws AuthorizationException
      */
-    public function destroy(Business $business, TaxRate $taxRate): JsonResponse
+    public function destroy(Business $business, TaxRate $taxRate): Response | JsonResponse
     {
-        $this->authorize('delete', [$taxRate, $business]);
+        $this->authorize('delete', $taxRate);
 
-        // Verificar si la tasa está en uso
-        if ($taxRate->transaction_sell_lines()->exists() || 
-            $taxRate->purchase_lines()->exists() ||
-            $taxRate->businesses()->exists()) {
-            return response()->json([
-                'message' => 'No se puede eliminar la tasa de impuesto porque está en uso.'
-            ], 409);
-        }
+        // La tasa está en uso en líneas de venta
+		if ($taxRate->transaction_sell_lines()->exists()) {
+			return response()->json([
+				'errors' => [
+					[
+						'status' => '422',
+						'title' => 'No se puede eliminar',
+						'detail' => 'La tasa de impuesto está en uso en líneas de venta y no se puede eliminar',
+					]
+				]
+			], 422);
+		}
+
+		// La tasa está en uso en líneas de compra
+		if ($taxRate->purchase_lines()->exists()) {
+			return response()->json([
+				'errors' => [
+					[
+						'status' => '422',
+						'title' => 'No se puede eliminar',
+						'detail' => 'La tasa de impuesto está en uso en líneas de compra y no se puede eliminar',
+					]
+				]
+			], 422);
+		}
+
+		// La tasa está en uso en negocios
+		if ($taxRate->businesses()->exists()) {
+			return response()->json([
+				'errors' => [
+					[
+						'status' => '422',
+						'title' => 'No se puede eliminar',
+						'detail' => 'La tasa de impuesto está en uso en negocios y no se puede eliminar',
+					]
+				]
+			], 422);
+		}
 
         $taxRate->delete();
 
-        return response()->json(null, 204);
+        return response()->noContent();
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,26 +19,36 @@ class TaxRateRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
         $businessId = $this->route('business')->id;
         $taxRateId = $this->route('taxRate')?->id;
 
-        return [
+        $data = [
             'data' => 'required|array',
             'data.type' => 'required|string|in:tax-rates',
-            'data.id' => $this->isMethod('patch') ? 'required|string' : 'sometimes|string',
             'data.attributes' => 'required|array',
-            'data.attributes.name' => ['required', 'string', 'max:191', Rule::unique('tax_rates', 'name')->where('business_id', $businessId)
-                    ->ignore($taxRateId)
-                    ->whereNull('deleted_at')
-            ],
+            'data.attributes.name' => ['required', 'string', 'max:191', Rule::unique('tax_rates', 'name')
+	            ->where('business_id', $businessId)
+	            ->ignore($taxRateId)
+	            ->whereNull('deleted_at')],
             'data.attributes.amount' => 'required|numeric|min:0|max:100',
             'data.attributes.is_tax_group' => 'sometimes|boolean',
             'data.attributes.for_tax_group' => 'sometimes|boolean',
         ];
+
+	    if ($this->isMethod('post')) {
+		    $data['data.attributes.business_id'] = 'required|integer|exists:businesses,id';
+		    $data['data.attributes.created_by'] = 'required|integer|exists:users,id';
+	    } else if ($this->isMethod('put') || $this->isMethod('patch')) {
+		    $data['data.id'] = 'required|integer|exists:categories,id';
+		    $data['data.attributes.business_id'] = 'prohibited'; // El ID del negocio no debe actualizarse
+		    $data['data.attributes.created_by'] = 'sometimes|integer|exists:users,id';
+	    }
+
+		return $data;
     }
 
     /**

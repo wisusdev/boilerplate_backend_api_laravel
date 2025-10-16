@@ -19,7 +19,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->string('short_code', 191)->nullable();
             $table->unsignedInteger('created_by')->index('categories_created_by_foreign');
-            $table->string('category_type', 191)->nullable();
+            $table->string('category_type', 191)->nullable()->default('product')->comment('product, service');
             $table->text('description')->nullable();
             $table->string('slug', 191)->nullable();
             $table->softDeletes();

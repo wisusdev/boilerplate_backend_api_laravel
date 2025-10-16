@@ -8,7 +8,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class BusinessResource extends JsonResource
 {
     use JsonApiResource;
-
     public function toJsonApi(): array
     {
         return [

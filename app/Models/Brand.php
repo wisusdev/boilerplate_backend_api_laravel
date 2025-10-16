@@ -25,6 +25,10 @@ class Brand extends Model
         'is_active'
     ];
 
+	public function getResourceType(): string
+    {
+        return 'brands';
+    }
     protected $dates = [
         'deleted_at',
     ];

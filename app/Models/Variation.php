@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Variation extends Model
 {
     use HasFactory, SoftDeletes;
-
     protected $fillable = [
         'business_id',
         'product_id',
@@ -44,6 +43,11 @@ class Variation extends Model
         'default_sell_price',
         'sell_price_inc_tax',
     ];
+
+	public function getResourceType(): string
+    {
+        return 'variations';
+    }
 
     protected $dates = [
         'deleted_at',
