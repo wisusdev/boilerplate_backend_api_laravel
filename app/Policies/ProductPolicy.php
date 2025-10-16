@@ -12,7 +12,7 @@ class ProductPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function index(User $user): bool
     {
         return $user->hasPermissionTo('products:index') || $user->hasRole('super-admin');
     }
@@ -20,7 +20,7 @@ class ProductPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Product $product): bool
+    public function show(User $user, Product $product): bool
     {
         // El usuario puede ver el producto si tiene permisos o si pertenece a su negocio
         return $user->hasPermissionTo('products:show') ||

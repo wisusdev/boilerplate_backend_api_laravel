@@ -12,45 +12,40 @@ class UnitPolicy
     /**
      * Determine whether the user can view any units.
      */
-    public function viewAny(User $user, Business $business): Response
+    public function index(User $user, Business $business): bool
     {
-        // El usuario debe ser el propietario del negocio o tener permisos de administrador
-        return $user->id === $business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para ver las unidades de este negocio.');
+		// El usuario puede ver las unidades de su propio negocio
+        return $user->can('units:index', [$business]) ||
+	        $user->businesses()->exists();
     }
 
     /**
      * Determine whether the user can view the unit.
      */
-    public function view(User $user, Unit $unit): Response
+    public function show(User $user, Unit $unit): bool
     {
         // El usuario debe ser el propietario del negocio asociado a la unidad
-        return $user->id === $unit->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para ver esta unidad.');
+        return $user->can('units:show', [$unit->business]) ||
+	        $user->businesses()->exists();
     }
 
     /**
      * Determine whether the user can create units.
      */
-    public function create(User $user, Business $business): Response
+    public function create(User $user, Business $business): bool
     {
-        // El usuario debe ser el propietario del negocio
-        return $user->id === $business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para crear unidades en este negocio.');
+	    return $user->can('units:create', [$business]) ||
+		    $user->businesses()->exists();
     }
 
     /**
      * Determine whether the user can update the unit.
      */
-    public function update(User $user, Unit $unit): Response
+    public function update(User $user, Unit $unit): bool
     {
         // El usuario debe ser el propietario del negocio asociado a la unidad
-        return $user->id === $unit->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para actualizar esta unidad.');
+        return $user->can('units:update', [$unit->business]) ||
+	        $user->businesses()->exists();
     }
 
     /**

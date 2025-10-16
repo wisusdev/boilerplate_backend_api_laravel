@@ -10,24 +10,23 @@ class CategoryPolicy
     /**
      * Determine whether the user can view any categories.
      */
-    public function viewAny(User $user): bool
+    public function index(User $user): bool
     {
-        return $user->can('view_categories') || 
-               $user->can('manage_business') || 
-               $user->businesses()->exists();
+        return $user->can('categories:index') ||
+            $user->can('manage_business') ||
+            $user->businesses()->exists();
     }
 
     /**
      * Determine whether the user can view the category.
      */
-    public function view(User $user, Category $category): bool
+    public function show(User $user, Category $category): bool
     {
         // El usuario puede ver categorías de su propio negocio
         $userBusinessIds = $user->businesses->pluck('id')->toArray();
-        
-        return in_array($category->business_id, $userBusinessIds) ||
-               $user->can('view_categories') ||
-               $user->can('manage_business');
+
+        return $user->can('categories:show') ||
+            $user->can('manage_business');
     }
 
     /**
@@ -35,9 +34,9 @@ class CategoryPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_categories') || 
-               $user->can('manage_business') || 
-               $user->businesses()->exists();
+        return $user->can('categories:create') ||
+            $user->can('manage_business') ||
+            $user->businesses()->exists();
     }
 
     /**
@@ -45,10 +44,9 @@ class CategoryPolicy
      */
     public function update(User $user, Category $category): bool
     {
-        // El usuario puede actualizar categorías de su propio negocio
-        $userBusinessIds = $user->businesses->pluck('id')->toArray();
-        
-        return in_array($category->business_id, $userBusinessIds) || $user->can('manage_all_categories');
+        return $user->can('categories:update') ||
+            $user->can('manage_business') ||
+            $user->businesses()->exists();
     }
 
     /**
@@ -56,15 +54,9 @@ class CategoryPolicy
      */
     public function delete(User $user, Category $category): bool
     {
-        // No se puede eliminar si tiene productos o subcategorías
-        if ($category->products()->exists() || $category->subcategories()->exists()) {
-            return false;
-        }
-
-        // El usuario puede eliminar categorías de su propio negocio
-        $userBusinessIds = $user->businesses->pluck('id')->toArray();
-        
-        return in_array($category->business_id, $userBusinessIds) || $user->can('manage_all_categories');
+        return $user->can('categories:delete') ||
+            $user->can('manage_business') ||
+            $user->businesses()->exists();
     }
 
     /**
@@ -72,11 +64,9 @@ class CategoryPolicy
      */
     public function restore(User $user, Category $category): bool
     {
-        $userBusinessIds = $user->businesses->pluck('id')->toArray();
-        
-        return (in_array($category->business_id, $userBusinessIds) && 
-                ($user->can('restore_categories') || $user->can('manage_business'))) ||
-               $user->can('manage_all_categories');
+        return $user->can('categories:restore') ||
+            $user->can('manage_business') ||
+            $user->businesses()->exists();
     }
 
     /**
@@ -85,9 +75,9 @@ class CategoryPolicy
     public function forceDelete(User $user, Category $category): bool
     {
         $userBusinessIds = $user->businesses->pluck('id')->toArray();
-        
-        return (in_array($category->business_id, $userBusinessIds) && 
-                $user->can('force_delete_categories')) ||
-               $user->can('manage_all_categories');
+
+        return (in_array($category->business_id, $userBusinessIds) &&
+            $user->can('force_delete_categories')) ||
+            $user->can('manage_all_categories');
     }
 }
