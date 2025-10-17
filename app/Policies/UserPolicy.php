@@ -7,35 +7,58 @@ use App\Models\User;
 class UserPolicy
 {
     /**
-     * Create a new policy instance.
+     * Determine whether the user can view any models.
      */
-    public function __construct()
-    {
-        //
-    }
-
     public function index(User $user): bool
     {
-        return $user->hasPermissionTo('users:index');
+        return $user->can('users:index');
     }
 
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function show(User $user, User $targetUser): bool
+    {
+        return $user->can('users:show');
+    }
+
+    /**
+     * Determine whether the user can store models.
+     */
     public function store(User $user): bool
     {
-        return $user->hasPermissionTo('users:store');
+        return $user->can('users:store');
     }
 
-    public function show(User $user): bool
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, User $targetUser): bool
     {
-        return $user->hasPermissionTo('users:show');
+        return $user->can('users:update');
     }
 
-    public function update(User $user): bool
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, User $targetUser): bool
     {
-        return $user->hasPermissionTo('users:update');
+        return $user->can('users:delete');
     }
 
-    public function delete(User $user): bool
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, User $targetUser): bool
     {
-        return $user->hasPermissionTo('users:delete');
+        return $user->can('users:restore');
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, User $targetUser): bool
+    {
+        return $user->can('users:force-delete');
     }
 }

@@ -23,6 +23,8 @@ class UserRequest extends FormRequest
      */
     public function rules(): array
     {
+        $user = $this->route('user');
+
         $rules = [
             'data.type' => ['required', 'string', 'in:users'],
             'data.attributes.first_name' => ['required', 'string', 'max:255'],
@@ -31,9 +33,8 @@ class UserRequest extends FormRequest
         ];
 
         if ($this->isMethod('put') || $this->isMethod('patch')) {
-            $user = $this->route('user');
-            $rules['data.attributes.username'][] = ['required', 'string', 'min:3', 'max:255', Rule::unique('users', 'username')->ignore($user->id)];
-            $rules['data.attributes.email'][] = ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)];
+            $rules['data.attributes.username'] = ['required', 'string', 'min:3', 'max:255', Rule::unique('users', 'username')->ignore($user->id)];
+            $rules['data.attributes.email'] = ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)];
             $rules['data.attributes.password'] = ['nullable', 'confirmed', 'string', 'min:8', 'max:255', 'not_regex:/^$/'];
         } else {
             $rules['data.attributes.username'] = ['required', 'string', 'min:3', 'max:255', Rule::unique('users', 'username')];
