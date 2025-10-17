@@ -10,6 +10,7 @@ use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class RolesController extends Controller
 {
@@ -58,30 +59,41 @@ class RolesController extends Controller
     public function update(RolRequest $request, Role $role): RoleResource
     {
         $this->authorize('update', $role);
+
+        $validated = $request->validated();
+        $data = $validated['data']['attributes'];
+
         $role->update([
-            'name' => $request->input('data.attributes.name')
+            'name' => $data['name']
         ]);
-        $role->syncPermissions($request->input('data.attributes.permissions'));
+
+        $role->syncPermissions($data['permissions']);
 
         return RoleResource::make($role);
     }
 
-    /**
-     * @throws AuthorizationException
-     */
+	/**
+	 * @throws AuthorizationException
+	 * @throws \Throwable
+	 */
     public function destroy(Role $role): JsonResponse | Response
     {
         $this->authorize('delete', $role);
 
-        if ($role->name === 'super-admin' || $role->name === 'admin') {
-            return response()->json(['message' => 'Cannot delete the ' . $role->name . ' role'], 403);
-        }
+		if ($role->users()->exists()) {
+			return response()->json([
+				'errors' => [
+					'status' => '422',
+					'title' => 'No se puede eliminar',
+					'detail' => 'El rol tiene usuarios asignados y no puede ser eliminado.',
+				]
+			]);
+		}
 
-        if ($role->users()->count() > 0) {
-            return response()->json(['message' => 'Cannot delete a role that has users assigned'], 403);
-        }
+		DB::transaction(function () use ($role) {
+			$role->delete();
+		});
 
-        $role->delete();
         return response()->noContent();
     }
 }

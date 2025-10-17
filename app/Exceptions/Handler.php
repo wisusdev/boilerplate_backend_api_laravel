@@ -7,6 +7,8 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Exceptions\PermissionDoesNotExist;
+use Spatie\Permission\Exceptions\RoleAlreadyExists;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -49,6 +51,14 @@ class Handler extends ExceptionHandler
         $this->renderable(function (RouteNotFoundException $e) {
             throw new JsonApi\RouteNotFoundException($e->getMessage());
         });
+
+		$this->renderable(function (RoleAlreadyExists $e) {
+            throw new JsonApi\RoleAlreadyExists($e->getMessage());
+        });
+
+	    $this->renderable(function (PermissionDoesNotExist $e) {
+		    throw new JsonApi\PermissionDoesNotExist($e->getMessage());
+	    });
     }
 
     protected function invalidJson($request, ValidationException $exception): JsonResponse

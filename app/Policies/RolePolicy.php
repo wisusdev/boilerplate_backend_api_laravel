@@ -2,40 +2,64 @@
 
 namespace App\Policies;
 
+use App\Models\Role;
 use App\Models\User;
 
 class RolePolicy
 {
     /**
-     * Create a new policy instance.
+     * Determine whether the user can view any models.
      */
-    public function __construct()
-    {
-        //
-    }
-
     public function index(User $user): bool
     {
-        return $user->hasPermissionTo('roles:index');
+        return $user->can('roles:index');
     }
 
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function show(User $user, Role $role): bool
+    {
+        return $user->can('roles:show');
+    }
+
+    /**
+     * Determine whether the user can create models.
+     */
     public function store(User $user): bool
     {
-        return $user->hasPermissionTo('roles:store');
+        return $user->can('roles:store');
     }
 
-    public function show(User $user): bool
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, Role $role): bool
     {
-        return $user->hasPermissionTo('roles:show');
+        return $user->can('roles:update');
     }
 
-    public function update(User $user): bool
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, Role $role): bool
     {
-        return $user->hasPermissionTo('roles:update');
+        return $user->can('roles:delete');
     }
 
-    public function delete(User $user): bool
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, Role $role): bool
     {
-        return $user->hasPermissionTo('roles:delete');
+        return $user->can('roles:restore');
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, Role $role): bool
+    {
+        return $user->can('roles:force-delete');
     }
 }
