@@ -19,7 +19,7 @@ class PrinterController extends Controller
      */
     public function index(Business $business): JsonResource
     {
-        $this->authorize('viewAny', Printer::class);
+        $this->authorize('index', Printer::class);
 
         $printers = Printer::query()
             ->where('business_id', $business->id)
@@ -52,7 +52,7 @@ class PrinterController extends Controller
      */
     public function show(Business $business, Printer $printer): PrinterResource
     {
-        $this->authorize('view', $printer);
+        $this->authorize('show', $printer);
         
         $printer = Printer::where('id', $printer->id)
             ->allowedIncludes(['business'])

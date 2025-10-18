@@ -64,7 +64,7 @@ class TaxRateController extends Controller
      */
     public function show(Business $business, TaxRate $taxRate): JsonResource
     {
-        $this->authorize('view', [$taxRate]);
+        $this->authorize('show', $taxRate);
 
 		$taxRate = TaxRate::where('id', $taxRate->id)
 			->allowedIncludes(['business', 'creator'])
@@ -155,7 +155,7 @@ class TaxRateController extends Controller
     {
         // Para bulk delete, no necesitamos autorización específica de taxRate
         // Solo verificamos que el usuario pueda eliminar en este negocio
-        $this->authorize('viewAny', [TaxRate::class, $business]);
+        $this->authorize('index', TaxRate::class);
 
         $data = $request->input('data.attributes', []);
         $taxRateIds = $data['ids'] ?? [];
@@ -168,7 +168,7 @@ class TaxRateController extends Controller
                 $taxRate = TaxRate::where('business_id', $business->id)->findOrFail($taxRateId);
 
                 // Authorize deletion for each tax rate individually
-                $this->authorize('delete', [$taxRate, $business]);
+                $this->authorize('delete', $taxRate);
 
                 // Verificar si la tasa está en uso
                 if ($taxRate->transaction_sell_lines()->exists() || 
@@ -202,7 +202,7 @@ class TaxRateController extends Controller
      */
     public function statistics(Business $business, TaxRate $taxRate): JsonResponse
     {
-        $this->authorize('view', [$taxRate, $business]);
+        $this->authorize('show', $taxRate);
 
         $sellLinesCount = $taxRate->transaction_sell_lines()->count();
         $purchaseLinesCount = $taxRate->purchase_lines()->count();
@@ -227,7 +227,7 @@ class TaxRateController extends Controller
      */
     public function changeStatus(Business $business, TaxRate $taxRate): JsonResource
     {
-        $this->authorize('update', [$taxRate, $business]);
+        $this->authorize('update', $taxRate);
 
         if ($taxRate->trashed()) {
             $taxRate->restore();
@@ -245,7 +245,7 @@ class TaxRateController extends Controller
      */
     public function restore(Business $business, TaxRate $taxRate): JsonResource
     {
-        $this->authorize('restore', [$taxRate, $business]);
+        $this->authorize('restore', $taxRate);
 
         $taxRate->restore();
 

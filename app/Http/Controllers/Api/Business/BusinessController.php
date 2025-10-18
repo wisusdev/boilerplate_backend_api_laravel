@@ -12,7 +12,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use OpenApi\Attributes as OA;
+use Throwable;
 
 class BusinessController extends Controller
 {
@@ -23,7 +23,7 @@ class BusinessController extends Controller
      */
     public function index(): JsonResource
     {
-        $this->authorize('viewAny', Business::class);
+        $this->authorize('index', Business::class);
 
         $businesses = Business::query()
             ->allowedIncludes(['currency', 'owner', 'business_locations'])
@@ -35,11 +35,12 @@ class BusinessController extends Controller
         return BusinessResource::collection($businesses);
     }
 
-    /**
-     * Store a newly created business in storage.
-     *
-     * @throws AuthorizationException
-     */
+	/**
+	 * Store a newly created business in storage.
+	 *
+	 * @throws AuthorizationException
+	 * @throws Throwable
+	 */
     public function store(BusinessRequest $request): BusinessResource
     {
         $this->authorize('create', Business::class);
@@ -95,7 +96,7 @@ class BusinessController extends Controller
      */
     public function show(Business $business): BusinessResource
     {
-        $this->authorize('view', $business);
+        $this->authorize('show', $business);
 
         $business = Business::where('id', $business->id)
             ->sparseFieldset()
@@ -104,11 +105,12 @@ class BusinessController extends Controller
         return BusinessResource::make($business);
     }
 
-    /**
-     * Update the specified business in storage.
-     *
-     * @throws AuthorizationException
-     */
+	/**
+	 * Update the specified business in storage.
+	 *
+	 * @throws AuthorizationException
+	 * @throws Throwable
+	 */
     public function update(BusinessRequest $request, Business $business): BusinessResource
     {
         $this->authorize('update', $business);
@@ -123,11 +125,12 @@ class BusinessController extends Controller
         return BusinessResource::make($business);
     }
 
-    /**
-     * Remove the specified business from storage.
-     *
-     * @throws AuthorizationException
-     */
+	/**
+	 * Remove the specified business from storage.
+	 *
+	 * @throws AuthorizationException
+	 * @throws Throwable
+	 */
     public function destroy(Business $business): Response
     {
         $this->authorize('delete', $business);
@@ -160,7 +163,7 @@ class BusinessController extends Controller
      */
     public function statistics(Business $business): JsonResponse
     {
-        $this->authorize('view', $business);
+        $this->authorize('show', $business);
 
         $stats = [
             'total_products' => $business->products()->count(),

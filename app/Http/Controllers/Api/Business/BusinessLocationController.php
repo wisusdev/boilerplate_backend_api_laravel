@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use OpenApi\Attributes as OA;
+use Throwable;
 
 class BusinessLocationController extends Controller
 {
@@ -25,11 +25,10 @@ class BusinessLocationController extends Controller
      */
     public function index(Business $business): JsonResource
     {
-        $this->authorize('viewAny', [BusinessLocation::class, $business]);
+        $this->authorize('index', BusinessLocation::class);
 
         $locations = BusinessLocation::query()
             ->where('business_id', $business->id)
-            ->allowedIncludes(['business'])
             ->allowedFilters(['name', 'is_active', 'business_id'])
             ->allowedSorts(['id', 'name', 'created_at'])
             ->sparseFieldset()
@@ -38,14 +37,15 @@ class BusinessLocationController extends Controller
         return BusinessLocationResource::collection($locations);
     }
 
-    /**
-     * Store a newly created business location in storage.
-     *
-     * @throws AuthorizationException
-     */
+	/**
+	 * Store a newly created business location in storage.
+	 *
+	 * @throws AuthorizationException
+	 * @throws Throwable
+	 */
     public function store(BusinessLocationRequest $request, Business $business): BusinessLocationResource
     {
-        $this->authorize('create', [BusinessLocation::class, $business]);
+        $this->authorize('create', BusinessLocation::class);
 
         $businessId = $business->id;
 
@@ -70,7 +70,7 @@ class BusinessLocationController extends Controller
      */
     public function show(Business $business, BusinessLocation $business_location): BusinessLocationResource
     {
-        $this->authorize('view', [$business, $business_location]);
+        $this->authorize('show', $business_location);
 
         $businessLocation = BusinessLocation::where('id', $business_location->id)
             ->allowedIncludes(['business'])
@@ -133,7 +133,7 @@ class BusinessLocationController extends Controller
      */
     public function statistics(Business $business, BusinessLocation $location): JsonResponse
     {
-        $this->authorize('view', $location);
+        $this->authorize('show', $location);
 
         $stats = [
             'total_products' => $location->variation_location_details()->distinct('variation_id')->count('variation_id'),
@@ -203,7 +203,7 @@ class BusinessLocationController extends Controller
      */
     public function bulkDestroy(Request $request, Business $business): JsonResponse
     {
-        $this->authorize('viewAny', [BusinessLocation::class, $business]);
+        $this->authorize('index', BusinessLocation::class);
 
         $data = $request->input('data.attributes', []);
         $locationIds = $data['ids'] ?? [];

@@ -3,130 +3,63 @@
 namespace App\Policies;
 
 use App\Models\Brand;
-use App\Models\Business;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class BrandPolicy
 {
     /**
-     * Determine whether the user can view any brands.
+     * Determine whether the user can view any models.
      */
-    public function viewAny(User $user, Business $business): Response
+    public function index(User $user): bool
     {
-        // El usuario debe ser el propietario del negocio o tener permisos de administrador
-        return $user->id === $business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para ver las marcas de este negocio.');
+        return $user->can('brands:index');
     }
 
     /**
-     * Determine whether the user can view the brand.
+     * Determine whether the user can view the model.
      */
-    public function view(User $user, Brand $brand): Response
+    public function show(User $user, Brand $brand): bool
     {
-        // El usuario debe ser el propietario del negocio asociado a la marca
-        return $user->id === $brand->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para ver esta marca.');
+        return $user->can('brands:show');
     }
 
     /**
-     * Determine whether the user can create brands.
+     * Determine whether the user can create models.
      */
-    public function create(User $user, Business $business): Response
+    public function create(User $user): bool
     {
-        // El usuario debe ser el propietario del negocio
-        return $user->id === $business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para crear marcas en este negocio.');
+        return $user->can('brands:create');
     }
 
     /**
-     * Determine whether the user can update the brand.
+     * Determine whether the user can update the model.
      */
-    public function update(User $user, Brand $brand): Response
+    public function update(User $user, Brand $brand): bool
     {
-        // El usuario debe ser el propietario del negocio asociado a la marca
-        return $user->id === $brand->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para actualizar esta marca.');
+        return $user->can('brands:update');
     }
 
     /**
-     * Determine whether the user can delete the brand.
+     * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Brand $brand): Response
+    public function delete(User $user, Brand $brand): bool
     {
-        // El usuario debe ser el propietario del negocio asociado a la marca
-        return $user->id === $brand->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para eliminar esta marca.');
+        return $user->can('brands:delete');
     }
 
     /**
-     * Determine whether the user can restore the brand.
+     * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Brand $brand): Response
+    public function restore(User $user, Brand $brand): bool
     {
-        // El usuario debe ser el propietario del negocio asociado a la marca
-        return $user->id === $brand->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para restaurar esta marca.');
+        return $user->can('brands:restore');
     }
 
     /**
-     * Determine whether the user can permanently delete the brand.
+     * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Brand $brand): Response
+    public function forceDelete(User $user, Brand $brand): bool
     {
-        // Solo administradores pueden eliminar permanentemente
-        return $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('Solo los administradores pueden eliminar permanentemente las marcas.');
-    }
-
-    /**
-     * Determine whether the user can view brand statistics.
-     */
-    public function viewStatistics(User $user, Brand $brand): Response
-    {
-        // El usuario debe ser el propietario del negocio asociado a la marca
-        return $user->id === $brand->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para ver las estadísticas de esta marca.');
-    }
-
-    /**
-     * Determine whether the user can manage products of the brand.
-     */
-    public function manageProducts(User $user, Brand $brand): Response
-    {
-        // El usuario debe ser el propietario del negocio asociado a la marca
-        return $user->id === $brand->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para gestionar los productos de esta marca.');
-    }
-
-    /**
-     * Determine whether the user can change the brand status.
-     */
-    public function changeStatus(User $user, Brand $brand): Response
-    {
-        // El usuario debe ser el propietario del negocio asociado a la marca
-        return $user->id === $brand->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para cambiar el estado de esta marca.');
-    }
-
-    /**
-     * Determine whether the user can bulk delete brands.
-     */
-    public function bulkDelete(User $user, Business $business): Response
-    {
-        // El usuario debe ser el propietario del negocio
-        return $user->id === $business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para realizar eliminaciones masivas en este negocio.');
+        return $user->can('brands:force-delete');
     }
 }

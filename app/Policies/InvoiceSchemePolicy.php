@@ -2,73 +2,64 @@
 
 namespace App\Policies;
 
-use App\Models\Business;
 use App\Models\InvoiceScheme;
 use App\Models\User;
 
 class InvoiceSchemePolicy
 {
     /**
-     * Determine whether the user can view any invoice schemes.
+     * Determine whether the user can view any models.
      */
-    public function index(User $user, Business $business): bool
+    public function index(User $user): bool
     {
-        return $business->owner_id === $user->id || $user->hasPermissionTo('invoice-schemes:index');
+        return $user->can('invoice-schemes:index');
     }
 
     /**
-     * Determine whether the user can view the invoice scheme.
+     * Determine whether the user can view the model.
      */
-    public function view(User $user, InvoiceScheme $invoiceScheme): bool
+    public function show(User $user, InvoiceScheme $invoiceScheme): bool
     {
-        return $invoiceScheme->business->owner_id === $user->id || $user->hasPermissionTo('invoice-schemes:show');
+        return $user->can('invoice-schemes:show');
     }
 
     /**
-     * Determine whether the user can create invoice schemes.
+     * Determine whether the user can create models.
      */
-    public function create(User $user, Business $business): bool
+    public function create(User $user): bool
     {
-        return $business->owner_id === $user->id || $user->hasPermissionTo('invoice-schemes:create');
+        return $user->can('invoice-schemes:create');
     }
 
     /**
-     * Determine whether the user can update the invoice scheme.
+     * Determine whether the user can update the model.
      */
     public function update(User $user, InvoiceScheme $invoiceScheme): bool
     {
-        return $invoiceScheme->business->owner_id === $user->id || $user->hasPermissionTo('invoice-schemes:edit');
+        return $user->can('invoice-schemes:update');
     }
 
     /**
-     * Determine whether the user can delete the invoice scheme.
+     * Determine whether the user can delete the model.
      */
     public function delete(User $user, InvoiceScheme $invoiceScheme): bool
     {
-        return $invoiceScheme->business->owner_id === $user->id || $user->hasPermissionTo('invoice-schemes:delete');
+        return $user->can('invoice-schemes:delete');
     }
 
     /**
-     * Determine whether the user can view invoice scheme statistics.
+     * Determine whether the user can restore the model.
      */
-    public function viewStatistics(User $user, InvoiceScheme $invoiceScheme): bool
+    public function restore(User $user, InvoiceScheme $invoiceScheme): bool
     {
-        return $invoiceScheme->business->owner_id === $user->id || $user->hasPermissionTo('invoice-schemes:statistics');
+        return $user->can('invoice-schemes:restore');
     }
 
     /**
-     * Determine whether the user can change invoice scheme status.
+     * Determine whether the user can permanently delete the model.
      */
-    public function changeStatus(User $user, InvoiceScheme $invoiceScheme): bool
+    public function forceDelete(User $user, InvoiceScheme $invoiceScheme): bool
     {
-        return $invoiceScheme->business->owner_id === $user->id || $user->hasPermissionTo('invoice-schemes:change-status');
-    }
-
-    /**
-     * Determine whether the user can bulk delete invoice schemes.
-     */
-    public function bulkDelete(User $user, Business $business): bool
-    {
-        return $business->owner_id === $user->id || $user->hasPermissionTo('invoice-schemes:bulk-destroy');
+        return $user->can('invoice-schemes:force-delete');
     }
 }

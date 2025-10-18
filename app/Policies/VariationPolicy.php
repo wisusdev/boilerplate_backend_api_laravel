@@ -2,153 +2,64 @@
 
 namespace App\Policies;
 
-use App\Models\Business;
 use App\Models\User;
 use App\Models\Variation;
-use Illuminate\Auth\Access\Response;
 
 class VariationPolicy
 {
     /**
-     * Determine whether the user can view any variations.
+     * Determine whether the user can view any models.
      */
-    public function viewAny(User $user, Business $business): Response
+    public function index(User $user): bool
     {
-        // El usuario debe ser el propietario del negocio o tener permisos de administrador
-        return $user->id === $business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para ver las variaciones de este negocio.');
+        return $user->can('variations:index');
     }
 
     /**
-     * Determine whether the user can view the variation.
+     * Determine whether the user can view the model.
      */
-    public function view(User $user, Variation $variation): Response
+    public function show(User $user, Variation $variation): bool
     {
-        // El usuario debe ser el propietario del negocio asociado a la variación
-        return $user->id === $variation->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para ver esta variación.');
+        return $user->can('variations:show');
     }
 
     /**
-     * Determine whether the user can create variations.
+     * Determine whether the user can create models.
      */
-    public function create(User $user, Business $business): Response
+    public function create(User $user): bool
     {
-        // El usuario debe ser el propietario del negocio
-        return $user->id === $business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para crear variaciones en este negocio.');
+        return $user->can('variations:create');
     }
 
     /**
-     * Determine whether the user can update the variation.
+     * Determine whether the user can update the model.
      */
-    public function update(User $user, Variation $variation): Response
+    public function update(User $user, Variation $variation): bool
     {
-        // El usuario debe ser el propietario del negocio asociado a la variación
-        return $user->id === $variation->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para actualizar esta variación.');
+        return $user->can('variations:update');
     }
 
     /**
-     * Determine whether the user can delete the variation.
+     * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Variation $variation): Response
+    public function delete(User $user, Variation $variation): bool
     {
-        // El usuario debe ser el propietario del negocio asociado a la variación
-        return $user->id === $variation->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para eliminar esta variación.');
+        return $user->can('variations:delete');
     }
 
     /**
-     * Determine whether the user can restore the variation.
+     * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Variation $variation): Response
+    public function restore(User $user, Variation $variation): bool
     {
-        // El usuario debe ser el propietario del negocio asociado a la variación
-        return $user->id === $variation->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para restaurar esta variación.');
+        return $user->can('variations:restore');
     }
 
     /**
-     * Determine whether the user can permanently delete the variation.
+     * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Variation $variation): Response
+    public function forceDelete(User $user, Variation $variation): bool
     {
-        // Solo administradores pueden eliminar permanentemente
-        return $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('Solo los administradores pueden eliminar permanentemente las variaciones.');
-    }
-
-    /**
-     * Determine whether the user can view variation statistics.
-     */
-    public function viewStatistics(User $user, Variation $variation): Response
-    {
-        // El usuario debe ser el propietario del negocio asociado a la variación
-        return $user->id === $variation->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para ver las estadísticas de esta variación.');
-    }
-
-    /**
-     * Determine whether the user can update stock of the variation.
-     */
-    public function updateStock(User $user, Variation $variation): Response
-    {
-        // El usuario debe ser el propietario del negocio asociado a la variación
-        return $user->id === $variation->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para actualizar el stock de esta variación.');
-    }
-
-    /**
-     * Determine whether the user can change the variation status.
-     */
-    public function changeStatus(User $user, Variation $variation): Response
-    {
-        // El usuario debe ser el propietario del negocio asociado a la variación
-        return $user->id === $variation->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para cambiar el estado de esta variación.');
-    }
-
-    /**
-     * Determine whether the user can update price of the variation.
-     */
-    public function updatePrice(User $user, Variation $variation): Response
-    {
-        // El usuario debe ser el propietario del negocio asociado a la variación
-        return $user->id === $variation->business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para actualizar el precio de esta variación.');
-    }
-
-    /**
-     * Determine whether the user can bulk update variations.
-     */
-    public function bulkUpdate(User $user, Business $business): Response
-    {
-        // El usuario debe ser el propietario del negocio
-        return $user->id === $business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para realizar actualizaciones masivas en este negocio.');
-    }
-
-    /**
-     * Determine whether the user can bulk delete variations.
-     */
-    public function bulkDelete(User $user, Business $business): Response
-    {
-        // El usuario debe ser el propietario del negocio
-        return $user->id === $business->user_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para realizar eliminaciones masivas en este negocio.');
+        return $user->can('variations:force-delete');
     }
 }

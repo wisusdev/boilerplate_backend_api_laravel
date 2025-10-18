@@ -45,7 +45,7 @@ class CategoryController extends Controller
      */
     public function store(CategoryRequest $request, Business $business): CategoryResource
     {
-        $this->authorize('create', [Category::class]);
+        $this->authorize('create', Category::class);
 
         $data = $request->validated();
         $categoryData = $data['data']['attributes'];
@@ -156,7 +156,7 @@ class CategoryController extends Controller
      */
     public function statistics(Business $business, Category $category): JsonResponse
     {
-        $this->authorize('view', $category);
+        $this->authorize('show', $category);
 
         $stats = [
             'products_count' => $category->products()->count(),
@@ -183,7 +183,7 @@ class CategoryController extends Controller
      */
     public function products(Business $business, Category $category): JsonResource
     {
-        $this->authorize('view', $category);
+        $this->authorize('show', $category);
 
         $products = $category->products()
             ->with(['business', 'brand', 'unit', 'variations'])
@@ -247,7 +247,7 @@ class CategoryController extends Controller
      */
     public function bulkDestroy(Request $request, Business $business): JsonResponse
     {
-        $this->authorize('viewAny', Category::class);
+        $this->authorize('index', Category::class);
 
         $data = $request->input('data.attributes', []);
         $categoryIds = $data['ids'] ?? [];

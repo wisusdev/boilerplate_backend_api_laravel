@@ -2,81 +2,64 @@
 
 namespace App\Policies;
 
-use App\Models\Business;
 use App\Models\InvoiceLayout;
 use App\Models\User;
 
 class InvoiceLayoutPolicy
 {
     /**
-     * Determine whether the user can view any invoice layouts.
+     * Determine whether the user can view any models.
      */
-    public function viewAny(User $user, Business $business): bool
+    public function index(User $user): bool
     {
-        return $business->owner_id === $user->id || $user->hasPermissionTo('invoice-layouts:index');
+        return $user->can('invoice-layouts:index');
     }
 
     /**
-     * Determine whether the user can view the invoice layout.
+     * Determine whether the user can view the model.
      */
-    public function view(User $user, InvoiceLayout $invoiceLayout): bool
+    public function show(User $user, InvoiceLayout $invoiceLayout): bool
     {
-        return $invoiceLayout->business->owner_id === $user->id || $user->hasPermissionTo('invoice-layouts:show');
+        return $user->can('invoice-layouts:show');
     }
 
     /**
-     * Determine whether the user can create invoice layouts.
+     * Determine whether the user can create models.
      */
-    public function create(User $user, Business $business): bool
+    public function create(User $user): bool
     {
-        return $business->owner_id === $user->id || $user->hasPermissionTo('invoice-layouts:create');
+        return $user->can('invoice-layouts:create');
     }
 
     /**
-     * Determine whether the user can update the invoice layout.
+     * Determine whether the user can update the model.
      */
     public function update(User $user, InvoiceLayout $invoiceLayout): bool
     {
-        return $invoiceLayout->business->owner_id === $user->id || $user->hasPermissionTo('invoice-layouts:edit');
+        return $user->can('invoice-layouts:update');
     }
 
     /**
-     * Determine whether the user can delete the invoice layout.
+     * Determine whether the user can delete the model.
      */
     public function delete(User $user, InvoiceLayout $invoiceLayout): bool
     {
-        return $invoiceLayout->business->owner_id === $user->id || $user->hasPermissionTo('invoice-layouts:delete');
+        return $user->can('invoice-layouts:delete');
     }
 
     /**
-     * Determine whether the user can view invoice layout statistics.
+     * Determine whether the user can restore the model.
      */
-    public function viewStatistics(User $user, InvoiceLayout $invoiceLayout): bool
+    public function restore(User $user, InvoiceLayout $invoiceLayout): bool
     {
-        return $invoiceLayout->business->owner_id === $user->id || $user->hasPermissionTo('invoice-layouts:statistics');
+        return $user->can('invoice-layouts:restore');
     }
 
     /**
-     * Determine whether the user can change invoice layout status.
+     * Determine whether the user can permanently delete the model.
      */
-    public function changeStatus(User $user, InvoiceLayout $invoiceLayout): bool
+    public function forceDelete(User $user, InvoiceLayout $invoiceLayout): bool
     {
-        return $invoiceLayout->business->owner_id === $user->id || $user->hasPermissionTo('invoice-layouts:change-status');
-    }
-
-    /**
-     * Determine whether the user can bulk delete invoice layouts.
-     */
-    public function bulkDelete(User $user, Business $business): bool
-    {
-        return $business->owner_id === $user->id || $user->hasPermissionTo('invoice-layouts:bulk-delete');
-    }
-
-    /**
-     * Determine whether the user can duplicate the invoice layout.
-     */
-    public function duplicate(User $user, InvoiceLayout $invoiceLayout): bool
-    {
-        return $invoiceLayout->business->owner_id === $user->id || $user->hasPermissionTo('invoice-layouts:duplicate');
+        return $user->can('invoice-layouts:force-delete');
     }
 }

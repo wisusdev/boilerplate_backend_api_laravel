@@ -18,7 +18,7 @@ class ReferenceCountController extends Controller
 {
     public function index(Request $request, Business $business): JsonResource
     {
-        $this->authorize('viewAny', [ReferenceCount::class, $business]);
+        $this->authorize('index', ReferenceCount::class);
 
         $referenceCounts = ReferenceCount::query()
             ->where('business_id', $business->id)
@@ -33,7 +33,7 @@ class ReferenceCountController extends Controller
 
     public function store(ReferenceCountRequest $request, Business $business): ReferenceCountResource
     {
-        $this->authorize('create', [ReferenceCount::class, $business]);
+        $this->authorize('create', ReferenceCount::class);
 
         $data = $request->validated();
         $referenceCountData = $data['data']['attributes'];
@@ -53,7 +53,7 @@ class ReferenceCountController extends Controller
      */
     public function show(Business $business, ReferenceCount $referenceCount): JsonResource
     {
-        $this->authorize('view', [$referenceCount, $business]);
+        $this->authorize('show', $referenceCount);
 
         return ReferenceCountResource::make($referenceCount->load('business'));
     }
@@ -66,7 +66,7 @@ class ReferenceCountController extends Controller
 	 */
     public function update(ReferenceCountRequest $request, Business $business, ReferenceCount $referenceCount): JsonResource
     {
-        $this->authorize('update', [$referenceCount, $business]);
+        $this->authorize('update', $referenceCount);
 
         $data = $request->validated();
         $referenceCountData = $data['data']['attributes'];
@@ -86,7 +86,7 @@ class ReferenceCountController extends Controller
 	 */
     public function destroy(Business $business, ReferenceCount $referenceCount): JsonResponse
     {
-        $this->authorize('delete', [$referenceCount, $business]);
+        $this->authorize('delete', $referenceCount);
 
         DB::transaction(function () use ($referenceCount) {
             $referenceCount->delete();

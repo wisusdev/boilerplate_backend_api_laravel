@@ -7,28 +7,59 @@ use App\Models\User;
 
 class PrinterPolicy
 {
-    public function viewAny(User $user): bool
+    /**
+     * Determine whether the user can view any models.
+     */
+    public function index(User $user): bool
     {
         return $user->can('printers:index');
     }
 
-    public function view(User $user, Printer $printer): bool
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function show(User $user, Printer $printer): bool
     {
         return $user->can('printers:show');
     }
 
+    /**
+     * Determine whether the user can create models.
+     */
     public function create(User $user): bool
     {
-        return $user->can('printers:store');
+        return $user->can('printers:create');
     }
 
+    /**
+     * Determine whether the user can update the model.
+     */
     public function update(User $user, Printer $printer): bool
     {
         return $user->can('printers:update');
     }
 
+    /**
+     * Determine whether the user can delete the model.
+     */
     public function delete(User $user, Printer $printer): bool
     {
         return $user->can('printers:delete');
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, Printer $printer): bool
+    {
+        return $user->can('printers:restore');
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, Printer $printer): bool
+    {
+        return $user->can('printers:force-delete');
     }
 }

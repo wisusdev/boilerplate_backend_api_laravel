@@ -3,62 +3,63 @@
 namespace App\Policies;
 
 use App\Models\ReferenceCount;
-use App\Models\Business;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class ReferenceCountPolicy
 {
     /**
-     * Determine whether the user can view any reference counts.
+     * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function index(User $user): bool
     {
-        // El usuario debe ser el propietario del negocio o tener permisos de administrador
-        return $user->hasPermissionTo('reference_counts:index');
+        return $user->can('reference_counts:index');
     }
 
     /**
-     * Determine whether the user can view the reference count.
+     * Determine whether the user can view the model.
      */
-    public function view(User $user, ReferenceCount $referenceCount): Response
+    public function show(User $user, ReferenceCount $referenceCount): bool
     {
-        // El usuario debe ser el propietario del negocio asociado al contador de referencia
-        return $user->id === $referenceCount->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para ver este contador de referencia.');
+        return $user->can('reference_counts:show');
     }
 
     /**
-     * Determine whether the user can create reference counts.
+     * Determine whether the user can create models.
      */
-    public function create(User $user, Business $business): Response
+    public function create(User $user): bool
     {
-        // El usuario debe ser el propietario del negocio
-        return $user->id === $business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para crear contadores de referencia en este negocio.');
+        return $user->can('reference_counts:create');
     }
 
     /**
-     * Determine whether the user can update the reference count.
+     * Determine whether the user can update the model.
      */
-    public function update(User $user, ReferenceCount $referenceCount): Response
+    public function update(User $user, ReferenceCount $referenceCount): bool
     {
-        // El usuario debe ser el propietario del negocio asociado al contador de referencia
-        return $user->id === $referenceCount->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para actualizar este contador de referencia.');
+        return $user->can('reference_counts:update');
     }
 
     /**
-     * Determine whether the user can delete the reference count.
+     * Determine whether the user can delete the model.
      */
-    public function delete(User $user, ReferenceCount $referenceCount): Response
+    public function delete(User $user, ReferenceCount $referenceCount): bool
     {
-        // El usuario debe ser el propietario del negocio asociado al contador de referencia
-        return $user->id === $referenceCount->business->owner_id || $user->hasRole('admin')
-            ? Response::allow()
-            : Response::deny('No tienes permisos para eliminar este contador de referencia.');
+        return $user->can('reference_counts:delete');
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, ReferenceCount $referenceCount): bool
+    {
+        return $user->can('reference_counts:restore');
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, ReferenceCount $referenceCount): bool
+    {
+        return $user->can('reference_counts:force-delete');
     }
 }

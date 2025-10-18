@@ -21,7 +21,7 @@ class InvoiceLayoutController extends Controller
      */
     public function index(Request $request, Business $business): AnonymousResourceCollection
     {
-        $this->authorize('viewAny', [InvoiceLayout::class, $business]);
+        $this->authorize('index', InvoiceLayout::class);
 
         $invoiceLayouts = InvoiceLayout::query()
             ->where('business_id', $business->id)
@@ -40,7 +40,7 @@ class InvoiceLayoutController extends Controller
      */
     public function store(InvoiceLayoutRequest $request, Business $business): InvoiceLayoutResource
     {
-        $this->authorize('create', [InvoiceLayout::class, $business]);
+        $this->authorize('create', InvoiceLayout::class);
 
         $validated = $request->validated();
 
@@ -62,7 +62,7 @@ class InvoiceLayoutController extends Controller
      */
     public function show(Business $business, InvoiceLayout $invoiceLayout): InvoiceLayoutResource
     {
-        $this->authorize('view', $invoiceLayout);
+        $this->authorize('show', $invoiceLayout);
 
         $invoiceLayout = InvoiceLayout::where('id', $invoiceLayout->id)
             ->allowedIncludes(['business'])
@@ -119,7 +119,7 @@ class InvoiceLayoutController extends Controller
      */
     public function statistics(Business $business, InvoiceLayout $invoiceLayout): JsonResponse
     {
-        $this->authorize('viewStatistics', $invoiceLayout);
+        $this->authorize('show', $invoiceLayout);
 
         $stats = [
             'business_locations_count' => $invoiceLayout->business_locations()->count(),
@@ -145,7 +145,7 @@ class InvoiceLayoutController extends Controller
      */
     public function changeStatus(Request $request, Business $business, InvoiceLayout $invoiceLayout): InvoiceLayoutResource
     {
-        $this->authorize('changeStatus', $invoiceLayout);
+        $this->authorize('update', $invoiceLayout);
 
         $request->validate([
             'data.type' => 'required|string',
@@ -172,7 +172,7 @@ class InvoiceLayoutController extends Controller
      */
     public function bulkDestroy(Request $request, Business $business): JsonResponse
     {
-        $this->authorize('bulkDelete', [InvoiceLayout::class, $business]);
+        $this->authorize('index', InvoiceLayout::class);
 
         $request->validate([
             'ids' => 'required|array',
@@ -209,7 +209,7 @@ class InvoiceLayoutController extends Controller
      */
     public function duplicate(Business $business, InvoiceLayout $invoiceLayout): InvoiceLayoutResource
     {
-        $this->authorize('duplicate', $invoiceLayout);
+        $this->authorize('create', InvoiceLayout::class);
 
         $duplicated = $invoiceLayout->replicate();
         $duplicated->name = $invoiceLayout->name . ' (Copia)';

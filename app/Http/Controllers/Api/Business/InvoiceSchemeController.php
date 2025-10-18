@@ -21,7 +21,7 @@ class InvoiceSchemeController extends Controller
      */
     public function index(Business $business, Request $request): AnonymousResourceCollection
     {
-        $this->authorize('index', [InvoiceScheme::class, $business]);
+        $this->authorize('index', InvoiceScheme::class);
 
         $invoiceSchemes = InvoiceScheme::query()
             ->where('business_id', $business->id)
@@ -39,7 +39,7 @@ class InvoiceSchemeController extends Controller
      */
     public function store(InvoiceSchemeRequest $request, Business $business): InvoiceSchemeResource
     {
-        $this->authorize('create', [InvoiceScheme::class, $business]);
+        $this->authorize('create', InvoiceScheme::class);
 
         $validated = $request->validated();
 
@@ -61,7 +61,7 @@ class InvoiceSchemeController extends Controller
      */
     public function show(Business $business, InvoiceScheme $invoiceScheme): InvoiceSchemeResource
     {
-        $this->authorize('view', $invoiceScheme);
+        $this->authorize('show', $invoiceScheme);
 
         $invoiceScheme = InvoiceScheme::where('id', $invoiceScheme->id)
             ->allowedIncludes(['business'])
@@ -119,7 +119,7 @@ class InvoiceSchemeController extends Controller
      */
     public function statistics(Business $business, InvoiceScheme $invoiceScheme): JsonResponse
     {
-        $this->authorize('viewStatistics', $invoiceScheme);
+        $this->authorize('show', $invoiceScheme);
 
         $stats = [
             'total_invoices' => $invoiceScheme->invoice_count,
@@ -146,7 +146,7 @@ class InvoiceSchemeController extends Controller
      */
     public function changeStatus(Request $request, Business $business, InvoiceScheme $invoiceScheme): InvoiceSchemeResource
     {
-        $this->authorize('changeStatus', $invoiceScheme);
+        $this->authorize('update', $invoiceScheme);
 
         $request->validate([
             'data.type' => 'required|string',
@@ -173,7 +173,7 @@ class InvoiceSchemeController extends Controller
      */
     public function bulkDestroy(Request $request, Business $business): JsonResponse
     {
-        $this->authorize('bulkDelete', [InvoiceScheme::class, $business]);
+        $this->authorize('index', InvoiceScheme::class);
 
         $request->validate([
             'ids' => 'required|array',

@@ -45,7 +45,7 @@ class ProductController extends Controller
      */
     public function store(ProductRequest $request, Business $business): ProductResource
     {
-        $this->authorize('create', [Product::class, $business]);
+        $this->authorize('create', Product::class);
 
         $data = $request->validated();
         $productData = $data['data']['attributes'];
@@ -176,7 +176,7 @@ class ProductController extends Controller
      */
     public function stock(Product $product): JsonResponse
     {
-        $this->authorize('view', $product);
+        $this->authorize('show', $product);
 
         $stockInfo = [];
 

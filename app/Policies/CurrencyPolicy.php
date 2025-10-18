@@ -8,92 +8,58 @@ use App\Models\User;
 class CurrencyPolicy
 {
     /**
-     * Determine whether the user can view any currencies.
+     * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function index(User $user): bool
     {
-        return $user->can('currencies:index') || 
-               $user->can('manage_system') || 
-               $user->hasRole('super-admin');
+        return $user->can('currencies:index');
     }
 
     /**
-     * Determine whether the user can view the currency.
+     * Determine whether the user can view the model.
      */
-    public function view(User $user, Currency $currency): bool
+    public function show(User $user, Currency $currency): bool
     {
-        return $user->can('currencies:show') || 
-               $user->can('manage_system') || 
-               $user->hasRole('super-admin');
+        return $user->can('currencies:show');
     }
 
     /**
-     * Determine whether the user can create currencies.
+     * Determine whether the user can create models.
      */
     public function create(User $user): bool
     {
-        return $user->can('currencies:create') || 
-               $user->can('manage_system') || 
-               $user->hasRole('super-admin');
+        return $user->can('currencies:create');
     }
 
     /**
-     * Determine whether the user can update the currency.
+     * Determine whether the user can update the model.
      */
     public function update(User $user, Currency $currency): bool
     {
-        return $user->can('currencies:update') || 
-               $user->can('manage_system') || 
-               $user->hasRole('super-admin');
+        return $user->can('currencies:update');
     }
 
     /**
-     * Determine whether the user can delete the currency.
+     * Determine whether the user can delete the model.
      */
     public function delete(User $user, Currency $currency): bool
     {
-        return $user->can('currencies:delete') || 
-               $user->can('manage_system') || 
-               $user->hasRole('super-admin');
+        return $user->can('currencies:delete');
     }
 
     /**
-     * Determine whether the user can restore the currency.
+     * Determine whether the user can restore the model.
      */
     public function restore(User $user, Currency $currency): bool
     {
-        return $user->can('currencies:restore') || 
-               $user->can('manage_system') || 
-               $user->hasRole('super-admin');
+        return $user->can('currencies:restore');
     }
 
     /**
-     * Determine whether the user can permanently delete the currency.
+     * Determine whether the user can permanently delete the model.
      */
     public function forceDelete(User $user, Currency $currency): bool
     {
-        return $user->can('currencies:force_delete') || 
-               $user->can('manage_system') || 
-               $user->hasRole('super-admin');
-    }
-
-    /**
-     * Determine whether the user can view currency statistics.
-     */
-    public function viewStatistics(User $user): bool
-    {
-        return $user->can('currencies:statistics') || 
-               $user->can('manage_system') || 
-               $user->hasRole('super-admin');
-    }
-
-    /**
-     * Determine whether the user can bulk delete currencies.
-     */
-    public function bulkDelete(User $user): bool
-    {
-        return $user->can('currencies:delete') || 
-               $user->can('manage_system') || 
-               $user->hasRole('super-admin');
+        return $user->can('currencies:force-delete');
     }
 }

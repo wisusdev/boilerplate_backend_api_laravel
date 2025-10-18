@@ -10,20 +10,17 @@ class BusinessPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function index(User $user): bool
     {
-        return $user->hasPermissionTo('businesses:index') || $user->hasRole('super-admin');
+        return $user->can('businesses:index');
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Business $business): bool
+    public function show(User $user, Business $business): bool
     {
-        // El usuario puede ver el negocio si es el propietario o tiene permisos
-        return $user->hasPermissionTo('businesses:show') ||
-               $user->hasRole('super-admin') ||
-               $business->owner_id === $user->id;
+        return $user->can('businesses:show');
     }
 
     /**
@@ -31,7 +28,7 @@ class BusinessPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('businesses:create') || $user->hasRole('super-admin');
+        return $user->can('businesses:create');
     }
 
     /**
@@ -39,10 +36,7 @@ class BusinessPolicy
      */
     public function update(User $user, Business $business): bool
     {
-        // Solo el propietario o usuarios con permisos pueden actualizar
-        return $user->hasPermissionTo('businesses:update') ||
-               $user->hasRole('super-admin') ||
-               $business->owner_id === $user->id;
+        return $user->can('businesses:update');
     }
 
     /**
@@ -50,9 +44,7 @@ class BusinessPolicy
      */
     public function delete(User $user, Business $business): bool
     {
-        // Solo el propietario o superadmin pueden eliminar
-        return $user->hasRole('super-admin') ||
-               ($business->owner_id === $user->id && $user->hasPermissionTo('businesses:delete'));
+        return $user->can('businesses:delete');
     }
 
     /**
@@ -60,8 +52,7 @@ class BusinessPolicy
      */
     public function restore(User $user, Business $business): bool
     {
-        return $user->hasRole('super-admin') ||
-               ($business->owner_id === $user->id && $user->hasPermissionTo('businesses:restore'));
+        return $user->can('businesses:restore');
     }
 
     /**
@@ -69,6 +60,6 @@ class BusinessPolicy
      */
     public function forceDelete(User $user, Business $business): bool
     {
-        return $user->hasRole('super-admin');
+        return $user->can('businesses:force-delete');
     }
 }

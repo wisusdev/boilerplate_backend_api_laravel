@@ -24,7 +24,7 @@ class TaxRateRequest extends FormRequest
     public function rules(): array
     {
         $businessId = $this->route('business')->id;
-        $taxRateId = $this->route('taxRate')?->id;
+        $taxRateId = $this->route('tax_rate') ? $this->route('tax_rate')->id : null;
 
         $data = [
             'data' => 'required|array',
@@ -44,7 +44,7 @@ class TaxRateRequest extends FormRequest
 		    $data['data.attributes.created_by'] = 'required|integer|exists:users,id';
 	    } else if ($this->isMethod('put') || $this->isMethod('patch')) {
 		    $data['data.id'] = 'required|integer|exists:categories,id';
-		    $data['data.attributes.business_id'] = 'prohibited'; // El ID del negocio no debe actualizarse
+		    $data['data.attributes.business_id'] = 'prohibited';
 		    $data['data.attributes.created_by'] = 'sometimes|integer|exists:users,id';
 	    }
 

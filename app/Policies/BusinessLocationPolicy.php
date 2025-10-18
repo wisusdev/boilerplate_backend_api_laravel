@@ -2,80 +2,64 @@
 
 namespace App\Policies;
 
-use App\Models\Business;
 use App\Models\BusinessLocation;
 use App\Models\User;
-use Illuminate\Auth\Access\HandlesAuthorization;
-use Illuminate\Auth\Access\Response;
 
 class BusinessLocationPolicy
 {
-    use HandlesAuthorization;
-
     /**
-     * Determine whether the user can view any business locations.
+     * Determine whether the user can view any models.
      */
-    public function viewAny(User $user, Business $business): Response|bool
+    public function index(User $user): bool
     {
-        // Verificar si el usuario es propietario del negocio o tiene permiso
-        return $user->id === $business->owner_id || $user->hasPermissionTo('business_locations:index');
+        return $user->can('business_locations:index');
     }
 
     /**
-     * Determine whether the user can view the business location.
+     * Determine whether the user can view the model.
      */
-    public function view(User $user, Business $business, BusinessLocation $location): Response|bool
+    public function show(User $user, BusinessLocation $businessLocation): bool
     {
-        // Verificar si el usuario es propietario del negocio o tiene permiso
-        return $user->id === $business->owner_id || $user->hasPermissionTo('business_locations:show');
+        return $user->can('business_locations:show');
     }
 
     /**
-     * Determine whether the user can create business locations.
+     * Determine whether the user can create models.
      */
-    public function create(User $user, Business $business): Response|bool
+    public function create(User $user): bool
     {
-        // Verificar si el usuario es propietario del negocio o tiene permiso
-        return $user->id === $business->owner_id || $user->hasPermissionTo('business_locations:create');
+        return $user->can('business_locations:create');
     }
 
     /**
-     * Determine whether the user can update the business location.
+     * Determine whether the user can update the model.
      */
-    public function update(User $user, BusinessLocation $location): Response|bool
+    public function update(User $user, BusinessLocation $businessLocation): bool
     {
-        // Verificar si el usuario es propietario del negocio o tiene permiso
-        $business = Business::find($location->business_id);
-        return $user->id === $business->owner_id || $user->hasPermissionTo('business_locations:update');
+        return $user->can('business_locations:update');
     }
 
     /**
-     * Determine whether the user can delete the business location.
+     * Determine whether the user can delete the model.
      */
-    public function delete(User $user, BusinessLocation $location): Response|bool
+    public function delete(User $user, BusinessLocation $businessLocation): bool
     {
-        // Verificar si el usuario es propietario del negocio o tiene permiso
-        $business = Business::find($location->business_id);
-        return $user->id === $business->owner_id || $user->hasPermissionTo('business_locations:delete');
+        return $user->can('business_locations:delete');
     }
 
     /**
-     * Determine whether the user can restore the business location.
+     * Determine whether the user can restore the model.
      */
-    public function restore(User $user, BusinessLocation $location): Response|bool
+    public function restore(User $user, BusinessLocation $businessLocation): bool
     {
-        // Verificar si el usuario es propietario del negocio o tiene permiso
-        $business = Business::find($location->business_id);
-        return $user->id === $business->owner_id || $user->hasPermissionTo('business_locations:restore');
+        return $user->can('business_locations:restore');
     }
 
     /**
-     * Determine whether the user can permanently delete the business location.
+     * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, BusinessLocation $location): Response|bool
+    public function forceDelete(User $user, BusinessLocation $businessLocation): bool
     {
-        // Verificar si el usuario es propietario del negocio o tiene permiso
-        $business = Business::find($location->business_id);
-        return $user->id === $business->owner_id || $user->hasPermissionTo('business_locations:delete');
+        return $user->can('business_locations:force-delete');
     }
 }

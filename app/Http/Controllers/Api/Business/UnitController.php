@@ -28,7 +28,7 @@ class UnitController extends Controller
      */
     public function index(Business $business): JsonResource
     {
-        $this->authorize('index', [Unit::class, $business]);
+        $this->authorize('index', Unit::class);
 
         $units = Unit::query()
             ->where('business_id', $business->id)
@@ -47,7 +47,7 @@ class UnitController extends Controller
 	 */
     public function store(UnitRequest $request, Business $business): UnitResource
     {
-        Gate::authorize('create', [Unit::class, $business]);
+        $this->authorize('create', Unit::class);
 
         $validatedData = $request->validated();
         $attributes = $validatedData['data']['attributes'];
@@ -65,7 +65,7 @@ class UnitController extends Controller
      */
     public function show(Business $business, Unit $unit): UnitResource
     {
-        Gate::authorize('show', $unit);
+        $this->authorize('show', $unit);
 
         $unit = Unit::where('id','=', $unit->id)
 	        ->allowedIncludes(['business', 'creator'])
@@ -81,7 +81,7 @@ class UnitController extends Controller
 	 */
     public function update(UnitRequest $request, Business $business, Unit $unit): UnitResource
     {
-        Gate::authorize('update', $unit);
+        $this->authorize('update', $unit);
 
         $validatedData = $request->validated();
         $attributes = $validatedData['data']['attributes'];
@@ -127,7 +127,7 @@ class UnitController extends Controller
     public function restore(Business $business, int $unitId): UnitResource
     {
         $unit = Unit::withTrashed()->findOrFail($unitId);
-        Gate::authorize('restore', $unit);
+        $this->authorize('restore', $unit);
 
         $unit->restore();
         $unit->load(['business', 'creator']);
@@ -140,7 +140,7 @@ class UnitController extends Controller
      */
     public function statistics(Business $business, Unit $unit): JsonResponse
     {
-        Gate::authorize('viewStatistics', $unit);
+        $this->authorize('show', $unit);
 
         $productsCount = $unit->products()->count();
         $activeProductsCount = $unit->products()->where('is_inactive', false)->count();
@@ -168,7 +168,7 @@ class UnitController extends Controller
      */
     public function products(Request $request, Business $business, Unit $unit): AnonymousResourceCollection
     {
-        Gate::authorize('manageProducts', $unit);
+        $this->authorize('index', Unit::class);
 
         $query = $unit->products()
             ->with(['business', 'category', 'brand', 'unit', 'creator']);
@@ -205,7 +205,7 @@ class UnitController extends Controller
      */
     public function changeStatus(Request $request, Business $business, Unit $unit): UnitResource
     {
-        $this->authorize('changeStatus', $unit);
+        $this->authorize('update', $unit);
 
         $request->validate([
             'data.attributes.is_active' => 'required|boolean',
@@ -226,7 +226,7 @@ class UnitController extends Controller
      */
     public function bulkDestroy(Request $request, Business $business): JsonResponse
     {
-        $this->authorize('bulkDelete', [Unit::class, $business]);
+        $this->authorize('index', Unit::class);
 
         $request->validate([
             'data.attributes.ids' => 'required|array|min:1',

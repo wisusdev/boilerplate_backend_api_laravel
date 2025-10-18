@@ -21,7 +21,7 @@ class CurrencyController extends Controller
      */
     public function index(): JsonResource
     {
-        $this->authorize('viewAny', Currency::class);
+        $this->authorize('index', Currency::class);
 
         $currencies = Currency::query()
             ->with(['businesses', 'purchase_businesses'])
@@ -63,7 +63,7 @@ class CurrencyController extends Controller
      */
     public function show(Currency $currency): CurrencyResource
     {
-        $this->authorize('view', $currency);
+        $this->authorize('show', $currency);
 
         $currency = Currency::where('id', $currency->id)
             ->sparseFieldset()
@@ -147,7 +147,7 @@ class CurrencyController extends Controller
      */
     public function statistics(Currency $currency): JsonResponse
     {
-        $this->authorize('viewStatistics', $currency);
+        $this->authorize('show', $currency);
 
         $businessCount = $currency->businesses()->count();
         $purchaseBusinessCount = $currency->purchase_businesses()->count();
@@ -213,7 +213,7 @@ class CurrencyController extends Controller
      */
     public function businesses(Currency $currency): JsonResponse
     {
-        $this->authorize('view', $currency);
+        $this->authorize('show', $currency);
 
         $mainCurrencyBusinesses = $currency->businesses()
             ->select('id', 'name', 'currency_id')
@@ -259,7 +259,7 @@ class CurrencyController extends Controller
      */
     public function bulkDestroy(Request $request): JsonResponse
     {
-        $this->authorize('bulkDelete', Currency::class);
+        $this->authorize('index', Currency::class);
 
         $request->validate([
             'ids' => 'required|array',
