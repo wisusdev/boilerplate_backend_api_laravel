@@ -1,0 +1,7 @@
+{
+    "Core": true,
+    "Pages": true,
+    "Blog": true,
+    "Media": true,
+    "Menu": true
+}

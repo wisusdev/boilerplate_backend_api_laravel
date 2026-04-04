@@ -29,20 +29,28 @@ class Handler extends ExceptionHandler
      */
     public function register(): void
     {
-        $this->renderable(function (NotFoundHttpException $e) {
-            throw new JsonApi\NotFoundHttpException;
+        $this->renderable(function (NotFoundHttpException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                throw new JsonApi\NotFoundHttpException;
+            }
         });
 
-        $this->renderable(function (BadRequestHttpException $e) {
-            throw new JsonApi\BadRequestHttpException($e->getMessage());
+        $this->renderable(function (BadRequestHttpException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                throw new JsonApi\BadRequestHttpException($e->getMessage());
+            }
         });
 
-        $this->renderable(function (AuthenticationException $e) {
-            throw new JsonApi\AuthenticationException;
+        $this->renderable(function (AuthenticationException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                throw new JsonApi\AuthenticationException;
+            }
         });
 
-        $this->renderable(function (AccessDeniedHttpException $e) {
-            throw new JsonApi\UnauthorizedException;
+        $this->renderable(function (AccessDeniedHttpException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                throw new JsonApi\UnauthorizedException;
+            }
         });
     }
 

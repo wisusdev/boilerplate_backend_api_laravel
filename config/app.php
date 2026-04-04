@@ -173,6 +173,11 @@ return [
         App\Providers\RouteServiceProvider::class,
         App\Providers\TelescopeServiceProvider::class,
         App\Providers\JsonApiServiceProvider::class,
+
+        /*
+         * CMS Service Providers...
+         */
+        App\CMS\Theme\ThemeServiceProvider::class,
     ])->toArray(),
 
     /*
@@ -188,6 +193,7 @@ return [
 
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
+        'Theme' => App\CMS\Theme\ThemeFacade::class,
     ])->toArray(),
 
 ];

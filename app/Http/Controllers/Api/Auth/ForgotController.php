@@ -22,7 +22,7 @@ class ForgotController extends Controller
 
 		DB::table('password_reset_tokens')->updateOrInsert(['email' => $email], [
 			'token' => $token,
-			'created_at' => now()->addHours(6)
+			'created_at' => now()->addHours()
 		]);
 
 		$url = config('app.frontend_url').'/auth/reset-password?token='.$token;

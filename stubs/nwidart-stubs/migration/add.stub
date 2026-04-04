@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('settings', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->string('key')->unique();
-            $table->text('value')->nullable();
-            $table->timestamps();
+        Schema::table('$TABLE$', function (Blueprint $table) {
+            $FIELDS_UP$
         });
     }
 
@@ -24,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('setthings');
+        Schema::table('$TABLE$', function (Blueprint $table) {
+            $FIELDS_DOWN$
+        });
     }
 };

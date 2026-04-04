@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Setting;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class SettingSeeder extends Seeder
 {
@@ -104,7 +103,6 @@ class SettingSeeder extends Seeder
 
 		foreach ($settings as $setting) {
 			Setting::create([
-				'id' => Str::uuid(),
 				'key' => $setting['key'],
 				'value' => $setting['value'],
 			]);
