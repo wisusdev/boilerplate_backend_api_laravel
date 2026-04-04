@@ -1,0 +1,7 @@
+{
+    "label": "Example Theme",
+    "description": "A sample custom theme to demonstrate the theme system. Place your Blade views and assets here.",
+    "version": "1.0.0",
+    "author": "Your Name",
+    "preview": "screenshot.png"
+}

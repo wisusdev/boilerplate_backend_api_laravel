@@ -1,0 +1,42 @@
+{
+    "name": "Default",
+    "slug": "default",
+    "version": "1.0.0",
+    "description": "The default CMS theme",
+    "author": "CMS Team",
+    "parent": null,
+    "supports": [
+        "menus",
+        "widgets",
+        "custom-header",
+        "custom-footer",
+        "post-thumbnails"
+    ],
+    "locations": {
+        "primary": "Primary Navigation",
+        "footer": "Footer Navigation",
+        "social": "Social Links"
+    },
+    "layouts": {
+        "default": "Default Layout",
+        "full-width": "Full Width",
+        "sidebar-left": "Sidebar Left",
+        "sidebar-right": "Sidebar Right"
+    },
+    "templates": {
+        "page": {
+            "default": "Default Page",
+            "contact": "Contact Page",
+            "landing": "Landing Page"
+        },
+        "post": {
+            "default": "Default Post",
+            "featured": "Featured Post"
+        }
+    },
+    "settings": {
+        "primary_color": "#3b82f6",
+        "secondary_color": "#6366f1",
+        "font_family": "Inter, sans-serif"
+    }
+}
