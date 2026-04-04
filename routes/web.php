@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\Admin\ModuleController;
+use App\Http\Controllers\Web\Admin\ProfileController;
 use App\Http\Controllers\Web\Admin\RoleController;
 use App\Http\Controllers\Web\Admin\SettingController;
 use App\Http\Controllers\Web\Admin\ThemeController;
@@ -48,6 +49,12 @@ Route::middleware(['web', 'auth'])->prefix('admin')->name('admin.')->group(funct
     Route::get('/', function () {
         return view('admin.dashboard');
     })->name('dashboard');
+
+    // Profile
+    Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::delete('profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Users
     Route::resource('users', UserController::class)->except(['show']);
