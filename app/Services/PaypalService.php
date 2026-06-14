@@ -2,21 +2,31 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
+use App\Traits\EncryptsCredentials;
 use App\Traits\ExternalConsumerServices;
-use GuzzleHttp\Exception\GuzzleException;
 
 class PaypalService
 {
+    use EncryptsCredentials;
     use ExternalConsumerServices;
+
     protected string $base_url;
     protected string $client_id;
     protected string $client_secret;
 
     public function __construct()
     {
-        $this->base_url = config('services.paypal.base_uri');
-        $this->client_id = config('services.paypal.client_id');
-        $this->client_secret = config('services.paypal.client_secret');
+        $pgRow = Setting::where('key', 'payment_gateway')->first();
+        $pg    = $pgRow ? json_decode($pgRow->value, true) : [];
+
+        // Support both flat keys (new) and nested payment_methods (legacy seeder)
+        $mode               = $pg['paypal_mode'] ?? $pg['payment_methods']['paypal']['mode'] ?? 'sandbox';
+        $this->client_id    = $this->decryptCredential($pg['paypal_client_id'] ?? $pg['payment_methods']['paypal']['client_id'] ?? config('services.paypal.client_id', ''));
+        $this->client_secret = $this->decryptCredential($pg['paypal_client_secret'] ?? $pg['payment_methods']['paypal']['client_secret'] ?? config('services.paypal.client_secret', ''));
+        $this->base_url     = $mode === 'live'
+            ? 'https://api-m.paypal.com'
+            : 'https://api-m.sandbox.paypal.com';
     }
 
 	protected function getAccessToken(): string
@@ -43,11 +53,16 @@ class PaypalService
 
 		$responseBody = json_decode($response);
 
+		if (empty($responseBody->access_token)) {
+			$error = $responseBody->error_description ?? $responseBody->error ?? 'PayPal auth failed';
+			throw new \RuntimeException("PayPal: {$error}");
+		}
+
 		// Guardar el nuevo token y su tiempo de expiración en la sesión
-		$expiresIn = $responseBody->expires_in; // Tiempo en segundos hasta que el token expire
+		$expiresIn = $responseBody->expires_in ?? 3600;
 		session([
 			'paypal_access_token' => $responseBody->access_token,
-			'paypal_token_expires' => $currentTime + $expiresIn - 300, // Restar 5 minutos para asegurar la validez
+			'paypal_token_expires' => $currentTime + $expiresIn - 300,
 		]);
 
 		return $responseBody->access_token;
@@ -263,5 +278,126 @@ class PaypalService
 		);
 
 		return json_decode($response);
+	}
+
+	/**
+	 * Create a one-time payment Order (v2/checkout/orders).
+	 *
+	 * @return array{order_id: string, approve_url: string}
+	 */
+	public function createOrder(float $amount, string $currency, string $returnUrl, string $cancelUrl): array
+	{
+		$accessToken = $this->getAccessToken();
+
+		$response = $this->makeRequest(
+			'POST',
+			$this->base_url . '/v2/checkout/orders',
+			[
+				'intent'         => 'CAPTURE',
+				'purchase_units' => [
+					[
+						'amount' => [
+							'currency_code' => strtoupper($currency),
+							'value'         => number_format($amount, 2, '.', ''),
+						],
+					],
+				],
+				'application_context' => [
+					'return_url' => $returnUrl,
+					'cancel_url' => $cancelUrl,
+				],
+			],
+			[
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $accessToken,
+			],
+			true
+		);
+
+		$data = json_decode($response, true);
+		$approveUrl = '';
+		foreach ($data['links'] ?? [] as $link) {
+			if ($link['rel'] === 'approve') {
+				$approveUrl = $link['href'];
+				break;
+			}
+		}
+
+		return [
+			'order_id'    => $data['id'] ?? '',
+			'approve_url' => $approveUrl,
+		];
+	}
+
+	/**
+	 * Capture an approved PayPal order.
+	 */
+	public function captureOrder(string $orderId): array
+	{
+		$accessToken = $this->getAccessToken();
+
+		$response = $this->makeRequest(
+			'POST',
+			$this->base_url . '/v2/checkout/orders/' . $orderId . '/capture',
+			[],
+			[
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $accessToken,
+			],
+			true
+		);
+
+		return json_decode($response, true);
+	}
+
+	/**
+	 * ID del webhook configurado en el dashboard de PayPal (necesario para verificar firmas).
+	 */
+	public function getWebhookId(): string
+	{
+		$pgRow = Setting::where('key', 'payment_gateway')->first();
+		$pg    = $pgRow ? json_decode($pgRow->value, true) : [];
+
+		return $this->decryptCredential((string) ($pg['paypal_webhook_id'] ?? config('services.paypal.webhook_id') ?? ''));
+	}
+
+	/**
+	 * Verifica la firma de un webhook usando la API oficial de PayPal
+	 * (/v1/notifications/verify-webhook-signature).
+	 *
+	 * @param array<string,string> $headers Cabeceras PAYPAL-* de la petición (en minúsculas)
+	 * @param array<string,mixed>  $event   Cuerpo del evento decodificado
+	 */
+	public function verifyWebhookSignature(array $headers, array $event): bool
+	{
+		$webhookId = $this->getWebhookId();
+		if ($webhookId === '') {
+			return false;
+		}
+
+		$accessToken = $this->getAccessToken();
+
+		$response = $this->makeRequest(
+			'POST',
+			$this->base_url . '/v1/notifications/verify-webhook-signature',
+			[
+				'auth_algo'         => $headers['paypal-auth-algo'] ?? '',
+				'cert_url'          => $headers['paypal-cert-url'] ?? '',
+				'transmission_id'   => $headers['paypal-transmission-id'] ?? '',
+				'transmission_sig'  => $headers['paypal-transmission-sig'] ?? '',
+				'transmission_time' => $headers['paypal-transmission-time'] ?? '',
+				'webhook_id'        => $webhookId,
+				'webhook_event'     => $event,
+			],
+			[
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $accessToken,
+			],
+			true
+		);
+
+		$data = json_decode($response, true);
+
+		return ($data['verification_status'] ?? '') === 'SUCCESS';
 	}
 }

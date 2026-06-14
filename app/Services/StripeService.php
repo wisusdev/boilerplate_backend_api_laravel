@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
+use App\Traits\EncryptsCredentials;
 use App\Traits\ExternalConsumerServices;
 
 class StripeService
 {
-
+	use EncryptsCredentials;
 	use ExternalConsumerServices;
 
 	protected string $base_url;
@@ -15,9 +17,12 @@ class StripeService
 
 	public function __construct()
 	{
-		$this->base_url = config('services.stripe.base_uri');
-		$this->client_id = config('services.stripe.key');
-		$this->client_secret = config('services.stripe.secret');
+		$pgRow = Setting::where('key', 'payment_gateway')->first();
+		$pg    = $pgRow ? json_decode($pgRow->value, true) : [];
+
+		$this->base_url      = 'https://api.stripe.com';
+		$this->client_id     = $this->decryptCredential($pg['stripe_public_key'] ?? $pg['payment_methods']['stripe']['key'] ?? config('services.stripe.key', ''));
+		$this->client_secret = $this->decryptCredential($pg['stripe_secret_key'] ?? $pg['payment_methods']['stripe']['secret'] ?? config('services.stripe.secret', ''));
 	}
 
 	public function createProduct(string $name, string $description, string $type = 'service'): object
@@ -174,5 +179,39 @@ class StripeService
 		$formattedAmount = number_format($amount, 2, '.', '');
 		$cents = $formattedAmount * 100;
 		return (int) $cents;
+	}
+
+	/**
+	 * Create a Stripe PaymentIntent for one-time payments.
+	 *
+	 * @return array{client_secret: string, payment_intent_id: string}
+	 */
+	public function createPaymentIntent(float $amount, string $currency): array
+	{
+		$response = $this->makeRequest(
+			'POST',
+			$this->base_url . '/v1/payment_intents',
+			[
+				'amount'   => $this->convertToCents($amount),
+				'currency' => strtolower($currency),
+				'automatic_payment_methods[enabled]' => 'true',
+			],
+			[
+				'Content-Type: application/x-www-form-urlencoded',
+				'Authorization: Bearer ' . $this->client_secret,
+			]
+		);
+
+		$data = json_decode($response, true);
+		return [
+			'client_secret'     => $data['client_secret'] ?? '',
+			'payment_intent_id' => $data['id'] ?? '',
+		];
+	}
+
+	/** Get publishable key (for frontend). */
+	public function getPublicKey(): string
+	{
+		return $this->client_id;
 	}
 }

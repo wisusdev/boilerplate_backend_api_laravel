@@ -64,12 +64,14 @@ return [
         'base_uri' => env('PAYPAL_BASE_URI'),
         'client_id' => env('PAYPAL_CLIENT_ID'),
         'client_secret' => env('PAYPAL_CLIENT_SECRET'),
+        'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
     ],
 
     'stripe' => [
         'base_uri' => env('STRIPE_BASE_URI'),
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
     'wompi' => [
@@ -77,6 +79,11 @@ return [
         'base_uri' => env('WOMPI_BASE_URI'),
         'public_key' => env('WOMPI_PUBLIC_KEY'),
         'private_key' => env('WOMPI_PRIVATE_KEY'),
+        'webhook_secret' => env('WOMPI_WEBHOOK_SECRET'),
+    ],
+
+    'notifications' => [
+        'admin_emails' => array_filter(array_map('trim', explode(',', env('ADMIN_NOTIFICATION_EMAILS', '')))),
     ],
 
 ];
