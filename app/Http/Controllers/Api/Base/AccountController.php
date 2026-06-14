@@ -44,7 +44,9 @@ class AccountController extends Controller
             'last_name' => $request->input('data.attributes.last_name'),
             'email' => $request->input('data.attributes.email'),
             'avatar' => $avatarName ?? $user->avatar,
-            'language' => $request->input('data.attributes.language')
+            'language' => $request->input('data.attributes.language'),
+            'phone' => $request->input('data.attributes.phone'),
+            'phone_secondary' => $request->input('data.attributes.phone_secondary'),
         ]);
 
         if ($user->email !== $request->input('data.attributes.email')) {

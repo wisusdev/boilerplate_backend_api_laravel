@@ -29,6 +29,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'avatar',
         'language',
+        'phone',
+        'phone_secondary',
     ];
 
     /**
@@ -54,6 +56,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new VerifyEmail());
+    }
+
+    public function getNameAttribute(): string
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
     }
 
     public function getResourceType(): string

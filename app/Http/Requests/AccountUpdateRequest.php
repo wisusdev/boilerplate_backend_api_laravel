@@ -29,7 +29,9 @@ class AccountUpdateRequest extends FormRequest
             'data.attributes.last_name' => ['required', 'string'],
             'data.attributes.email' => ['required', 'email', 'unique:users,email,' . $this->user()->id],
             'data.attributes.avatar' => ['nullable', 'string', new Base64FileValidationRule(['image/jpeg', 'image/png', 'image/gif', 'image/webp'], 2048)],
-            'data.attributes.language' => ['required', 'string', 'in:en,es']
+            'data.attributes.language' => ['required', 'string', 'in:en,es'],
+            'data.attributes.phone' => ['nullable', 'string', 'max:30'],
+            'data.attributes.phone_secondary' => ['nullable', 'string', 'max:30'],
         ];
     }
 
