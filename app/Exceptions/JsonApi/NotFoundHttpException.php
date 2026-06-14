@@ -15,12 +15,17 @@ class NotFoundHttpException extends Exception
     {
         $id = $request->input('data.id');
         $type = $request->input('data.type');
+        $path = $request->path();
+
+        $detail = ($type || $id)
+            ? 'Resource not found with the type ' . $type . ' and id ' . $id
+            : 'Route not found for ' . $request->method() . ' ' . $path;
 
         return response()->json([
             'errors' => [
                 [
                     'title' => 'Not Found',
-                    'detail' => 'Resource not found with the type ' . $type . ' and id ' . $id,
+                    'detail' => $detail,
                     'status' => '404'
                 ]
             ]

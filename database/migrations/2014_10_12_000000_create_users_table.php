@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string('password');
             $table->string('avatar')->nullable();
             $table->string('language', 2)->default('es');
+            $table->string('phone', 30)->nullable();
+            $table->string('phone_secondary', 30)->nullable();
             $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();

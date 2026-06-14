@@ -20,7 +20,7 @@ php artisan storage:link
 
 ```bash
 php artisan passport:install
-php artisan passport:client --personal
+php artisan passport:client --personal --name=local --provider=users --no-interaction
 ```
 
 ## Frontend

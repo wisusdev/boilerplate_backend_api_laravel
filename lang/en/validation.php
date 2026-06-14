@@ -178,6 +178,9 @@ return [
         ],
     ],
 
+    'invalidCredentials' => 'The provided credentials are incorrect.',
+    'limitAuthDevices' => 'You have reached the maximum number of active sessions.',
+
     /*
     |--------------------------------------------------------------------------
     | Custom Validation Attributes

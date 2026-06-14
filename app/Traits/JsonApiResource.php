@@ -6,6 +6,7 @@ use App\JsonApi\Document;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\MissingValue;
+use Illuminate\Support\Facades\Route;
 
 trait JsonApiResource
 {
@@ -18,6 +19,13 @@ trait JsonApiResource
      */
     public function toArray(Request $request): array
     {
+        $showRoute = 'api.v1.' .  $this->resource->getResourceType() . '.show';
+        $links = [];
+
+        if (Route::has($showRoute)) {
+            $links['self'] = route($showRoute, $this->resource);
+        }
+
         if($request->filled('include')){
             $this->with['included'] = [];
             foreach ($this->getIncludes() as $resource) {
@@ -32,9 +40,7 @@ trait JsonApiResource
             ->id($this->resource->getRouteKey())
             ->attributes($this->filterAttributes($this->toJsonApi()))
             ->relationshipLinks($this->getRelationshipLinks())
-            ->links([
-                'self' => route('api.v1.' .  $this->resource->getResourceType() . '.show', $this->resource)
-            ])->get('data');
+            ->links($links)->get('data');
     }
 
     public function getIncludes(): array
@@ -49,10 +55,14 @@ trait JsonApiResource
 
     public function withResponse($request, $response)
     {
-        $response->header(
-            'Location',
-            route('api.v1.' . $this->getResourceType() . '.show', $this->resource)
-        );
+        $showRoute = 'api.v1.' . $this->getResourceType() . '.show';
+
+        if (Route::has($showRoute)) {
+            $response->header(
+                'Location',
+                route($showRoute, $this->resource)
+            );
+        }
     }
 
     public function filterAttributes(array $attributes): array
