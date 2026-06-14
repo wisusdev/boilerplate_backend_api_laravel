@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Booking;
+use App\Models\User;
+use App\Notifications\AdminAlertNotification;
+use App\Notifications\InvoiceCreatedNotification;
+use App\Notifications\ReservationConfirmedNotification;
+use App\Services\Booking\BookingHandlerInterface;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+
+class BookingService
+{
+    private array $handlers = [];
+
+    public function registerHandler(string $type, BookingHandlerInterface $handler): void
+    {
+        $this->handlers[$type] = $handler;
+    }
+
+    public function create(User $user, string $bookingType, array $data): Booking
+    {
+        $handler = $this->handlers[$bookingType]
+            ?? throw new \InvalidArgumentException("No handler registered for booking type: {$bookingType}");
+
+        return DB::transaction(function () use ($user, $bookingType, $handler, $data): Booking {
+            $handler->validate($data);
+            $prepared = $handler->prepare($data);
+            $details = Arr::pull($prepared, 'details');
+
+            $booking = Booking::create(array_merge($prepared, [
+                'user_id'      => $user->id,
+                'booking_type' => $bookingType,
+                'status'       => Booking::STATUS_PENDING,
+            ]));
+
+            if ($details !== null) {
+                $booking->transportDetail()->create($details);
+            }
+
+            return $booking;
+        });
+    }
+
+    public function changeStatus(Booking $booking, string $status): Booking
+    {
+        return DB::transaction(function () use ($booking, $status): Booking {
+            $booking->update(['status' => $status]);
+
+            if ($status === Booking::STATUS_CONFIRMED) {
+                $this->notifyConfirmation($booking);
+            }
+
+            return $booking->refresh();
+        });
+    }
+
+    public function notifyConfirmation(Booking $booking): void
+    {
+        $booking->loadMissing(['user', 'bookable', 'invoice', 'transportDetail']);
+
+        if ($booking->user) {
+            $isTransport = $booking->booking_type === Booking::TYPE_TRANSPORT;
+
+            $booking->user->notify(new ReservationConfirmedNotification(
+                $isTransport ? 'Your transport booking is confirmed' : 'Your tour booking is confirmed',
+                $isTransport ? 'Your vehicle rental has been confirmed successfully.' : 'Your trip booking has been confirmed successfully.',
+                $isTransport ? [
+                    'booking_id' => $booking->id,
+                    'vehicle'    => $booking->bookable?->title,
+                    'pickup_at'  => $booking->starts_at?->toDateTimeString(),
+                ] : [
+                    'booking_id'   => $booking->id,
+                    'tour'         => $booking->bookable?->title,
+                    'booking_date' => $booking->starts_at?->toDateString(),
+                ]
+            ));
+
+            if ($booking->invoice) {
+                $booking->user->notify(new InvoiceCreatedNotification(
+                    'INV-' . str_pad((string) $booking->invoice->id, 6, '0', STR_PAD_LEFT),
+                    (string) $booking->invoice->amount
+                ));
+            }
+        }
+
+        foreach (config('services.notifications.admin_emails', []) as $email) {
+            Notification::route('mail', $email)->notify(new AdminAlertNotification(
+                'Booking confirmed',
+                'A booking has been confirmed and may require back-office attention.',
+                [
+                    'booking_id'   => $booking->id,
+                    'booking_type' => $booking->booking_type,
+                    'bookable_id'  => $booking->bookable_id,
+                ]
+            ));
+        }
+    }
+}
