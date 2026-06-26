@@ -22,10 +22,10 @@ Gestión del catálogo de vehículos de transporte disponibles para alquiler por
 | `vehicle_type` | string | Tipo: `van`, `bus`, `car`, `truck`, etc. |
 | `description` | text | Descripción del vehículo |
 | `location` | string | Base o ubicación del vehículo |
-| `hourly_rate` | decimal(10,2) | Tarifa por hora |
-| `daily_rate` | decimal(10,2) | Tarifa por día |
+| `hourly_rate` | decimal(12,2) | Tarifa por hora |
+| `daily_rate` | decimal(12,2) | Tarifa por día |
 | `capacity` | integer | Capacidad de pasajeros |
-| `currency_code` | char(3) | Moneda de las tarifas (ISO 4217) |
+| `currency_code` | char(3) | Moneda de las tarifas (ISO 4217). Validado contra `currencies.code`. |
 | `features` | json array | Lista de características o equipamiento |
 | `is_active` | boolean | Visible en el catálogo público |
 

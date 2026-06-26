@@ -22,11 +22,11 @@ Gestión del catálogo de experiencias de viaje. Incluye tours, categorías, dis
 | `id` | bigint | Clave primaria |
 | `title` | string | Título del tour |
 | `description` | text | Descripción completa |
-| `price` | decimal(10,2) | Precio por persona |
+| `price` | decimal(12,2) | Precio por persona |
 | `max_capacity` | integer | Capacidad máxima por fecha |
 | `location` | string | Ubicación o destino |
-| `category` | string | Categoría textual (o FK a `TourCategory`) |
-| `currency_code` | char(3) | Moneda del precio (ISO 4217) |
+| `category_id` | bigint FK → tour_categories nullable | Categoría normalizada (`nullOnDelete`). Reemplaza al antiguo campo de texto `category`. |
+| `currency_code` | char(3) | Moneda del precio (ISO 4217). Validado contra `currencies.code`. |
 | `itinerary` | json array | Lista de pasos del itinerario |
 | `highlights` | json array | Puntos destacados del tour |
 | `map_url` | string nullable | URL de mapa embebido (Google Maps) |
@@ -117,7 +117,7 @@ GET /api/tours
 
 | Param | Descripción |
 |-------|-------------|
-| `filter[category]` | Filtrar por categoría |
+| `filter[category_id]` | Filtrar por categoría (ID de `tour_categories`) |
 | `filter[location]` | Filtrar por ubicación |
 | `sort` | `price`, `title`, `-created_at` |
 | `page[number]` | Número de página |
@@ -135,6 +135,9 @@ GET /api/tours
       "price": "65.00",
       "currency_code": "USD",
       "location": "Santa Ana, El Salvador",
+      "category_id": 1,
+      "category": "Volcanes",
+      "category_color": "#184ca0",
       "max_capacity": 20,
       "is_active": true,
       "featured_image": "https://...",
@@ -166,6 +169,7 @@ Authorization: Bearer {token}
       "description": "Descripción completa",
       "price": 65.00,
       "currency_code": "USD",
+      "category_id": 1,
       "max_capacity": 20,
       "location": "Santa Ana",
       "is_active": true,

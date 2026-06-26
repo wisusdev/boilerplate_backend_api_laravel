@@ -278,11 +278,13 @@ Endpoint **público** (los gateways no envían Bearer token) y **sin** middlewar
 | `code` | char(3) unique | ISO 4217 (USD, EUR, etc.) |
 | `name` | string | Nombre completo |
 | `symbol` | string | Símbolo ($, €, etc.) |
-| `rate_to_usd` | decimal(10,6) | Tasa de conversión respecto al USD |
+| `rate_to_usd` | decimal(18,8) | Tasa de conversión respecto al USD |
 | `is_default` | boolean | Moneda por defecto del sistema |
 | `is_active` | boolean | Disponible para selección |
 
-Solo puede haber **una moneda con `is_default = true`** al mismo tiempo.
+Solo puede haber **una moneda con `is_default = true`** al mismo tiempo. Esto lo **garantiza el modelo** `Currency`: al guardar una moneda con `is_default = true`, las demás se desmarcan automáticamente.
+
+Los códigos de moneda que se envían al crear/editar tours, vehículos y consultas personalizadas se validan contra `currencies.code` (`exists:currencies,code`). En registros transaccionales (`bookings`, `invoices`, `payments`) el `currency_code` se conserva como *snapshot* histórico y no lleva FK.
 
 ```
 GET /api/currencies        → Listar monedas activas (público)

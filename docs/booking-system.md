@@ -15,7 +15,7 @@
 
 ## Visión general
 
-El sistema utiliza una tabla `bookings` unificada que soporta cualquier tipo de agendamiento mediante una relación polimórfica (`bookable_type` / `bookable_id`). El campo `booking_type` actúa como discriminador legible para filtrar sin JOINs.
+El sistema utiliza una tabla `bookings` unificada que soporta cualquier tipo de agendamiento mediante una relación polimórfica (`bookable_type` / `bookable_id`). El discriminador legible `booking_type` (`tour` \| `transport`) **se deriva** de `bookable_type` mediante un accessor del modelo y **no se persiste** como columna, evitando que ambos campos puedan desincronizarse. Sigue disponible en la API (entrada y salida) como hasta ahora.
 
 Los campos específicos de cada tipo se guardan en tablas de extensión 1:1 (p.ej. `transport_booking_details`). La tabla base nunca cambia cuando se agrega un nuevo tipo.
 
@@ -38,23 +38,22 @@ bookings (base)
 | `user_id` | uuid FK → users | Cliente que reserva |
 | `bookable_type` | varchar(100) | FQCN del modelo: `App\Models\Tour`, `App\Models\TransportVehicle` |
 | `bookable_id` | bigint unsigned | ID del recurso reservado |
-| `booking_type` | varchar(20) | Alias legible: `tour`, `transport` |
 | `starts_at` | datetime | Inicio del servicio (fecha a medianoche para tours) |
 | `ends_at` | datetime nullable | Fin del servicio (null para tours de un día) |
 | `party_size` | uint | Personas (tours) o cantidad de vehículos (transport) |
-| `total_price` | decimal(10,2) | Precio calculado al momento de la reserva |
+| `total_price` | decimal(12,2) | Precio calculado al momento de la reserva |
 | `currency_code` | char(3) | ISO 4217. Default: `USD` |
 | `status` | varchar(20) | `pending` \| `confirmed` \| `cancelled` |
 | `notes` | text nullable | Notas libres del cliente |
 | `created_at` / `updated_at` | timestamp | |
 
+> `booking_type` no es columna: se deriva de `bookable_type` (ver accessor `getBookingTypeAttribute` en el modelo `Booking`).
+
 **Índices:**
 - `user_id`
 - `status`
-- `booking_type`
-- `(bookable_type, bookable_id)` — para eager-load del polimórfico
 - `starts_at`
-- `(booking_type, bookable_id, starts_at, ends_at)` — para consultas de solapamiento en transport
+- `(bookable_type, bookable_id, starts_at, ends_at)` (`bookings_bookable_schedule_idx`) — consultas de solapamiento en transport; cubre también `(bookable_type, bookable_id)` como prefijo para el eager-load del polimórfico
 
 ### `transport_booking_details`
 
@@ -73,11 +72,14 @@ Extensión 1:1 para campos exclusivos del agendamiento de transporte.
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
 | `id` | bigint PK | |
-| `booking_id` | bigint unique FK → bookings | Un invoice por booking |
-| `amount` | decimal(10,2) | |
+| `booking_id` | bigint unique FK → bookings (`restrictOnDelete`) | Un invoice por booking. No se permite borrar un booking con factura (documento fiscal). |
+| `amount` | decimal(12,2) | |
+| `currency_code` | char(3) | Moneda al momento de emisión (snapshot del booking). Default: `USD` |
 | `status` | varchar | `pending` \| `issued` |
-| `dte_code` | varchar nullable | Código de documento tributario |
 | `issued_at` | timestamp nullable | |
+| `deleted_at` | timestamp nullable | Soft delete — las facturas no se eliminan físicamente |
+
+> Los campos del DTE (`dte_type`, `dte_number`, `dte_generation_code`, `dte_seal`, `dte_status`, etc.) se documentan en [dte-facturacion-electronica.md](dte-facturacion-electronica.md). La antigua columna `dte_code` fue eliminada por redundante; el "sello" del MH vive en `dte_seal` y la API sigue exponiendo `dte_code` como alias por compatibilidad.
 
 ### `payments`
 
@@ -399,11 +401,12 @@ $handler->validate($data);          // lanza ValidationException si falla
 $prepared = $handler->prepare($data); // retorna atributos + 'details' opcional
 $details = Arr::pull($prepared, 'details');
 
+// $prepared ya incluye bookable_type/bookable_id (del handler); booking_type
+// se deriva de bookable_type, por eso NO se asigna aquí.
 $booking = Booking::create([
     ...$prepared,
-    'user_id'      => $user->id,
-    'booking_type' => $bookingType,
-    'status'       => 'pending',
+    'user_id' => $user->id,
+    'status'  => 'pending',
 ]);
 
 if ($details) {
@@ -472,11 +475,19 @@ class AccommodationBookingDetail extends Model
 }
 ```
 
-### 3. Constante en Booking
+### 3. Constante y mapeo en Booking
+
+Agrega la constante y regístrala en `BOOKABLE_MAP`. Ese mapa es la única fuente de verdad: de él se derivan tanto el accessor `booking_type` como el helper `bookableClassFor()` usado en los filtros.
 
 ```php
 // app/Models/Booking.php
 public const TYPE_ACCOMMODATION = 'accommodation';
+
+public const BOOKABLE_MAP = [
+    self::TYPE_TOUR          => Tour::class,
+    self::TYPE_TRANSPORT     => TransportVehicle::class,
+    self::TYPE_ACCOMMODATION => Accommodation::class, // ← agregar
+];
 ```
 
 ### 4. Handler

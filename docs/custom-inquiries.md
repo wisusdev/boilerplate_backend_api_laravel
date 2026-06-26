@@ -21,10 +21,10 @@ Permite a clientes enviar solicitudes de viaje a medida cuando los tours estánd
 | `preferred_destinations` | json array | Lista de destinos de interés |
 | `travel_start_date` | date | Fecha aproximada de inicio del viaje |
 | `travel_end_date` | date | Fecha aproximada de fin del viaje |
-| `budget_min` | decimal(10,2) nullable | Presupuesto mínimo |
-| `budget_max` | decimal(10,2) nullable | Presupuesto máximo |
+| `budget_min` | decimal(12,2) nullable | Presupuesto mínimo |
+| `budget_max` | decimal(12,2) nullable | Presupuesto máximo |
 | `travelers_count` | integer | Número de viajeros |
-| `currency_code` | char(3) | Moneda del presupuesto |
+| `currency_code` | char(3) | Moneda del presupuesto. Validado contra `currencies.code`. |
 | `message` | text | Descripción libre de lo que el cliente busca |
 | `status` | string | `pending` \| `reviewed` \| `closed` |
 

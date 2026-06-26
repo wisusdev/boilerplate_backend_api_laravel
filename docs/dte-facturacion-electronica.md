@@ -176,11 +176,14 @@ BookingObserver::createInvoiceIfNeeded()
 
 | Columna | Descripción |
 |---------|-------------|
-| `booking_id` | FK → bookings (1:1) |
-| `amount` | Monto total de la factura |
+| `booking_id` | FK → bookings (1:1, `restrictOnDelete`) |
+| `amount` | Monto total de la factura — `decimal(12,2)` |
+| `currency_code` | Moneda al emitir (snapshot del booking) |
 | `status` | `pending` → `issued` (cuando DTE es aceptado) |
-| `dte_code` | Alias del sello MH (para backward compatibility) |
 | `issued_at` | Fecha y hora de emisión |
+| `deleted_at` | Soft delete — las facturas no se borran físicamente |
+
+> **Nota:** la columna `dte_code` fue **eliminada** por redundante (duplicaba el sello). El sello del MH se guarda en `dte_seal`. Por compatibilidad, la API (`InvoiceResource`) sigue exponiendo un campo de salida `dte_code` que es un **alias de `dte_seal`**, pero ya no existe como columna en la base de datos.
 
 ---
 
