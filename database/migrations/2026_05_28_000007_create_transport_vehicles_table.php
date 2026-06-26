@@ -14,8 +14,8 @@ return new class extends Migration
             $table->string('vehicle_type');
             $table->text('description')->nullable();
             $table->string('location');
-            $table->decimal('hourly_rate', 10, 2)->nullable();
-            $table->decimal('daily_rate', 10, 2)->nullable();
+            $table->decimal('hourly_rate', 12, 2)->nullable();
+            $table->decimal('daily_rate', 12, 2)->nullable();
             $table->unsignedInteger('capacity');
             $table->string('currency_code', 3)->default('USD');
             $table->json('features')->nullable();

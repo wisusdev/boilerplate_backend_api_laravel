@@ -31,7 +31,7 @@ class TransportVehicleRequest extends FormRequest
             'data.attributes.hourly_rate'       => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'data.attributes.daily_rate'        => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'data.attributes.capacity'          => [$required, 'integer', 'min:1'],
-            'data.attributes.currency_code'     => ['sometimes', 'string', 'size:3'],
+            'data.attributes.currency_code'     => ['sometimes', 'string', 'size:3', 'exists:currencies,code'],
             'data.attributes.features'          => ['sometimes', 'array'],
             'data.attributes.is_active'         => ['sometimes', 'boolean'],
         ];

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Travel;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\InvoiceResource;
+use App\Models\Booking;
 use App\Models\Invoice;
 use App\Services\DteService;
 use Illuminate\Http\JsonResponse;
@@ -28,7 +29,7 @@ class InvoiceController extends Controller
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('dte_status'), fn ($q) => $q->where('dte_status', $request->string('dte_status')))
             ->when($request->filled('booking_type'), fn ($q) =>
-                $q->whereHas('booking', fn ($bq) => $bq->where('booking_type', $request->string('booking_type')))
+                $q->whereHas('booking', fn ($bq) => $bq->where('bookable_type', Booking::bookableClassFor($request->string('booking_type'))))
             )
             ->latest()
             ->sparseFieldset()

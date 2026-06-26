@@ -50,11 +50,11 @@ class BookingObserver
         [$invoice] = [Invoice::firstOrCreate(
             ['booking_id' => $booking->id],
             [
-                'amount'     => $booking->total_price,
-                'status'     => 'pending',
-                'dte_status' => Invoice::DTE_NOT_GENERATED,
-                'dte_code'   => null,
-                'issued_at'  => now(),
+                'amount'        => $booking->total_price,
+                'currency_code' => $booking->currency_code,
+                'status'        => 'pending',
+                'dte_status'    => Invoice::DTE_NOT_GENERATED,
+                'issued_at'     => now(),
             ]
         )];
 

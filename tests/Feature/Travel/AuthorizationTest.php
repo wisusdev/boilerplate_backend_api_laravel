@@ -94,7 +94,6 @@ class AuthorizationTest extends TestCase
             'user_id'       => $user->id,
             'bookable_type' => Tour::class,
             'bookable_id'   => $tour->id,
-            'booking_type'  => Booking::TYPE_TOUR,
             'starts_at'     => '2026-12-01 00:00:00',
             'party_size'    => 1,
             'total_price'   => 50,
@@ -121,6 +120,11 @@ class AuthorizationTest extends TestCase
 
     public function test_admin_can_create_tour(): void
     {
+        \App\Models\Currency::create([
+            'code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$',
+            'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
+        ]);
+
         Passport::actingAs($this->makeUser('admin'));
 
         $response = $this->apiJson('POST', '/api/v1/tours', [

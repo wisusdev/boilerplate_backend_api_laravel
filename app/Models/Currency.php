@@ -24,6 +24,19 @@ class Currency extends Model
         'is_active' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        // Garantiza que exista una sola moneda marcada como predeterminada.
+        static::saved(function (self $currency) {
+            if ($currency->is_default) {
+                static::query()
+                    ->whereKeyNot($currency->getKey())
+                    ->where('is_default', true)
+                    ->update(['is_default' => false]);
+            }
+        });
+    }
+
     public function getResourceType(): string
     {
         return 'currencies';

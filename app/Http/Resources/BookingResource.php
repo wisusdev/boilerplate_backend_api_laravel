@@ -34,7 +34,7 @@ class BookingResource extends JsonResource
             // Tour-specific (null for other types)
             'tour_id'              => $isTour ? $booking->bookable_id : null,
             'tour_title'           => $isTour ? $bookable?->title : null,
-            'tour_category'        => $isTour ? $bookable?->category : null,
+            'tour_category'        => $isTour ? $bookable?->category?->name : null,
             'booking_date'         => $isTour ? $booking->starts_at?->toDateString() : null,
             'pax_count'            => $isTour ? $booking->party_size : null,
 

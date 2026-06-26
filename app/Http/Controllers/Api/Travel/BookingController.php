@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
+use App\Models\Tour;
 use App\Services\BookingService;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -22,9 +24,9 @@ class BookingController extends Controller
         $isAdmin = $user->hasRole(['admin', 'super-admin']);
 
         $bookings = Booking::query()
-            ->with(['user', 'bookable', 'transportDetail', 'latestPayment'])
+            ->with(['user', 'transportDetail', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])])
             ->when(! $isAdmin, fn ($q) => $q->where('user_id', $user->id))
-            ->when($request->filled('booking_type'), fn ($q) => $q->where('booking_type', $request->string('booking_type')->toString()))
+            ->when($request->filled('booking_type'), fn ($q) => $q->where('bookable_type', Booking::bookableClassFor($request->string('booking_type')->toString())))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')->toString()))
             ->when($request->filled('date_from'), fn ($q) => $q->whereDate('starts_at', '>=', $request->string('date_from')->toString()))
             ->when($request->filled('date_to'), fn ($q) => $q->whereDate('starts_at', '<=', $request->string('date_to')->toString()))
@@ -39,7 +41,7 @@ class BookingController extends Controller
     {
         $this->ensureOwnerOrAdmin($request, $booking);
 
-        $booking->load(['user', 'bookable', 'transportDetail', 'latestPayment']);
+        $booking->load(['user', 'transportDetail', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])]);
         return BookingResource::make($booking);
     }
 

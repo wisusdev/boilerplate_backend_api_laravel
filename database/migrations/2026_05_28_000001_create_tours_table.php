@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('description');
-            $table->decimal('price', 10, 2);
+            $table->decimal('price', 12, 2);
             $table->unsignedInteger('max_capacity');
             $table->string('location');
-            $table->string('category')->nullable();
+            $table->foreignId('category_id')->nullable()->constrained('tour_categories')->nullOnDelete();
             $table->string('currency_code', 3)->default('USD');
             $table->json('itinerary')->nullable();
             $table->json('highlights')->nullable();

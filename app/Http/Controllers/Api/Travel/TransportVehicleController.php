@@ -85,7 +85,6 @@ class TransportVehicleController extends Controller
         ]);
 
         $overlapping = Booking::query()
-            ->where('booking_type', Booking::TYPE_TRANSPORT)
             ->where('bookable_type', TransportVehicle::class)
             ->where('bookable_id', $transportVehicle->id)
             ->whereIn('status', [Booking::STATUS_PENDING, Booking::STATUS_CONFIRMED])

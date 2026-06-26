@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     // DTE status constants
     public const DTE_NOT_GENERATED = 'not_generated';
@@ -26,8 +27,8 @@ class Invoice extends Model
     protected $fillable = [
         'booking_id',
         'amount',
+        'currency_code',
         'status',
-        'dte_code',
         'issued_at',
         // DTE fields
         'dte_type',

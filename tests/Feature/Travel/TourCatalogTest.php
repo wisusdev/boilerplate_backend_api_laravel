@@ -68,6 +68,11 @@ class TourCatalogTest extends TestCase
 
     public function test_store_creates_a_tour(): void
     {
+        \App\Models\Currency::create([
+            'code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$',
+            'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
+        ]);
+
         Role::findOrCreate('admin', 'api');
 
         $user = User::create([

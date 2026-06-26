@@ -13,12 +13,13 @@ return new class extends Migration
     {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('booking_id')->constrained()->cascadeOnDelete()->unique();
-            $table->decimal('amount', 10, 2);
+            $table->foreignId('booking_id')->constrained()->restrictOnDelete()->unique();
+            $table->decimal('amount', 12, 2);
+            $table->string('currency_code', 3)->default('USD');
             $table->string('status')->default('pending');
-            $table->string('dte_code')->nullable();
             $table->timestamp('issued_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

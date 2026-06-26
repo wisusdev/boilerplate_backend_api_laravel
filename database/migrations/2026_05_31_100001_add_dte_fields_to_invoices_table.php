@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('invoices', function (Blueprint $table) {
             // DTE document identification
-            $table->string('dte_type', 5)->nullable()->after('dte_code');        // '03' = CF, '01' = CCF
+            $table->string('dte_type', 5)->nullable()->after('status');          // '03' = CF, '01' = CCF
             $table->string('dte_number', 40)->nullable()->after('dte_type');     // Sequential: DTE-03-M001P001-000000000001
             $table->string('dte_generation_code', 36)->nullable()->unique()->after('dte_number'); // UUID
             $table->string('dte_seal', 500)->nullable()->after('dte_generation_code'); // Sello de recepción MH

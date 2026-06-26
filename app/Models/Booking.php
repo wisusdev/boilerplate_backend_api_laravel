@@ -21,11 +21,20 @@ class Booking extends Model
     public const TYPE_TOUR = 'tour';
     public const TYPE_TRANSPORT = 'transport';
 
+    /**
+     * Discriminador lógico (booking_type) ↔ clase del bookable polimórfico.
+     * `booking_type` se deriva de `bookable_type`; no se persiste para evitar
+     * que ambos campos puedan desincronizarse.
+     */
+    public const BOOKABLE_MAP = [
+        self::TYPE_TOUR      => Tour::class,
+        self::TYPE_TRANSPORT => TransportVehicle::class,
+    ];
+
     protected $fillable = [
         'user_id',
         'bookable_type',
         'bookable_id',
-        'booking_type',
         'starts_at',
         'ends_at',
         'party_size',
@@ -41,6 +50,22 @@ class Booking extends Model
         'party_size'  => 'integer',
         'total_price' => 'decimal:2',
     ];
+
+    /**
+     * booking_type derivado de bookable_type (no es una columna).
+     */
+    public function getBookingTypeAttribute(): ?string
+    {
+        return array_search($this->bookable_type, self::BOOKABLE_MAP, true) ?: null;
+    }
+
+    /**
+     * Resuelve la clase del bookable a partir del tipo lógico ('tour'|'transport').
+     */
+    public static function bookableClassFor(string $type): ?string
+    {
+        return self::BOOKABLE_MAP[$type] ?? null;
+    }
 
     public function user(): BelongsTo
     {

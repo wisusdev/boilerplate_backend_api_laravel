@@ -32,9 +32,8 @@ class BookingService
             $details = Arr::pull($prepared, 'details');
 
             $booking = Booking::create(array_merge($prepared, [
-                'user_id'      => $user->id,
-                'booking_type' => $bookingType,
-                'status'       => Booking::STATUS_PENDING,
+                'user_id' => $user->id,
+                'status'  => Booking::STATUS_PENDING,
             ]));
 
             if ($details !== null) {

@@ -14,11 +14,11 @@ class ReportService
         $end = Carbon::parse($endDate ?? now())->endOfDay();
 
         $tourBookings = Booking::query()
-            ->where('booking_type', Booking::TYPE_TOUR)
+            ->where('bookable_type', Booking::bookableClassFor(Booking::TYPE_TOUR))
             ->whereBetween('created_at', [$start, $end]);
 
         $transportBookings = Booking::query()
-            ->where('booking_type', Booking::TYPE_TRANSPORT)
+            ->where('bookable_type', Booking::bookableClassFor(Booking::TYPE_TRANSPORT))
             ->whereBetween('created_at', [$start, $end]);
 
         return [

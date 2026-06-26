@@ -17,7 +17,6 @@ class TransportBookingHandler implements BookingHandlerInterface
             ->firstOrFail();
 
         $overlapping = Booking::query()
-            ->where('booking_type', Booking::TYPE_TRANSPORT)
             ->where('bookable_type', TransportVehicle::class)
             ->where('bookable_id', $vehicle->id)
             ->whereIn('status', [Booking::STATUS_PENDING, Booking::STATUS_CONFIRMED])

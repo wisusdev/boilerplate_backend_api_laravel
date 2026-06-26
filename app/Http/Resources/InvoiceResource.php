@@ -15,6 +15,7 @@ class InvoiceResource extends JsonResource
         return [
             'booking_id'           => $inv->booking_id,
             'amount'               => $inv->amount,
+            'currency_code'        => $inv->currency_code,
             'status'               => $inv->status,
             'issued_at'            => $inv->issued_at,
             // DTE
@@ -22,7 +23,7 @@ class InvoiceResource extends JsonResource
             'dte_number'           => $inv->dte_number,
             'dte_generation_code'  => $inv->dte_generation_code,
             'dte_seal'             => $inv->dte_seal,
-            'dte_code'             => $inv->dte_code ?? $inv->dte_seal, // backward compat
+            'dte_code'             => $inv->dte_seal, // backward compat: el "sello" MH
             'dte_status'           => $inv->dte_status,
             'dte_environment'      => $inv->dte_environment,
             'dte_submitted_at'     => $inv->dte_submitted_at,

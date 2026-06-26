@@ -24,7 +24,7 @@ class CustomInquiryRequest extends FormRequest
             'data.attributes.budget_min' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'data.attributes.budget_max' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'data.attributes.travelers_count' => ['sometimes', 'nullable', 'integer', 'min:1'],
-            'data.attributes.currency_code' => ['sometimes', 'string', 'size:3'],
+            'data.attributes.currency_code' => ['sometimes', 'string', 'size:3', 'exists:currencies,code'],
             'data.attributes.message' => ['sometimes', 'nullable', 'string'],
         ];
     }

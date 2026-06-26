@@ -82,7 +82,6 @@ class TransportAndInquiryTest extends TestCase
         $this->assertDatabaseHas('bookings', [
             'bookable_type' => TransportVehicle::class,
             'bookable_id'   => $vehicle->id,
-            'booking_type'  => 'transport',
             'user_id'       => $user->id,
         ]);
         // ...y los campos específicos en la tabla de extensión 1:1.
@@ -95,6 +94,11 @@ class TransportAndInquiryTest extends TestCase
 
     public function test_custom_inquiry_store_creates_record(): void
     {
+        \App\Models\Currency::create([
+            'code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$',
+            'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
+        ]);
+
         $response = $this->apiJson('POST', '/api/v1/custom-inquiries', [
             'data' => [
                 'type' => 'custom_inquiries',

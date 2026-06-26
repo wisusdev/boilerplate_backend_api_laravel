@@ -77,6 +77,8 @@ class TravelModuleSeeder extends Seeder
 
     private function seedTours(): \Illuminate\Support\Collection
     {
+        $categories = TourCategory::query()->pluck('id', 'name');
+
         $toursData = [
             [
                 'title'         => 'Volcan Santa Ana Sunrise',
@@ -84,6 +86,7 @@ class TravelModuleSeeder extends Seeder
                 'price'         => 65,
                 'max_capacity'  => 14,
                 'location'      => 'Santa Ana',
+                'category_id'   => $categories['Volcanes'] ?? null,
                 'currency_code' => 'USD',
                 'itinerary'     => ['Pickup 4:30 AM', 'Hike to crater', 'Breakfast stop'],
                 'highlights'    => ['Crater views', 'Local guide', 'Photos included'],
@@ -96,6 +99,7 @@ class TravelModuleSeeder extends Seeder
                 'price'         => 58,
                 'max_capacity'  => 20,
                 'location'      => 'Ahuachapan',
+                'category_id'   => $categories['Cultura'] ?? null,
                 'currency_code' => 'USD',
                 'itinerary'     => ['Nahuizalco', 'Juayua market', 'Ataco murals'],
                 'highlights'    => ['Coffee tasting', 'Street food', 'Colonial towns'],
@@ -108,6 +112,7 @@ class TravelModuleSeeder extends Seeder
                 'price'         => 47,
                 'max_capacity'  => 12,
                 'location'      => 'La Libertad',
+                'category_id'   => $categories['Playa'] ?? null,
                 'currency_code' => 'USD',
                 'itinerary'     => ['Beach arrival', 'Warmup', 'Surf lesson', 'Lunch'],
                 'highlights'    => ['Surf instructor', 'Board included', 'Oceanfront lunch'],
@@ -180,7 +185,6 @@ class TravelModuleSeeder extends Seeder
                     'starts_at'     => now()->addDays($index + 2)->startOfDay(),
                 ],
                 [
-                    'booking_type'  => Booking::TYPE_TOUR,
                     'ends_at'       => null,
                     'party_size'    => 2 + $index,
                     'total_price'   => (2 + $index) * (float) $tour->price,
@@ -193,10 +197,11 @@ class TravelModuleSeeder extends Seeder
                 Invoice::query()->firstOrCreate(
                     ['booking_id' => $booking->id],
                     [
-                        'amount'    => $booking->total_price,
-                        'status'    => 'issued',
-                        'dte_code'  => 'INV-' . str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
-                        'issued_at' => now(),
+                        'amount'        => $booking->total_price,
+                        'currency_code' => $booking->currency_code,
+                        'status'        => 'issued',
+                        'dte_number'    => 'INV-' . str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
+                        'issued_at'     => now(),
                     ]
                 );
             }
@@ -218,7 +223,6 @@ class TravelModuleSeeder extends Seeder
                     'starts_at'     => $pickupAt,
                 ],
                 [
-                    'booking_type'  => Booking::TYPE_TRANSPORT,
                     'ends_at'       => $dropoffAt,
                     'party_size'    => 1,
                     'total_price'   => (float) ($vehicle->daily_rate ?? 100),
@@ -239,10 +243,11 @@ class TravelModuleSeeder extends Seeder
             Invoice::query()->firstOrCreate(
                 ['booking_id' => $booking->id],
                 [
-                    'amount'    => $booking->total_price,
-                    'status'    => 'issued',
-                    'dte_code'  => 'INV-' . str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
-                    'issued_at' => now(),
+                    'amount'        => $booking->total_price,
+                    'currency_code' => $booking->currency_code,
+                    'status'        => 'issued',
+                    'dte_number'    => 'INV-' . str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
+                    'issued_at'     => now(),
                 ]
             );
 

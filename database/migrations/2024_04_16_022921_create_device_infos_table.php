@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('device_infos', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('user_id')->index();
+            $table->uuid('user_id');
             $table->string('session_token');
             $table->timestamp('login_at');
             $table->string('browser');
@@ -21,6 +21,9 @@ return new class extends Migration
             $table->string('ip');
             $table->string('country');
             $table->softDeletes();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->index('user_id');
         });
     }
 

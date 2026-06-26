@@ -36,7 +36,7 @@ class TourBookingHandler implements BookingHandlerInterface
 
         if ($maxPerDay > 0) {
             $bookingsToday = Booking::query()
-                ->where('booking_type', Booking::TYPE_TOUR)
+                ->where('bookable_type', Booking::bookableClassFor(Booking::TYPE_TOUR))
                 ->whereDate('starts_at', $data['booking_date'])
                 ->whereNotIn('status', [Booking::STATUS_CANCELLED])
                 ->count();

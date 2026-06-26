@@ -413,7 +413,6 @@ class DteService
             if ($accepted) {
                 $updates['dte_status']      = Invoice::DTE_ACCEPTED;
                 $updates['dte_seal']        = $sello;
-                $updates['dte_code']        = $sello;
                 $updates['status']          = 'issued';
                 $updates['dte_accepted_at'] = now();
             } else {

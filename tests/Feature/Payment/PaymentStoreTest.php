@@ -43,7 +43,6 @@ class PaymentStoreTest extends TestCase
         return Booking::create([
             'bookable_type' => Tour::class,
             'bookable_id'   => $tour->id,
-            'booking_type'  => Booking::TYPE_TOUR,
             'starts_at'     => '2026-10-01 00:00:00',
             'party_size'    => 2,
             'total_price'   => 150,

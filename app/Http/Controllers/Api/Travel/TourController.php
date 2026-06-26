@@ -16,7 +16,7 @@ class TourController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $tours = Tour::query()
-            ->with('media')
+            ->with(['media', 'category'])
             ->where('is_active', true)
             ->latest()
             ->sparseFieldset()
@@ -40,7 +40,7 @@ class TourController extends Controller
             'price' => $data['price'],
             'max_capacity' => $data['max_capacity'],
             'location' => $data['location'],
-            'category' => $data['category'] ?? null,
+            'category_id' => $data['category_id'] ?? null,
             'currency_code' => $data['currency_code'] ?? config('app.currency', 'USD'),
             'itinerary' => $data['itinerary'] ?? [],
             'highlights' => $data['highlights'] ?? [],
@@ -65,7 +65,7 @@ class TourController extends Controller
             'price' => $data['price'] ?? null,
             'max_capacity' => $data['max_capacity'] ?? null,
             'location' => $data['location'] ?? null,
-            'category' => array_key_exists('category', $data) ? $data['category'] : null,
+            'category_id' => array_key_exists('category_id', $data) ? $data['category_id'] : null,
             'currency_code' => $data['currency_code'] ?? null,
             'itinerary' => $data['itinerary'] ?? null,
             'highlights' => $data['highlights'] ?? null,

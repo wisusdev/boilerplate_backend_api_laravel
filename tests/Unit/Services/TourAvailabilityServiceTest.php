@@ -54,7 +54,6 @@ class TourAvailabilityServiceTest extends TestCase
             'user_id'       => $this->user->id,
             'bookable_type' => Tour::class,
             'bookable_id'   => $tour->id,
-            'booking_type'  => Booking::TYPE_TOUR,
             'starts_at'     => $date . ' 00:00:00',
             'party_size'    => $partySize,
             'total_price'   => 50 * $partySize,

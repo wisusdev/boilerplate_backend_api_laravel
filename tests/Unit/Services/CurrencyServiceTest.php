@@ -114,4 +114,17 @@ class CurrencyServiceTest extends TestCase
 
         $this->service->defaultCurrency();
     }
+
+    public function test_marking_a_currency_default_unsets_the_previous_default(): void
+    {
+        $usd = $this->createCurrency('USD', 1.0, true);
+        $eur = $this->createCurrency('EUR', 0.92, false);
+
+        // Marcar EUR como predeterminada debe desmarcar USD automáticamente.
+        $eur->update(['is_default' => true]);
+
+        $this->assertFalse($usd->fresh()->is_default);
+        $this->assertTrue($eur->fresh()->is_default);
+        $this->assertSame(1, Currency::where('is_default', true)->count());
+    }
 }

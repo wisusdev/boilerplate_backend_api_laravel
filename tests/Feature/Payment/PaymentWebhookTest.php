@@ -53,7 +53,7 @@ class PaymentWebhookTest extends TestCase
 
         $booking = Booking::create([
             'user_id' => $user->id, 'bookable_type' => Tour::class, 'bookable_id' => $tour->id,
-            'booking_type' => Booking::TYPE_TOUR, 'starts_at' => '2099-01-01 00:00:00',
+            'starts_at' => '2099-01-01 00:00:00',
             'party_size' => 1, 'total_price' => 50, 'currency_code' => 'USD', 'status' => Booking::STATUS_PENDING,
         ]);
 

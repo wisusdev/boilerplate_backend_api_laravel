@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -20,7 +21,7 @@ class Tour extends Model implements HasMedia
         'max_capacity',
         'location',
         'is_active',
-        'category',
+        'category_id',
         'currency_code',
         'itinerary',
         'highlights',
@@ -31,6 +32,7 @@ class Tour extends Model implements HasMedia
 
     protected $casts = [
         'price' => 'decimal:2',
+        'category_id' => 'integer',
         'max_capacity' => 'integer',
         'is_active' => 'boolean',
         'itinerary' => 'array',
@@ -51,6 +53,11 @@ class Tour extends Model implements HasMedia
             ->width(400)
             ->height(300)
             ->performOnCollections('featured_image', 'gallery');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(TourCategory::class);
     }
 
     public function bookings(): HasMany
