@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('tours', function (Blueprint $table) {
             $table->id();
             $table->string('title');
+            $table->string('slug')->unique();
             $table->text('description');
             $table->decimal('price', 12, 2);
             $table->unsignedInteger('max_capacity');

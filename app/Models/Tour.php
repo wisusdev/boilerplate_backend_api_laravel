@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -16,6 +17,7 @@ class Tour extends Model implements HasMedia
 
     protected $fillable = [
         'title',
+        'slug',
         'description',
         'price',
         'max_capacity',
@@ -40,6 +42,37 @@ class Tour extends Model implements HasMedia
         'map_markers' => 'array',
         'faqs' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        // Genera un slug único a partir del título al crear (si no se envía uno).
+        // No se regenera al editar para no romper URLs/bookmarks existentes.
+        static::creating(function (self $tour) {
+            if (empty($tour->slug)) {
+                $tour->slug = self::uniqueSlug((string) $tour->title);
+            }
+        });
+    }
+
+    protected static function uniqueSlug(string $title): string
+    {
+        $base = Str::slug($title) ?: 'tour';
+        $slug = $base;
+        $i = 2;
+        while (self::query()->where('slug', $slug)->exists()) {
+            $slug = "{$base}-{$i}";
+            $i++;
+        }
+        return $slug;
+    }
+
+    /**
+     * Permite resolver tours por slug (público) o por id numérico (admin).
+     */
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        return $this->where(is_numeric($value) ? 'id' : 'slug', $value)->firstOrFail();
+    }
 
     public function registerMediaCollections(): void
     {
