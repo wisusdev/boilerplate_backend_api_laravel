@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             UserSeeder::class,
             TravelModuleSeeder::class,
+            // Descarga imágenes de stock (requiere red); resiliente si falla.
+            StockImageSeeder::class,
         ]);
     }
 }
