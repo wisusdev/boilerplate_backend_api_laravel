@@ -41,15 +41,15 @@ use Illuminate\Support\Facades\Route;
 
 // Auth
 Route::prefix('auth')->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class,])->group(function () {
-    Route::post('/login', [LoginController::class, 'login'])->name('auth.login');
-    Route::post('/register', [RegisterController::class, 'register'])->name('auth.register');
+    Route::post('/login', [LoginController::class, 'login'])->name('auth.login')->middleware('throttle:auth');
+    Route::post('/register', [RegisterController::class, 'register'])->name('auth.register')->middleware('throttle:auth-register');
     Route::post('/logout', [LogoutController::class, 'logout'])->name('auth.logout')->middleware('auth:api');
-    Route::post('/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot');
-    Route::post('/reset-password', [ForgotController::class, 'reset'])->name('auth.reset');
-    Route::post('/email/resend', [VerifyEmailController::class, 'resend'])->name('verification.send')->middleware('auth:api');
+    Route::post('/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot')->middleware('throttle:auth-forgot');
+    Route::post('/reset-password', [ForgotController::class, 'reset'])->name('auth.reset')->middleware('throttle:auth');
+    Route::post('/email/resend', [VerifyEmailController::class, 'resend'])->name('verification.send')->middleware(['auth:api', 'throttle:email-resend']);
     Route::get('/email/verify/{id}/{hash}', [VerifyEmailController::class, 'verifyEmail'])->name('verification.verify');
     Route::post('/refresh-token', [RefreshTokenController::class, 'refreshToken'])->name('auth.refresh-token')->middleware('auth:api');
-    Route::post('/verify-social-token', [SocialAuthController::class, 'verifySocialToken'])->name('auth.verify-social-token');
+    Route::post('/verify-social-token', [SocialAuthController::class, 'verifySocialToken'])->name('auth.verify-social-token')->middleware('throttle:auth');
 });
 
 // Protected routes
@@ -197,7 +197,7 @@ Route::get('/tour-categories', [TourCategoryController::class, 'index'])->name('
 // Reviews (public read)
 Route::get('/reviews', [ReviewController::class, 'index'])->name('api.v1.reviews.index');
 
-Route::post('/custom-inquiries', [CustomInquiryController::class, 'store'])->name('api.v1.custom_inquiries.store');
+Route::post('/custom-inquiries', [CustomInquiryController::class, 'store'])->name('api.v1.custom_inquiries.store')->middleware('throttle:forms');
 
 // Gallery (public read)
 Route::get('/gallery', [GalleryController::class, 'index'])->name('api.v1.gallery.index');
