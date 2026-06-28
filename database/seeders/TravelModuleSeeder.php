@@ -124,6 +124,15 @@ class TravelModuleSeeder extends Seeder
         // Tours adicionales generados para probar paginación y vista móvil con muchos items.
         $toursData = array_merge($toursData, $this->bulkTours(50, $categories));
 
+        // map_url como coordenadas "lat,lng" para que el mapa de OpenStreetMap se embeba.
+        $coords = $this->locationCoords();
+        $toursData = array_map(function ($data) use ($coords) {
+            if (isset($coords[$data['location']])) {
+                $data['map_url'] = $coords[$data['location']];
+            }
+            return $data;
+        }, $toursData);
+
         $tours = collect($toursData)->map(fn ($data) => Tour::query()->updateOrCreate(
             ['title' => $data['title']],
             array_merge($data, ['is_active' => true])
@@ -140,6 +149,26 @@ class TravelModuleSeeder extends Seeder
         }
 
         return $tours;
+    }
+
+    /** Coordenadas "lat,lng" por ubicación (El Salvador) para embeber el mapa. */
+    private function locationCoords(): array
+    {
+        return [
+            'Santa Ana'    => '13.8530,-89.6300', // volcán de Santa Ana
+            'La Libertad'  => '13.4942,-89.3839', // El Tunco
+            'Ahuachapan'   => '13.8706,-89.8500',
+            'Ahuachapán'   => '13.8706,-89.8500',
+            'Sonsonate'    => '13.7186,-89.7242',
+            'Cuscatlán'    => '13.7167,-88.9333',
+            'Morazán'      => '13.6969,-88.1006',
+            'Chalatenango' => '14.0333,-88.9400',
+            'La Paz'       => '13.5000,-88.8686',
+            'Usulután'     => '13.3500,-88.4500',
+            'San Miguel'   => '13.4833,-88.1833',
+            'Cabañas'      => '13.8722,-88.6306',
+            'San Vicente'  => '13.6333,-88.8000',
+        ];
     }
 
     /** Genera tours variados (categoría, lugar, precio) con títulos únicos. */
