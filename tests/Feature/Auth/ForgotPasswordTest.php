@@ -4,8 +4,10 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use App\Notifications\ForgotPassword;
+use App\Notifications\PasswordChangeNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -92,6 +94,28 @@ class ForgotPasswordTest extends TestCase
     }
 
     // ─── reset ────────────────────────────────────────────────────────────────
+
+    public function test_reset_exitoso_cambia_password_y_notifica(): void
+    {
+        Notification::fake();
+        $user = $this->createUser('reset-ok@example.com');
+
+        DB::table('password_reset_tokens')->insert([
+            'email'      => 'reset-ok@example.com',
+            'token'      => 'valid_reset_token',
+            'created_at' => now()->addHours(6),
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/reset-password', $this->resetPayload('valid_reset_token', 'brandNew123'));
+
+        $response->assertOk();
+        // La contraseña realmente cambió.
+        $this->assertTrue(Hash::check('brandNew123', $user->fresh()->password));
+        // El token se consumió.
+        $this->assertDatabaseMissing('password_reset_tokens', ['token' => 'valid_reset_token']);
+        // Se notificó al usuario.
+        Notification::assertSentTo($user, PasswordChangeNotification::class);
+    }
 
     public function test_reset_falla_con_token_invalido(): void
     {

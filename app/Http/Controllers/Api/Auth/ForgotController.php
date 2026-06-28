@@ -7,6 +7,7 @@ use App\Http\Requests\ForgotRequest;
 use App\Http\Requests\ResetPasswordRequest;
 use App\Models\User;
 use App\Notifications\ForgotPassword;
+use App\Notifications\PasswordChangeNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -69,9 +70,14 @@ class ForgotController extends Controller
             ]);
 		}
 
+		// Asigna la nueva contraseña (el cast 'hashed' del modelo la encripta).
+		$user->password = $request->input('data.attributes.password');
 		$user->save();
 
 		DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+
+		// Notifica al usuario que su contraseña fue restablecida.
+		$user->notify(new PasswordChangeNotification());
 
         return response()->json([
             'data' => [

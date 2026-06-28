@@ -30,7 +30,11 @@ class ValidateJsonApiDocument
             ]);
         }
 
-        if ($request->isMethod('PATCH')) {
+        // data.id solo es obligatorio al actualizar un recurso identificado por la URL
+        // (rutas con parámetro, p. ej. /tours/{tour}). Las acciones sobre un recurso
+        // singleton del usuario autenticado (/account/profile, /account/change-password,
+        // /settings, /gallery/reorder) no llevan id en la URL ni en el documento.
+        if ($request->isMethod('PATCH') && !empty($request->route()?->parameters())) {
             $request->validate([
                 'data.id' => ['required', 'string']
             ]);

@@ -59,6 +59,23 @@ class RegisterTest extends TestCase
         ]);
     }
 
+    public function test_registro_sin_username_genera_uno_automatico(): void
+    {
+        Notification::fake();
+
+        $payload = $this->validPayload();
+        unset($payload['data']['attributes']['username']);
+
+        $response = $this->postJson('/api/v1/auth/register', $payload);
+
+        $response->assertCreated();
+        $user = User::where('email', 'john@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertNotEmpty($user->username);
+        // Se deriva del local-part del email cuando no se envía username.
+        $this->assertSame('john', $user->username);
+    }
+
     public function test_registro_falla_con_email_duplicado(): void
     {
         Notification::fake();
@@ -126,13 +143,14 @@ class RegisterTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+        // username ya NO es requerido (se autogenera si no se envía).
         $response->assertJsonValidationErrors([
             'data.attributes.email',
-            'data.attributes.username',
             'data.attributes.first_name',
             'data.attributes.last_name',
             'data.attributes.password',
         ]);
+        $response->assertJsonMissingValidationErrors(['data.attributes.username']);
     }
 
     public function test_registro_falla_con_email_malformado(): void

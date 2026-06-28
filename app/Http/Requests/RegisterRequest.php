@@ -27,7 +27,7 @@ class RegisterRequest extends FormRequest
             'data' => ['required', 'array'],
             'data.attributes' => ['required', 'array'],
             'data.type' => ['required', 'string', 'in:users'],
-            'data.attributes.username' => ['required', 'max:255', Rule::unique('users', 'username')],
+            'data.attributes.username' => ['sometimes', 'nullable', 'max:255', Rule::unique('users', 'username')],
             'data.attributes.first_name' => ['required', 'max:255'],
             'data.attributes.last_name' => ['required', 'max:255'],
             'data.attributes.email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
