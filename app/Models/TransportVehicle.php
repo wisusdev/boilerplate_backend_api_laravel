@@ -35,6 +35,35 @@ class TransportVehicle extends Model implements HasMedia
         'is_active' => 'boolean',
     ];
 
+    // ─── Scopes de filtrado (usados por allowedFilters del catálogo) ───────────
+    public function scopeVehicleType($query, $value)
+    {
+        return $query->where('vehicle_type', $value);
+    }
+
+    public function scopeCapacityMin($query, $value)
+    {
+        return $query->where('capacity', '>=', (int) $value);
+    }
+
+    public function scopeRateMin($query, $value)
+    {
+        return $query->where('daily_rate', '>=', (float) $value);
+    }
+
+    public function scopeRateMax($query, $value)
+    {
+        return $query->where('daily_rate', '<=', (float) $value);
+    }
+
+    public function scopeSearch($query, $value)
+    {
+        return $query->where(function ($q) use ($value) {
+            $q->where('title', 'LIKE', "%{$value}%")
+                ->orWhere('location', 'LIKE', "%{$value}%");
+        });
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('featured_image')->singleFile();

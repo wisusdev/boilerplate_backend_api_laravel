@@ -43,6 +43,30 @@ class Tour extends Model implements HasMedia
         'faqs' => 'array',
     ];
 
+    // ─── Scopes de filtrado (usados por allowedFilters del catálogo) ───────────
+    public function scopeCategoryId($query, $value)
+    {
+        return $query->where('category_id', $value);
+    }
+
+    public function scopePriceMin($query, $value)
+    {
+        return $query->where('price', '>=', (float) $value);
+    }
+
+    public function scopePriceMax($query, $value)
+    {
+        return $query->where('price', '<=', (float) $value);
+    }
+
+    public function scopeSearch($query, $value)
+    {
+        return $query->where(function ($q) use ($value) {
+            $q->where('title', 'LIKE', "%{$value}%")
+                ->orWhere('location', 'LIKE', "%{$value}%");
+        });
+    }
+
     protected static function booted(): void
     {
         // Genera un slug único a partir del título al crear (si no se envía uno).

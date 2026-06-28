@@ -18,7 +18,9 @@ class TourController extends Controller
         $tours = Tour::query()
             ->with(['media', 'category'])
             ->where('is_active', true)
-            ->latest()
+            ->allowedFilters(['categoryId', 'priceMin', 'priceMax', 'location', 'search'])
+            ->allowedSorts(['price', 'title', 'max_capacity', 'created_at'])
+            ->when(! request()->filled('sort'), fn ($q) => $q->latest())
             ->sparseFieldset()
             ->jsonPaginate();
 

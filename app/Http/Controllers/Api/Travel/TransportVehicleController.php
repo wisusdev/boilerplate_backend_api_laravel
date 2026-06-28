@@ -19,7 +19,9 @@ class TransportVehicleController extends Controller
         $vehicles = TransportVehicle::query()
             ->with('media')
             ->where('is_active', true)
-            ->latest()
+            ->allowedFilters(['vehicleType', 'capacityMin', 'rateMin', 'rateMax', 'location', 'search'])
+            ->allowedSorts(['daily_rate', 'hourly_rate', 'capacity', 'created_at'])
+            ->when(! request()->filled('sort'), fn ($q) => $q->latest())
             ->sparseFieldset()
             ->jsonPaginate();
 
