@@ -50,18 +50,25 @@ class StockImageSeeder extends Seeder
 
     public function run(): void
     {
-        // Tours: imagen destacada + galería
-        foreach (Tour::all() as $tour) {
+        // Tours: imagen destacada para TODOS (cards reales en listado/móvil);
+        // galería solo para los primeros (evita cientos de descargas a escala).
+        $galleryLimitTours = 6;
+        foreach (Tour::all()->values() as $index => $tour) {
             $base = $tour->slug ?: ('tour-' . $tour->id);
             $this->addFeatured($tour, $base . '-cover');
-            $this->addGallery($tour, [$base . '-1', $base . '-2', $base . '-3']);
+            if ($index < $galleryLimitTours) {
+                $this->addGallery($tour, [$base . '-1', $base . '-2', $base . '-3']);
+            }
         }
 
-        // Vehículos de transporte
-        foreach (TransportVehicle::all() as $vehicle) {
+        // Vehículos: destacada para todos; galería solo para los primeros.
+        $galleryLimitVehicles = 3;
+        foreach (TransportVehicle::all()->values() as $index => $vehicle) {
             $base = 'vehiculo-' . $vehicle->id;
             $this->addFeatured($vehicle, $base . '-cover');
-            $this->addGallery($vehicle, [$base . '-1', $base . '-2']);
+            if ($index < $galleryLimitVehicles) {
+                $this->addGallery($vehicle, [$base . '-1', $base . '-2']);
+            }
         }
 
         // Galería del sitio (si está vacía)

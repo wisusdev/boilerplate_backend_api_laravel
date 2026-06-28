@@ -121,12 +121,16 @@ class TravelModuleSeeder extends Seeder
             ],
         ];
 
+        // Tours adicionales generados para probar paginación y vista móvil con muchos items.
+        $toursData = array_merge($toursData, $this->bulkTours(50, $categories));
+
         $tours = collect($toursData)->map(fn ($data) => Tour::query()->updateOrCreate(
             ['title' => $data['title']],
             array_merge($data, ['is_active' => true])
         ));
 
-        foreach ($tours as $tour) {
+        // Disponibilidad solo para los primeros tours (suficiente para probar reservas).
+        foreach ($tours->take(8) as $tour) {
             for ($i = 1; $i <= 10; $i++) {
                 TourAvailability::query()->firstOrCreate(
                     ['tour_id' => $tour->id, 'available_date' => now()->addDays($i)->toDateString()],
@@ -136,6 +140,42 @@ class TravelModuleSeeder extends Seeder
         }
 
         return $tours;
+    }
+
+    /** Genera tours variados (categoría, lugar, precio) con títulos únicos. */
+    private function bulkTours(int $count, \Illuminate\Support\Collection $categories): array
+    {
+        $catNames = $categories->keys()->all() ?: ['Volcanes', 'Playa', 'Cultura', 'Trekking'];
+        $places = ['Santa Ana', 'La Libertad', 'Ahuachapán', 'Sonsonate', 'Cuscatlán', 'Morazán', 'Chalatenango', 'La Paz', 'Usulután', 'San Miguel', 'Cabañas', 'San Vicente'];
+        $themes = [
+            'Volcanes' => ['Ascenso al cráter', 'Mirador volcánico', 'Sendero de lava'],
+            'Playa'    => ['Surf al atardecer', 'Snorkel en la bahía', 'Día de playa'],
+            'Cultura'  => ['Pueblo colonial', 'Ruta del café', 'Tour de murales'],
+            'Trekking' => ['Bosque nuboso', 'Cascadas escondidas', 'Travesía de montaña'],
+        ];
+
+        $out = [];
+        for ($i = 1; $i <= $count; $i++) {
+            $cat = $catNames[$i % count($catNames)];
+            $place = $places[$i % count($places)];
+            $themeList = $themes[$cat] ?? ['Tour de ' . $cat];
+            $theme = $themeList[$i % count($themeList)];
+
+            $out[] = [
+                'title'         => "{$theme} — {$place} #{$i}",
+                'description'   => "Experiencia de {$cat} en {$place}. Guía local, transporte y refrigerio incluidos.",
+                'price'         => 30 + (($i % 18) * 5),
+                'max_capacity'  => 6 + ($i % 16),
+                'location'      => $place,
+                'category_id'   => $categories[$cat] ?? null,
+                'currency_code' => 'USD',
+                'itinerary'     => ['Punto de encuentro', 'Actividad principal', 'Refrigerio', 'Regreso'],
+                'highlights'    => ['Guía local', 'Transporte incluido', 'Grupos pequeños'],
+                'faqs'          => [['q' => '¿Qué incluye?', 'a' => 'Guía, transporte y refrigerio.']],
+            ];
+        }
+
+        return $out;
     }
 
     private function seedVehicles(): \Illuminate\Support\Collection
@@ -165,15 +205,46 @@ class TravelModuleSeeder extends Seeder
             ],
         ];
 
+        // Vehículos adicionales generados para probar paginación / vista móvil.
+        $vehiclesData = array_merge($vehiclesData, $this->bulkVehicles(10));
+
         return collect($vehiclesData)->map(fn ($data) => TransportVehicle::query()->updateOrCreate(
             ['title' => $data['title']],
             array_merge($data, ['is_active' => true])
         ));
     }
 
+    /** Genera vehículos variados con títulos únicos. */
+    private function bulkVehicles(int $count): array
+    {
+        $types = ['suv', 'van', 'bus', 'sedan', 'pickup', 'minibus', 'coaster'];
+        $places = ['San Salvador', 'La Libertad', 'Santa Ana', 'Sonsonate', 'San Miguel', 'Ahuachapán'];
+        $featureSets = [['AC', 'GPS'], ['AC', '4x4', 'Seguro'], ['AC', 'WiFi', 'Conductor']];
+
+        $out = [];
+        for ($i = 1; $i <= $count; $i++) {
+            $type = $types[$i % count($types)];
+            $place = $places[$i % count($places)];
+
+            $out[] = [
+                'title'         => ucfirst($type) . " de transporte #{$i}",
+                'vehicle_type'  => $type,
+                'description'   => "Vehículo tipo {$type} disponible en {$place}.",
+                'location'      => $place,
+                'hourly_rate'   => 12 + (($i % 10) * 2),
+                'daily_rate'    => 80 + (($i % 12) * 10),
+                'capacity'      => 4 + ($i % 12),
+                'currency_code' => 'USD',
+                'features'      => $featureSets[$i % count($featureSets)],
+            ];
+        }
+
+        return $out;
+    }
+
     private function seedTourBookings(\Illuminate\Support\Collection $tours, \Illuminate\Support\Collection $users): void
     {
-        foreach ($tours->values() as $index => $tour) {
+        foreach ($tours->take(8)->values() as $index => $tour) {
             $user   = $users[$index % $users->count()];
             $status = $index % 2 === 0 ? Booking::STATUS_CONFIRMED : Booking::STATUS_PENDING;
 
@@ -210,7 +281,7 @@ class TravelModuleSeeder extends Seeder
 
     private function seedTransportBookings(\Illuminate\Support\Collection $vehicles, \Illuminate\Support\Collection $users): void
     {
-        foreach ($vehicles->values() as $index => $vehicle) {
+        foreach ($vehicles->take(4)->values() as $index => $vehicle) {
             $user      = $users[$index % $users->count()];
             $pickupAt  = now()->addDays($index + 1)->setTime(8, 0, 0);
             $dropoffAt = now()->addDays($index + 1)->setTime(18, 0, 0);
