@@ -12,6 +12,9 @@ class CustomInquiry extends Model
 
     protected $fillable = [
         'user_id',
+        'contact_name',
+        'contact_email',
+        'contact_phone',
         'preferred_destinations',
         'travel_start_date',
         'travel_end_date',

@@ -103,6 +103,9 @@ class TransportAndInquiryTest extends TestCase
             'data' => [
                 'type' => 'custom_inquiries',
                 'attributes' => [
+                    'contact_name' => 'Ana Pérez',
+                    'contact_email' => 'ana@example.com',
+                    'contact_phone' => '+503 7777 8888',
                     'preferred_destinations' => ['Ataco', 'Apaneca'],
                     'travel_start_date' => '2026-07-01',
                     'travel_end_date' => '2026-07-05',
@@ -116,9 +119,15 @@ class TransportAndInquiryTest extends TestCase
         ]);
 
         $response->assertCreated();
+        // El recurso expone name/email/phone para el panel admin.
+        $response->assertJsonPath('data.attributes.name', 'Ana Pérez');
+        $response->assertJsonPath('data.attributes.email', 'ana@example.com');
+        $response->assertJsonPath('data.attributes.phone', '+503 7777 8888');
         $this->assertDatabaseHas('custom_inquiries', [
+            'contact_name' => 'Ana Pérez',
+            'contact_email' => 'ana@example.com',
+            'contact_phone' => '+503 7777 8888',
             'travelers_count' => 4,
-            'message' => 'Need a family trip plan',
         ]);
     }
 

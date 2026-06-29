@@ -16,12 +16,12 @@ class CustomInquiryController extends Controller
 
     public function index()
     {
-        return CustomInquiryResource::collection(CustomInquiry::query()->latest()->jsonPaginate());
+        return CustomInquiryResource::collection(CustomInquiry::query()->with('user')->latest()->jsonPaginate());
     }
 
     public function show(CustomInquiry $customInquiry): CustomInquiryResource
     {
-        return CustomInquiryResource::make($customInquiry);
+        return CustomInquiryResource::make($customInquiry->load('user'));
     }
 
     public function store(CustomInquiryRequest $request): CustomInquiryResource

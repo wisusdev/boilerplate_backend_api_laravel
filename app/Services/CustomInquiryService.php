@@ -14,6 +14,9 @@ class CustomInquiryService
     {
         $inquiry = CustomInquiry::create([
             'user_id' => $user?->id,
+            'contact_name' => $data['contact_name'] ?? null,
+            'contact_email' => $data['contact_email'] ?? null,
+            'contact_phone' => $data['contact_phone'] ?? null,
             'preferred_destinations' => $data['preferred_destinations'],
             'travel_start_date' => $data['travel_start_date'] ?? null,
             'travel_end_date' => $data['travel_end_date'] ?? null,
