@@ -123,6 +123,16 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/', [BookingController::class, 'store'])->name('store');
         Route::get('/{booking}', [BookingController::class, 'show'])->name('show');
         Route::patch('/{booking}', [BookingController::class, 'update'])->name('update');
+
+        // Acciones del cliente sobre su reserva (JSON plano / PDF, sin documento JSON:API)
+        Route::post('/{booking}/cancel', [BookingController::class, 'cancel'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('cancel');
+        Route::post('/{booking}/reschedule', [BookingController::class, 'reschedule'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('reschedule');
+        Route::post('/{booking}/messages', [BookingController::class, 'sendMessage'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('messages');
+        Route::get('/{booking}/receipt', [BookingController::class, 'receipt'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('receipt');
     });
 
     Route::prefix('custom-inquiries')->name('api.v1.custom_inquiries.')->middleware('role:admin|super-admin')->group(function () {

@@ -6,11 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
+use App\Models\BookingMessage;
 use App\Models\Tour;
+use App\Models\TransportVehicle;
+use App\Models\User;
+use App\Notifications\AdminAlertNotification;
+use App\Notifications\BookingNotification;
 use App\Services\BookingService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -71,6 +80,155 @@ class BookingController extends Controller
         );
 
         return BookingResource::make($booking);
+    }
+
+    /**
+     * Cancelar una reserva (solo si está pendiente / sin pagar). Notifica al cliente y a admins.
+     */
+    public function cancel(Request $request, Booking $booking): BookingResource
+    {
+        $this->ensureOwnerOrAdmin($request, $booking);
+
+        if ($booking->status !== Booking::STATUS_PENDING) {
+            throw ValidationException::withMessages([
+                'status' => ['message.bookingNotCancellable'],
+            ]);
+        }
+
+        $booking = $this->bookingService->changeStatus($booking, Booking::STATUS_CANCELLED);
+
+        $title = $this->bookableTitle($booking);
+        $booking->user?->notify(new BookingNotification(
+            'Reserva cancelada',
+            "Tu reserva de \"{$title}\" fue cancelada.",
+            ['reserva' => '#' . $booking->id]
+        ));
+        $this->notifyAdmins('Reserva cancelada por el cliente', 'Una reserva fue cancelada.', [
+            'reserva' => '#' . $booking->id,
+            'detalle' => $title,
+        ]);
+
+        return BookingResource::make($this->loadRelations($booking));
+    }
+
+    /**
+     * Reagendar fecha(s) de la reserva (valida disponibilidad). Notifica al cliente y a admins.
+     */
+    public function reschedule(Request $request, Booking $booking): BookingResource
+    {
+        $this->ensureOwnerOrAdmin($request, $booking);
+
+        if ($booking->status === Booking::STATUS_CANCELLED) {
+            throw ValidationException::withMessages(['date' => ['message.bookingCancelledNoReschedule']]);
+        }
+
+        if ($booking->booking_type === Booking::TYPE_TOUR) {
+            $data = $request->validate(['date' => ['required', 'date', 'after:today']]);
+            $booking->update(['starts_at' => $data['date']]);
+        } else {
+            $data = $request->validate([
+                'pickup_at'  => ['required', 'date', 'after:now'],
+                'dropoff_at' => ['required', 'date', 'after:pickup_at'],
+            ]);
+
+            $overlap = Booking::query()
+                ->where('bookable_type', TransportVehicle::class)
+                ->where('bookable_id', $booking->bookable_id)
+                ->where('id', '!=', $booking->id)
+                ->whereIn('status', [Booking::STATUS_PENDING, Booking::STATUS_CONFIRMED])
+                ->where('starts_at', '<', $data['dropoff_at'])
+                ->where('ends_at', '>', $data['pickup_at'])
+                ->exists();
+
+            if ($overlap) {
+                throw ValidationException::withMessages(['pickup_at' => ['message.vehicleUnavailableForDates']]);
+            }
+
+            $booking->update(['starts_at' => $data['pickup_at'], 'ends_at' => $data['dropoff_at']]);
+        }
+
+        $booking->refresh();
+        $title = $this->bookableTitle($booking);
+        $booking->user?->notify(new BookingNotification(
+            'Reserva reagendada',
+            "Tu reserva de \"{$title}\" fue reagendada.",
+            ['reserva' => '#' . $booking->id, 'nueva_fecha' => $booking->starts_at?->toDayDateTimeString()]
+        ));
+        $this->notifyAdmins('Reserva reagendada por el cliente', 'Una reserva cambió de fecha.', [
+            'reserva' => '#' . $booking->id,
+            'detalle' => $title,
+        ]);
+
+        return BookingResource::make($this->loadRelations($booking));
+    }
+
+    /**
+     * Enviar un mensaje/consulta sobre la reserva. Notifica a los administradores.
+     */
+    public function sendMessage(Request $request, Booking $booking): JsonResponse
+    {
+        $this->ensureOwnerOrAdmin($request, $booking);
+
+        $data = $request->validate(['message' => ['required', 'string', 'max:2000']]);
+
+        BookingMessage::create([
+            'booking_id' => $booking->id,
+            'user_id'    => $request->user()->id,
+            'message'    => $data['message'],
+        ]);
+
+        $title = $this->bookableTitle($booking);
+        $this->notifyAdmins('Nuevo mensaje sobre una reserva', 'Un cliente envió un mensaje sobre su reserva.', [
+            'reserva' => '#' . $booking->id,
+            'detalle' => $title,
+            'mensaje' => $data['message'],
+        ]);
+        $request->user()->notify(new BookingNotification(
+            'Mensaje recibido',
+            'Recibimos tu mensaje sobre la reserva y te responderemos pronto.',
+            ['reserva' => $title]
+        ));
+
+        return response()->json([
+            'data' => [
+                'type'       => 'booking-messages',
+                'attributes' => ['status' => true, 'message' => 'message.bookingMessageSent'],
+            ],
+        ]);
+    }
+
+    /**
+     * Descargar el comprobante de la reserva en PDF.
+     */
+    public function receipt(Request $request, Booking $booking)
+    {
+        $this->ensureOwnerOrAdmin($request, $booking);
+
+        $this->loadRelations($booking);
+        $pdf = Pdf::loadView('pdf.booking-receipt', [
+            'booking' => $booking,
+            'attrs'   => (new BookingResource($booking))->toJsonApi(),
+        ]);
+
+        return $pdf->download('comprobante-reserva-' . $booking->id . '.pdf');
+    }
+
+    private function loadRelations(Booking $booking): Booking
+    {
+        return $booking->load(['user', 'transportDetail', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])]);
+    }
+
+    private function bookableTitle(Booking $booking): string
+    {
+        return $booking->bookable?->title ?? ('Reserva #' . $booking->id);
+    }
+
+    private function notifyAdmins(string $title, string $body, array $details = []): void
+    {
+        $emails = User::role(['admin', 'super-admin'])->pluck('email')->filter()->unique();
+        foreach ($emails as $email) {
+            Notification::route('mail', $email)->notify(new AdminAlertNotification($title, $body, $details));
+        }
     }
 
     /**
