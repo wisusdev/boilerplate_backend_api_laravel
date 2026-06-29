@@ -7,6 +7,7 @@ use App\Http\Requests\BookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Models\BookingMessage;
+use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TransportVehicle;
 use App\Models\User;
@@ -225,7 +226,18 @@ class BookingController extends Controller
 
     private function notifyAdmins(string $title, string $body, array $details = []): void
     {
-        $emails = User::role(['admin', 'super-admin'])->pluck('email')->filter()->unique();
+        // Solo roles que existen: el scope role() de Spatie lanza excepción con un rol inexistente.
+        $roleNames = Role::query()
+            ->where('guard_name', 'api')
+            ->whereIn('name', ['admin', 'super-admin'])
+            ->pluck('name')
+            ->all();
+
+        if (empty($roleNames)) {
+            return;
+        }
+
+        $emails = User::role($roleNames, 'api')->pluck('email')->filter()->unique();
         foreach ($emails as $email) {
             Notification::route('mail', $email)->notify(new AdminAlertNotification($title, $body, $details));
         }

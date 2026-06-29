@@ -126,6 +126,19 @@ class BookingActionsTest extends TestCase
         );
     }
 
+    public function test_enviar_mensaje_no_falla_si_no_existe_rol_super_admin(): void
+    {
+        // En algunos entornos solo existe el rol 'admin' (no 'super-admin').
+        Role::query()->where('name', 'super-admin')->delete();
+
+        $user = $this->makeUser('owner7@example.com');
+        $booking = $this->makeTourBooking($user);
+        Passport::actingAs($user);
+
+        $this->postJson("/api/v1/bookings/{$booking->id}/messages", ['message' => 'Hola'])
+            ->assertOk();
+    }
+
     public function test_descargar_comprobante_pdf(): void
     {
         $user = $this->makeUser('owner6@example.com');
