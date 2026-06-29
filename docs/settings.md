@@ -36,7 +36,8 @@ Configuración general de la aplicación.
 | `app.name` | string | Nombre del negocio |
 | `app.tagline` | string | Slogan o descripción corta |
 | `app.logo` | string | URL del logo |
-| `app.contact_email` | string | Correo de contacto |
+| `app.contact_email` | string | Correo de contacto público |
+| `app.inquiry_notification_emails` | string | Destinatarios de la notificación del formulario de contacto / consultas personalizadas. Uno o varios correos separados por coma, punto y coma o espacio. Si está vacío hace _fallback_ a `app.contact_email`. **Solo visible para administradores** en `GET /settings`; nunca se expone al público. |
 | `app.contact_phone` | string | Teléfono de contacto |
 | `app.address` | string | Dirección física |
 | `app.social_links` | object | URLs de redes sociales (facebook, instagram, etc.) |

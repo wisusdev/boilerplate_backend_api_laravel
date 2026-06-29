@@ -63,15 +63,37 @@ DELETE /api/transport-vehicles/{id}/gallery/{media} → Eliminar imagen
 GET /api/transport-vehicles
 ```
 
-**Query params:**
+El listado público soporta paginación, orden y filtros estilo JSON:API.
+
+**Filtros (`filter[campo]=valor`):**
 
 | Param | Descripción |
 |-------|-------------|
-| `filter[vehicle_type]` | Filtrar por tipo de vehículo |
+| `filter[vehicleType]` | Filtrar por tipo de vehículo (`van`, `bus`, `car`, etc.) |
+| `filter[capacityMin]` | Capacidad mínima de pasajeros |
+| `filter[rateMin]` | Tarifa mínima |
+| `filter[rateMax]` | Tarifa máxima |
 | `filter[location]` | Filtrar por ubicación |
-| `filter[capacity_min]` | Capacidad mínima de pasajeros |
-| `sort` | `hourly_rate`, `daily_rate`, `title` |
+| `filter[search]` | Búsqueda libre en título y ubicación |
+
+**Orden (`sort`):** lista separada por coma; prefijo `-` para descendente. Campos permitidos: `daily_rate`, `hourly_rate`, `capacity`, `created_at`. Por defecto (sin `sort`) se ordena por los más recientes. Un campo no permitido devuelve **HTTP 400**.
+
+**Paginación (JSON:API):**
+
+| Param | Descripción |
+|-------|-------------|
+| `page[size]` | Tamaño de página (default 15) |
 | `page[number]` | Número de página |
+
+La respuesta incluye un bloque `meta` con `current_page`, `last_page`, `per_page` y `total`.
+
+**Ejemplos:**
+
+```
+GET /api/v1/transport-vehicles?filter[capacityMin]=10&sort=daily_rate&page[size]=12
+GET /api/v1/transport-vehicles?filter[vehicleType]=van&filter[rateMax]=250&sort=-created_at
+GET /api/v1/transport-vehicles?filter[search]=hiace&sort=capacity,daily_rate&page[number]=2
+```
 
 **Response:**
 ```json
@@ -92,7 +114,13 @@ GET /api/transport-vehicles
       "is_active": true,
       "featured_image": "https://..."
     }
-  }]
+  }],
+  "meta": {
+    "current_page": 1,
+    "last_page": 3,
+    "per_page": 15,
+    "total": 40
+  }
 }
 ```
 

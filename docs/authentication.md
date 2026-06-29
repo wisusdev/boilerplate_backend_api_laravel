@@ -12,6 +12,7 @@ Gestiona el ciclo de vida de sesiones de usuario: registro, login, OAuth social,
 6. [OAuth social](#oauth-social)
 7. [Refresh y logout](#refresh-y-logout)
 8. [Límite de dispositivos](#límite-de-dispositivos)
+9. [Rate limiting](#rate-limiting)
 
 ---
 
@@ -143,6 +144,11 @@ POST /api/auth/reset-password
 }
 ```
 
+Al resetear:
+- Se valida que el token exista y no haya expirado.
+- Se **aplica la nueva contraseña** al usuario (encriptada por el cast `hashed` del modelo) y se elimina el token usado.
+- Se envía al usuario una notificación de confirmación (`PasswordChangeNotification`) avisando que su contraseña fue restablecida.
+
 ---
 
 ## Verificación de correo
@@ -219,6 +225,23 @@ Revoca únicamente el token actual. Las demás sesiones activas del usuario no s
 Si el ajuste `auth.limit_auth_devices` está habilitado, el sistema controla cuántos tokens activos simultáneos puede tener un usuario. Cuando se supera el límite, el login falla con un error 422.
 
 Los dispositivos activos se registran en la tabla `device_infos` (modelo `DeviceInfo`), que incluye nombre del dispositivo y timestamps.
+
+---
+
+## Rate limiting
+
+Los endpoints sensibles de autenticación aplican límites de peticiones para mitigar fuerza bruta y el envío masivo de correos. Al excederse, responden con **HTTP 429 (Too Many Requests)**. Los límites están **desactivados en el entorno `testing`**.
+
+| Endpoint | Throttle | Límite | Clave |
+|----------|----------|--------|-------|
+| `POST /auth/login` | `auth` | 6 / min | IP |
+| `POST /auth/reset-password` | `auth` | 6 / min | IP |
+| `POST /auth/verify-social-token` | `auth` | 6 / min | IP |
+| `POST /auth/register` | `auth-register` | 5 / min + 20 / hora | IP |
+| `POST /auth/forgot-password` | `auth-forgot` | 3 / min + 10 / hora | IP |
+| `POST /auth/email/resend` | `email-resend` | 2 / min + 6 / hora | por usuario (id) |
+
+> Otros formularios públicos (p. ej. consultas personalizadas / contacto) usan el throttle `forms` (8 / min + 40 / hora). Ver [custom-inquiries.md](custom-inquiries.md).
 
 ---
 

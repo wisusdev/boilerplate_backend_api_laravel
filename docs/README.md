@@ -37,7 +37,16 @@ Documentación técnica del API REST del proyecto VamosPues. Construido con Lara
 - **Formato**: JSON:API (`Content-Type: application/vnd.api+json`)
 - **Autenticación**: `Authorization: Bearer {token}`
 - **Paginación**: `?page[number]=1&page[size]=15`
-- **Prefijo de rutas**: `/api/`
+- **Prefijo de rutas**: `/api/v1/`
+
+### Documento JSON:API y `data.id`
+
+En las peticiones `POST`/`PATCH` el cuerpo debe incluir `data.type` y normalmente `data.attributes`. El campo **`data.id` solo es obligatorio en peticiones `PATCH` a rutas de recurso con parámetro** (p. ej. `PATCH /tours/{tour}`), donde el `id` del documento debe coincidir con el de la URL.
+
+Las acciones sobre recursos _singleton_ del usuario autenticado **no requieren `data.id`**, ya que no llevan parámetro en la URL. Por ejemplo:
+
+- `PATCH /account/profile`
+- `PATCH /account/change-password`
 
 ## Estructura de respuesta estándar
 

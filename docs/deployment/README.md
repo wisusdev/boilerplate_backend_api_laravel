@@ -2,6 +2,8 @@
 
 Documentación de despliegue del API Laravel en distintos proveedores de nube. Cada archivo cubre un proveedor específico con comandos listos para usar.
 
+> 📋 **Antes de publicar**, revisa la [Guía para pasar el proyecto a producción](production-checklist.md): checklist de go-live de **backend + frontend** (variables de entorno, correos, seeders, colas, CORS, build del SPA, verificación y rollback).
+
 ## Proveedores documentados
 
 | Proveedor | Archivo | Complejidad | Costo aprox/mes |

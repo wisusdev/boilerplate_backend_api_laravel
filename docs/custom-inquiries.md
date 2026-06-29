@@ -39,6 +39,8 @@ Permite a clientes enviar solicitudes de viaje a medida cuando los tours estánd
 
 Accesible sin autenticación. Si el usuario está autenticado, la consulta se asocia a su cuenta automáticamente.
 
+Este endpoint público está limitado por el throttle `forms` (**8 / min + 40 / hora** por IP; desactivado en `testing`). Al excederse responde **HTTP 429**.
+
 ```
 POST /api/custom-inquiries
 Content-Type: application/vnd.api+json
@@ -118,7 +120,7 @@ Authorization: Bearer {token} (requiere admin)
 ```
 1. Cliente envía consulta (POST /api/custom-inquiries)
    → status: pending
-   → Notificación por email al equipo de administración
+   → Notificación por email a los destinatarios configurados
 
 2. Admin revisa en panel (Admin → Consultas personalizadas)
    → Puede ver destinos, fechas, presupuesto y mensaje
@@ -130,6 +132,14 @@ Authorization: Bearer {token} (requiere admin)
    → reviewed: ya fue atendida
    → closed: proceso completado
 ```
+
+### Destinatarios de la notificación
+
+Los correos que reciben la notificación de cada nueva consulta se controlan con el ajuste `app.inquiry_notification_emails` (ver [settings.md](settings.md)):
+
+- Acepta **uno o varios correos** separados por coma, punto y coma o espacio.
+- Si está **vacío**, hace _fallback_ a `app.contact_email`.
+- Es un dato **interno**: solo es visible para administradores en `GET /settings`; nunca se expone al público.
 
 ---
 

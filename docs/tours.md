@@ -91,9 +91,11 @@ Testimonios de clientes mostrados en la landing page.
 ### Rutas públicas (sin autenticación)
 
 ```
-GET /api/tours          → Listar tours activos
-GET /api/tours/{id}     → Ver detalle de un tour
+GET /api/tours              → Listar tours activos
+GET /api/tours/{id|slug}    → Ver detalle de un tour
 ```
+
+> **Nota:** el modelo `Tour` expone un campo `slug` único (generado automáticamente desde el `title` al crear). El endpoint de detalle acepta tanto el **id numérico** como el **slug**: `GET /api/tours/{id|slug}` (p. ej. `/api/v1/tours/volcan-santa-ana-al-amanecer`).
 
 ### Rutas de administración (requieren rol admin)
 
@@ -113,15 +115,36 @@ DELETE /api/tours/{id}/gallery/{media} → Eliminar imagen de galería
 GET /api/tours
 ```
 
-**Query params:**
+El listado público soporta paginación, orden y filtros estilo JSON:API.
+
+**Filtros (`filter[campo]=valor`):**
 
 | Param | Descripción |
 |-------|-------------|
-| `filter[category_id]` | Filtrar por categoría (ID de `tour_categories`) |
+| `filter[categoryId]` | Filtrar por categoría (ID de `tour_categories`) |
+| `filter[priceMin]` | Precio mínimo por persona |
+| `filter[priceMax]` | Precio máximo por persona |
 | `filter[location]` | Filtrar por ubicación |
-| `sort` | `price`, `title`, `-created_at` |
-| `page[number]` | Número de página |
+| `filter[search]` | Búsqueda libre en **título** y **ubicación** |
+
+**Orden (`sort`):** lista separada por coma; prefijo `-` para descendente. Campos permitidos: `price`, `title`, `max_capacity`, `created_at`. Por defecto (sin `sort`) se ordena por los más recientes. Un campo no permitido devuelve **HTTP 400**.
+
+**Paginación (JSON:API):**
+
+| Param | Descripción |
+|-------|-------------|
 | `page[size]` | Tamaño de página (default 15) |
+| `page[number]` | Número de página |
+
+La respuesta incluye un bloque `meta` con `current_page`, `last_page`, `per_page` y `total`.
+
+**Ejemplos:**
+
+```
+GET /api/v1/tours?filter[priceMin]=50&sort=price&page[size]=12
+GET /api/v1/tours?filter[categoryId]=1&filter[location]=Santa+Ana&sort=-created_at
+GET /api/v1/tours?filter[search]=volcan&sort=price,-max_capacity&page[number]=2&page[size]=10
+```
 
 **Response:**
 ```json
@@ -145,7 +168,13 @@ GET /api/tours
       "highlights": ["Vista 360°", "Guía certificado"],
       "faqs": [{"question": "...", "answer": "..."}]
     }
-  }]
+  }],
+  "meta": {
+    "current_page": 1,
+    "last_page": 4,
+    "per_page": 15,
+    "total": 50
+  }
 }
 ```
 
