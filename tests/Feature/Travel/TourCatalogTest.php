@@ -66,6 +66,98 @@ class TourCatalogTest extends TestCase
         $response->assertJsonMissing(['title' => 'Inactive tour']);
     }
 
+    private function makeTour(array $attrs = []): Tour
+    {
+        return Tour::create(array_merge([
+            'title' => 'Tour ' . uniqid(),
+            'description' => 'Desc',
+            'price' => 100,
+            'max_capacity' => 10,
+            'location' => 'San Salvador',
+            'currency_code' => 'USD',
+            'is_active' => true,
+        ], $attrs));
+    }
+
+    public function test_index_filtra_por_rango_de_precio(): void
+    {
+        $this->makeTour(['title' => 'Barato', 'price' => 30]);
+        $this->makeTour(['title' => 'Medio', 'price' => 80]);
+        $this->makeTour(['title' => 'Caro', 'price' => 150]);
+
+        $response = $this->withHeaders($this->apiHeaders())
+            ->get('/api/v1/tours?filter[priceMin]=50&filter[priceMax]=100');
+
+        $response->assertOk();
+        $response->assertJsonFragment(['title' => 'Medio']);
+        $response->assertJsonMissing(['title' => 'Barato']);
+        $response->assertJsonMissing(['title' => 'Caro']);
+    }
+
+    public function test_index_filtra_por_categoria(): void
+    {
+        $playa = \App\Models\TourCategory::create(['name' => 'Playa', 'is_active' => true]);
+        $volcan = \App\Models\TourCategory::create(['name' => 'Volcanes', 'is_active' => true]);
+
+        $this->makeTour(['title' => 'Surf', 'category_id' => $playa->id]);
+        $this->makeTour(['title' => 'Cráter', 'category_id' => $volcan->id]);
+
+        $response = $this->withHeaders($this->apiHeaders())
+            ->get('/api/v1/tours?filter[categoryId]=' . $playa->id);
+
+        $response->assertOk();
+        $response->assertJsonFragment(['title' => 'Surf']);
+        $response->assertJsonMissing(['title' => 'Cráter']);
+    }
+
+    public function test_index_busca_por_titulo_o_ubicacion(): void
+    {
+        $this->makeTour(['title' => 'El Tunco Surf', 'location' => 'La Libertad']);
+        $this->makeTour(['title' => 'Café tour', 'location' => 'Ahuachapán']);
+
+        $response = $this->withHeaders($this->apiHeaders())
+            ->get('/api/v1/tours?filter[search]=Tunco');
+
+        $response->assertOk();
+        $response->assertJsonFragment(['title' => 'El Tunco Surf']);
+        $response->assertJsonMissing(['title' => 'Café tour']);
+    }
+
+    public function test_index_ordena_por_precio_ascendente(): void
+    {
+        $this->makeTour(['title' => 'Caro', 'price' => 150]);
+        $this->makeTour(['title' => 'Barato', 'price' => 30]);
+
+        $response = $this->withHeaders($this->apiHeaders())
+            ->get('/api/v1/tours?sort=price');
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.attributes.title', 'Barato');
+    }
+
+    public function test_index_respeta_el_tamano_de_pagina(): void
+    {
+        for ($i = 0; $i < 8; $i++) {
+            $this->makeTour(['title' => "Tour pag $i"]);
+        }
+
+        $response = $this->withHeaders($this->apiHeaders())
+            ->get('/api/v1/tours?page[size]=5');
+
+        $response->assertOk();
+        $response->assertJsonCount(5, 'data');
+        $response->assertJsonPath('meta.total', 8);
+        $response->assertJsonPath('meta.per_page', 5);
+        $response->assertJsonPath('meta.last_page', 2);
+    }
+
+    public function test_index_rechaza_orden_no_permitido(): void
+    {
+        $this->withHeaders($this->apiHeaders())
+            ->get('/api/v1/tours?sort=secret_field')
+            ->assertStatus(400);
+    }
+
     public function test_store_creates_a_tour(): void
     {
         \App\Models\Currency::create([
