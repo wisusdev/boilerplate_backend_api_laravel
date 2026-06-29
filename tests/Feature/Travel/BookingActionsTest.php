@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\BookingMessage;
 use App\Models\Role;
 use App\Models\Tour;
+use App\Models\TransportVehicle;
 use App\Models\User;
 use App\Notifications\AdminAlertNotification;
 use App\Notifications\BookingNotification;
@@ -101,6 +102,64 @@ class BookingActionsTest extends TestCase
 
         $this->assertEquals($newDate, $booking->fresh()->starts_at->toDateString());
         Notification::assertSentTo($user, BookingNotification::class);
+    }
+
+    public function test_reagendar_tour_falla_si_no_hay_cupo(): void
+    {
+        $tour = Tour::create([
+            'title' => 'Tour Lleno', 'description' => 'd', 'price' => 50, 'max_capacity' => 2,
+            'location' => 'SV', 'currency_code' => 'USD', 'is_active' => true,
+        ]);
+        $targetDate = now()->addDays(7);
+
+        // Otra reserva confirmada que llena el cupo en la fecha destino.
+        Booking::create([
+            'bookable_type' => Tour::class, 'bookable_id' => $tour->id,
+            'user_id' => $this->makeUser('full@example.com')->id,
+            'starts_at' => $targetDate, 'party_size' => 2, 'total_price' => 100,
+            'currency_code' => 'USD', 'status' => Booking::STATUS_CONFIRMED,
+        ]);
+
+        $user = $this->makeUser('owner-cap@example.com');
+        $booking = Booking::create([
+            'bookable_type' => Tour::class, 'bookable_id' => $tour->id, 'user_id' => $user->id,
+            'starts_at' => now()->addDays(2), 'party_size' => 1, 'total_price' => 50,
+            'currency_code' => 'USD', 'status' => Booking::STATUS_PENDING,
+        ]);
+        Passport::actingAs($user);
+
+        $this->postJson("/api/v1/bookings/{$booking->id}/reschedule", ['date' => $targetDate->toDateString()])
+            ->assertStatus(422);
+    }
+
+    public function test_reagendar_transporte_falla_si_se_solapa(): void
+    {
+        $vehicle = TransportVehicle::create([
+            'title' => 'Van X', 'vehicle_type' => 'van', 'location' => 'SV',
+            'hourly_rate' => 10, 'daily_rate' => 80, 'capacity' => 6, 'currency_code' => 'USD', 'is_active' => true,
+        ]);
+
+        // Reserva existente del vehículo: día +5 de 08:00 a 18:00.
+        Booking::create([
+            'bookable_type' => TransportVehicle::class, 'bookable_id' => $vehicle->id,
+            'user_id' => $this->makeUser('busy@example.com')->id,
+            'starts_at' => now()->addDays(5)->setTime(8, 0), 'ends_at' => now()->addDays(5)->setTime(18, 0),
+            'party_size' => 1, 'total_price' => 80, 'currency_code' => 'USD', 'status' => Booking::STATUS_CONFIRMED,
+        ]);
+
+        $user = $this->makeUser('owner-tr@example.com');
+        $booking = Booking::create([
+            'bookable_type' => TransportVehicle::class, 'bookable_id' => $vehicle->id, 'user_id' => $user->id,
+            'starts_at' => now()->addDays(2)->setTime(8, 0), 'ends_at' => now()->addDays(2)->setTime(18, 0),
+            'party_size' => 1, 'total_price' => 80, 'currency_code' => 'USD', 'status' => Booking::STATUS_PENDING,
+        ]);
+        Passport::actingAs($user);
+
+        // Intenta reagendar a la ventana ya ocupada (día +5).
+        $this->postJson("/api/v1/bookings/{$booking->id}/reschedule", [
+            'pickup_at'  => now()->addDays(5)->setTime(10, 0)->toDateTimeString(),
+            'dropoff_at' => now()->addDays(5)->setTime(16, 0)->toDateTimeString(),
+        ])->assertStatus(422);
     }
 
     public function test_enviar_mensaje_guarda_y_notifica_admins(): void

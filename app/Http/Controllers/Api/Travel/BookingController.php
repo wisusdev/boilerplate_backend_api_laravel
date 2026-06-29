@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Notifications\AdminAlertNotification;
 use App\Notifications\BookingNotification;
 use App\Services\BookingService;
+use App\Services\TourAvailabilityService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\JsonResponse;
@@ -24,8 +25,10 @@ use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
-    public function __construct(private readonly BookingService $bookingService)
-    {
+    public function __construct(
+        private readonly BookingService $bookingService,
+        private readonly TourAvailabilityService $availabilityService
+    ) {
     }
 
     public function index(Request $request): AnonymousResourceCollection
@@ -125,6 +128,13 @@ class BookingController extends Controller
 
         if ($booking->booking_type === Booking::TYPE_TOUR) {
             $data = $request->validate(['date' => ['required', 'date', 'after:today']]);
+
+            // Valida cupo del tour en la nueva fecha (considera cierres, override y reservas existentes).
+            $capacity = $this->availabilityService->availableCapacity($booking->bookable, $data['date']);
+            if ($capacity < (int) $booking->party_size) {
+                throw ValidationException::withMessages(['date' => ['message.tourUnavailableForDate']]);
+            }
+
             $booking->update(['starts_at' => $data['date']]);
         } else {
             $data = $request->validate([
