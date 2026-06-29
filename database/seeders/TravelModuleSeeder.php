@@ -312,8 +312,9 @@ class TravelModuleSeeder extends Seeder
     {
         foreach ($vehicles->take(4)->values() as $index => $vehicle) {
             $user      = $users[$index % $users->count()];
-            $pickupAt  = now()->addDays($index + 1)->setTime(8, 0, 0);
-            $dropoffAt = now()->addDays($index + 1)->setTime(18, 0, 0);
+            // Reservas en el pasado: sirven de historial sin bloquear las fechas por defecto.
+            $pickupAt  = now()->subDays(($index + 1) * 3)->setTime(8, 0, 0);
+            $dropoffAt = now()->subDays(($index + 1) * 3)->setTime(18, 0, 0);
 
             $booking = Booking::query()->firstOrCreate(
                 [
