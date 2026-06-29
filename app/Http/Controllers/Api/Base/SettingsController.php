@@ -99,7 +99,7 @@ class SettingsController extends Controller
 
         // ── app fields ─────────────────────────────────────────────────────
         $appFields = ['app_name', 'app_tagline', 'app_logo_url',
-            'contact_email', 'contact_phone', 'contact_whatsapp', 'contact_address',
+            'contact_email', 'inquiry_notification_emails', 'contact_phone', 'contact_whatsapp', 'contact_address',
             'contact_city', 'contact_country',
             'social_facebook', 'social_instagram', 'social_twitter', 'social_youtube', 'social_tiktok',
             'timezone',
@@ -250,6 +250,7 @@ class SettingsController extends Controller
             $sensitiveKeys = [
                 'paypal_client_secret', 'stripe_secret_key', 'wompi_private_key',
                 'mail', 'password',
+                'inquiry_notification_emails', // destinatarios internos, no públicos
             ];
             foreach ($sensitiveKeys as $sk) {
                 unset($flat[$sk]);

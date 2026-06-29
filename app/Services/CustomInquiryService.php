@@ -47,10 +47,15 @@ class CustomInquiryService
         $appSetting = Setting::query()->where('key', 'app')->first();
         if ($appSetting && is_string($appSetting->value)) {
             $decoded = json_decode($appSetting->value, true);
-            $contactEmail = $decoded['contact_email'] ?? null;
 
-            if (is_string($contactEmail) && $contactEmail !== '') {
-                $settingsEmails = preg_split('/[,;\s]+/', $contactEmail) ?: [];
+            // Destinatarios dedicados de notificaciones; si están vacíos, usa el correo público.
+            $raw = $decoded['inquiry_notification_emails'] ?? null;
+            if (! is_string($raw) || trim($raw) === '') {
+                $raw = $decoded['contact_email'] ?? null;
+            }
+
+            if (is_string($raw) && $raw !== '') {
+                $settingsEmails = preg_split('/[,;\s]+/', $raw) ?: [];
             }
         }
 

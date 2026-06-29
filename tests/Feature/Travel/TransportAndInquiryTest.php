@@ -121,4 +121,64 @@ class TransportAndInquiryTest extends TestCase
             'message' => 'Need a family trip plan',
         ]);
     }
+
+    public function test_inquiry_notifica_a_los_correos_configurados(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        \App\Models\Currency::create([
+            'code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$',
+            'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
+        ]);
+
+        // Campo dedicado de notificaciones: admite uno o varios correos.
+        \App\Models\Setting::create([
+            'key'   => 'app',
+            'value' => json_encode([
+                'contact_email' => 'publico@empresa.com',
+                'inquiry_notification_emails' => 'ventas@empresa.com, reservas@empresa.com',
+            ]),
+        ]);
+
+        $this->apiJson('POST', '/api/v1/custom-inquiries', [
+            'data' => [
+                'type' => 'custom_inquiries',
+                'attributes' => ['preferred_destinations' => ['Ataco'], 'currency_code' => 'USD'],
+            ],
+        ])->assertCreated();
+
+        foreach (['ventas@empresa.com', 'reservas@empresa.com'] as $email) {
+            \Illuminate\Support\Facades\Notification::assertSentTo(
+                new \Illuminate\Notifications\AnonymousNotifiable,
+                \App\Notifications\AdminAlertNotification::class,
+                fn ($n, $channels, $notifiable) => $notifiable->routes['mail'] === $email
+            );
+        }
+    }
+
+    public function test_inquiry_usa_correo_publico_si_no_hay_dedicados(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        \App\Models\Currency::create([
+            'code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$',
+            'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
+        ]);
+
+        \App\Models\Setting::create([
+            'key'   => 'app',
+            'value' => json_encode(['contact_email' => 'publico@empresa.com']),
+        ]);
+
+        $this->apiJson('POST', '/api/v1/custom-inquiries', [
+            'data' => [
+                'type' => 'custom_inquiries',
+                'attributes' => ['preferred_destinations' => ['Ataco'], 'currency_code' => 'USD'],
+            ],
+        ])->assertCreated();
+
+        \Illuminate\Support\Facades\Notification::assertSentTo(
+            new \Illuminate\Notifications\AnonymousNotifiable,
+            \App\Notifications\AdminAlertNotification::class,
+            fn ($n, $channels, $notifiable) => $notifiable->routes['mail'] === 'publico@empresa.com'
+        );
+    }
 }
