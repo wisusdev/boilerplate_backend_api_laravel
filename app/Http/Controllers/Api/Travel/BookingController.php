@@ -20,7 +20,9 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
@@ -62,13 +64,96 @@ class BookingController extends Controller
     {
         $attrs = $request->validated()['data']['attributes'];
 
+        // El cliente reserva para sí; un admin (agendamiento presencial) puede asignar
+        // la reserva a un cliente existente o crear uno nuevo por correo.
+        $targetUser = $this->resolveBookingCustomer($request);
+
         $booking = $this->bookingService->create(
-            $request->user(),
+            $targetUser,
             $attrs['booking_type'],
             $attrs
         );
 
-        return BookingResource::make($booking);
+        // Presencial: el admin puede confirmar de una vez (dispara la notificación de confirmación).
+        if ($this->isAdmin($request) && $request->input('data.attributes.status') === Booking::STATUS_CONFIRMED) {
+            $booking = $this->bookingService->changeStatus($booking, Booking::STATUS_CONFIRMED);
+        }
+
+        return BookingResource::make($this->loadRelations($booking));
+    }
+
+    private function isAdmin(Request $request): bool
+    {
+        return $request->user()->hasRole(['admin', 'super-admin']);
+    }
+
+    /**
+     * Determina el usuario dueño de la reserva. Un cliente reserva para sí mismo;
+     * un admin puede indicar un cliente existente (customer.id / user_id) o uno nuevo (customer.email).
+     */
+    private function resolveBookingCustomer(Request $request): User
+    {
+        $auth = $request->user();
+
+        if (! $this->isAdmin($request)) {
+            return $auth;
+        }
+
+        $customer = $request->input('data.attributes.customer');
+        $userId   = $request->input('data.attributes.user_id');
+
+        if (is_array($customer) && (! empty($customer['id']) || ! empty($customer['email']))) {
+            $request->validate([
+                'data.attributes.customer.id'    => ['sometimes', 'nullable', 'uuid', 'exists:users,id'],
+                'data.attributes.customer.email' => ['required_without:data.attributes.customer.id', 'nullable', 'email', 'max:255'],
+                'data.attributes.customer.name'  => ['sometimes', 'nullable', 'string', 'max:255'],
+                'data.attributes.customer.phone' => ['sometimes', 'nullable', 'string', 'max:50'],
+            ]);
+
+            return ! empty($customer['id'])
+                ? User::findOrFail($customer['id'])
+                : $this->findOrCreateCustomer($customer);
+        }
+
+        if ($userId) {
+            return User::findOrFail($userId);
+        }
+
+        return $auth;
+    }
+
+    private function findOrCreateCustomer(array $c): User
+    {
+        $existing = User::where('email', $c['email'])->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $name  = trim($c['name'] ?? '') ?: 'Cliente';
+        $parts = preg_split('/\s+/', $name, 2);
+
+        $user = User::create([
+            'first_name' => $parts[0],
+            'last_name'  => $parts[1] ?? '',
+            'email'      => $c['email'],
+            'phone'      => $c['phone'] ?? null,
+            'username'   => $this->uniqueUsername($c['email']),
+            'password'   => Hash::make(Str::random(40)),
+        ]);
+        $user->assignRole('user');
+
+        return $user;
+    }
+
+    private function uniqueUsername(string $email): string
+    {
+        $base = Str::lower(preg_replace('/[^a-z0-9]/i', '', Str::before($email, '@'))) ?: 'cliente';
+        $username = $base;
+        while (User::where('username', $username)->exists()) {
+            $username = $base . random_int(100, 9999);
+        }
+
+        return $username;
     }
 
     public function update(BookingRequest $request, Booking $booking): BookingResource
