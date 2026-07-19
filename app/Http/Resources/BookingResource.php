@@ -18,6 +18,7 @@ class BookingResource extends JsonResource
         $payment  = $booking->relationLoaded('latestPayment') ? $booking->latestPayment : null;
         $detail   = $booking->relationLoaded('transportDetail') ? $booking->transportDetail : null;
         $coupon   = $booking->relationLoaded('coupon') ? $booking->coupon : null;
+        $upVeh    = $booking->relationLoaded('upgradeVehicle') ? $booking->upgradeVehicle : null;
 
         $isTour      = $booking->booking_type === Booking::TYPE_TOUR;
         $isTransport = $booking->booking_type === Booking::TYPE_TRANSPORT;
@@ -40,8 +41,10 @@ class BookingResource extends JsonResource
             'pax_count'            => $isTour ? $booking->party_size : null,
 
             // Opción de vehículo elegida para el tour (null si no se eligió)
-            'upgrade_label'        => $isTour ? $booking->upgrade_label : null,
-            'upgrade_surcharge'    => $isTour ? $booking->upgrade_surcharge : null,
+            'upgrade_vehicle_id'   => $isTour ? $booking->upgrade_vehicle_id : null,   // referencia al vehículo del catálogo
+            'upgrade_vehicle_title'=> $isTour ? $upVeh?->title : null,                 // título actual del vehículo (si existe)
+            'upgrade_label'        => $isTour ? $booking->upgrade_label : null,         // snapshot del nombre al reservar
+            'upgrade_surcharge'    => $isTour ? $booking->upgrade_surcharge : null,     // precio fijado por el admin (snapshot)
 
             // Punto de recogida indicado por el cliente (tour)
             'pickup_address'       => $isTour ? $booking->pickup_address : null,

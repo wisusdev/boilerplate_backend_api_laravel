@@ -207,9 +207,10 @@ class Tour extends Model implements HasMedia
     }
 
     /**
-     * Opciones de vehículo de paga configuradas (lista saneada de {name, surcharge}).
+     * Opciones de vehículo de paga configuradas (lista saneada de {vehicle_id, name, surcharge}).
+     * `vehicle_id` referencia al vehículo del catálogo; `name`/`surcharge` son el snapshot editable.
      *
-     * @return array<int, array{name: string, surcharge: float}>
+     * @return array<int, array{vehicle_id: int|null, name: string, surcharge: float}>
      */
     public function vehicleOptionsList(): array
     {
@@ -220,8 +221,9 @@ class Tour extends Model implements HasMedia
                 return null;
             }
             return [
-                'name'      => (string) $opt['name'],
-                'surcharge' => round((float) ($opt['surcharge'] ?? 0), 2),
+                'vehicle_id' => isset($opt['vehicle_id']) && $opt['vehicle_id'] !== '' ? (int) $opt['vehicle_id'] : null,
+                'name'       => (string) $opt['name'],
+                'surcharge'  => round((float) ($opt['surcharge'] ?? 0), 2),
             ];
         }, $options)));
     }

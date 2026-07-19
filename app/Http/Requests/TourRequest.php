@@ -34,9 +34,10 @@ class TourRequest extends FormRequest
             'data.attributes.pricing_tiers.*.min_pax'          => ['required_with:data.attributes.pricing_tiers', 'integer', 'min:1'],
             'data.attributes.pricing_tiers.*.discount_percent' => ['required_with:data.attributes.pricing_tiers', 'numeric', 'min:0', 'max:100'],
             // Opciones de vehículo de paga (hasta 3): [{name, surcharge}]
-            'data.attributes.vehicle_options'             => ['sometimes', 'nullable', 'array', 'max:3'],
-            'data.attributes.vehicle_options.*.name'      => ['required_with:data.attributes.vehicle_options', 'string', 'max:120'],
-            'data.attributes.vehicle_options.*.surcharge' => ['required_with:data.attributes.vehicle_options', 'numeric', 'min:0'],
+            'data.attributes.vehicle_options'               => ['sometimes', 'nullable', 'array', 'max:3'],
+            'data.attributes.vehicle_options.*.vehicle_id'  => ['sometimes', 'nullable', 'integer', 'exists:transport_vehicles,id'],
+            'data.attributes.vehicle_options.*.name'        => ['required_with:data.attributes.vehicle_options', 'string', 'max:120'],
+            'data.attributes.vehicle_options.*.surcharge'   => ['required_with:data.attributes.vehicle_options', 'numeric', 'min:0'],
             // Visibilidad de secciones del flujo de reserva
             'data.attributes.booking_sections'         => ['sometimes', 'nullable', 'array'],
             'data.attributes.booking_sections.vehicle' => ['sometimes', 'boolean'],

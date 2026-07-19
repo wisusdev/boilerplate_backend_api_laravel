@@ -3,6 +3,7 @@
 namespace Tests\Feature\Travel;
 
 use App\Models\Tour;
+use App\Models\TransportVehicle;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -31,15 +32,29 @@ class TourVehicleOptionTest extends TestCase
         ]);
     }
 
+    private function vehicle(string $title): TransportVehicle
+    {
+        return TransportVehicle::create([
+            'title' => $title, 'vehicle_type' => 'van', 'location' => 'SV',
+            'capacity' => 12, 'currency_code' => 'USD', 'is_active' => true,
+            'daily_rate' => 100,
+        ]);
+    }
+
     private function tour(array $overrides = []): Tour
     {
+        // Opciones referencian vehículos reales del catálogo; el precio (surcharge) lo fija el admin.
+        $v1 = $this->vehicle('Sedán privado');
+        $v2 = $this->vehicle('Van con A/C');
+        $v3 = $this->vehicle('Microbús');
+
         return Tour::create(array_merge([
             'title' => 'Vehicle Option Tour', 'description' => 'x', 'price' => 100,
             'max_capacity' => 20, 'location' => 'SV', 'currency_code' => 'USD', 'is_active' => true,
             'vehicle_options' => [
-                ['name' => 'Sedán privado', 'surcharge' => 20],
-                ['name' => 'Van con A/C', 'surcharge' => 35],
-                ['name' => 'Microbús', 'surcharge' => 50],
+                ['vehicle_id' => $v1->id, 'name' => 'Sedán privado', 'surcharge' => 20],
+                ['vehicle_id' => $v2->id, 'name' => 'Van con A/C', 'surcharge' => 35],
+                ['vehicle_id' => $v3->id, 'name' => 'Microbús', 'surcharge' => 50],
             ],
         ], $overrides));
     }
@@ -77,14 +92,20 @@ class TourVehicleOptionTest extends TestCase
             ],
         ]);
 
+        $microbusVehicleId = $tour->vehicleOptionsList()[2]['vehicle_id'];
+
         $response->assertSuccessful();
-        // 100 * 2 + 50 = 250
+        // 100 * 2 + 50 = 250 (precio fijado por el admin)
         $response->assertJsonPath('data.attributes.total_price', '250.00');
         $response->assertJsonPath('data.attributes.upgrade_label', 'Microbús');
+        $response->assertJsonPath('data.attributes.upgrade_vehicle_id', $microbusVehicleId);
+        $response->assertJsonPath('data.attributes.upgrade_vehicle_title', 'Microbús');
         $this->assertDatabaseHas('bookings', [
-            'bookable_id'   => $tour->id,
-            'upgrade_label' => 'Microbús',
-            'total_price'   => 250,
+            'bookable_id'        => $tour->id,
+            'upgrade_vehicle_id' => $microbusVehicleId,
+            'upgrade_label'      => 'Microbús',
+            'upgrade_surcharge'  => 50,
+            'total_price'        => 250,
         ]);
     }
 
@@ -115,6 +136,9 @@ class TourVehicleOptionTest extends TestCase
         $admin->assignRole('admin');
         Passport::actingAs($admin);
 
+        $v1 = $this->vehicle('Sedán');
+        $v2 = $this->vehicle('Van');
+
         $response = $this->apiJson('POST', '/api/v1/tours', [
             'data' => [
                 'type' => 'tours',
@@ -126,8 +150,8 @@ class TourVehicleOptionTest extends TestCase
                     'location' => 'SV',
                     'currency_code' => 'USD',
                     'vehicle_options' => [
-                        ['name' => 'Sedán', 'surcharge' => 15],
-                        ['name' => 'Van', 'surcharge' => 30],
+                        ['vehicle_id' => $v1->id, 'name' => 'Sedán', 'surcharge' => 15],
+                        ['vehicle_id' => $v2->id, 'name' => 'Van', 'surcharge' => 30],
                     ],
                     'booking_sections' => ['pickup' => false, 'coupon' => true],
                 ],
@@ -135,8 +159,11 @@ class TourVehicleOptionTest extends TestCase
         ]);
 
         $response->assertCreated();
+        // El vehicle_id se persiste y expone en el recurso.
+        $response->assertJsonPath('data.attributes.vehicle_options.0.vehicle_id', $v1->id);
         $tour = Tour::where('title', 'Config Tour')->firstOrFail();
         $this->assertCount(2, $tour->vehicleOptionsList());
+        $this->assertSame($v2->id, $tour->vehicleOptionsList()[1]['vehicle_id']);
         $this->assertFalse($tour->sectionVisible('pickup'));
         $this->assertTrue($tour->sectionVisible('coupon'));
     }

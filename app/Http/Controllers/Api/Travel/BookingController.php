@@ -39,7 +39,7 @@ class BookingController extends Controller
         $isAdmin = $user->hasRole(['admin', 'super-admin']);
 
         $bookings = Booking::query()
-            ->with(['user', 'transportDetail', 'coupon', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])])
+            ->with(['user', 'transportDetail', 'upgradeVehicle', 'coupon', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])])
             ->when(! $isAdmin, fn ($q) => $q->where('user_id', $user->id))
             ->when($request->filled('booking_type'), fn ($q) => $q->where('bookable_type', Booking::bookableClassFor($request->string('booking_type')->toString())))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')->toString()))
@@ -56,7 +56,7 @@ class BookingController extends Controller
     {
         $this->ensureOwnerOrAdmin($request, $booking);
 
-        $booking->load(['user', 'transportDetail', 'coupon', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])]);
+        $booking->load(['user', 'transportDetail', 'upgradeVehicle', 'coupon', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])]);
         return BookingResource::make($booking);
     }
 
@@ -311,7 +311,7 @@ class BookingController extends Controller
 
     private function loadRelations(Booking $booking): Booking
     {
-        return $booking->load(['user', 'transportDetail', 'coupon', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])]);
+        return $booking->load(['user', 'transportDetail', 'upgradeVehicle', 'coupon', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])]);
     }
 
     private function bookableTitle(Booking $booking): string

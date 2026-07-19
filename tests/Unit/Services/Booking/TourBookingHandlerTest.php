@@ -89,8 +89,8 @@ class TourBookingHandlerTest extends TestCase
         $tour = $this->createTour([
             'price' => 100,
             'vehicle_options' => [
-                ['name' => 'Sedán', 'surcharge' => 20],
-                ['name' => 'Van A/C', 'surcharge' => 50],
+                ['vehicle_id' => 3, 'name' => 'Sedán', 'surcharge' => 20],
+                ['vehicle_id' => 7, 'name' => 'Van A/C', 'surcharge' => 50],
             ],
         ]);
 
@@ -98,8 +98,9 @@ class TourBookingHandlerTest extends TestCase
         $prepared = $this->handler->prepare($this->bookingData($tour, ['pax_count' => 2, 'upgrade_option_index' => 1]));
 
         $this->assertSame(250.0, (float) $prepared['total_price']);
+        $this->assertSame(7, $prepared['upgrade_vehicle_id']);   // referencia al vehículo
         $this->assertSame('Van A/C', $prepared['upgrade_label']);
-        $this->assertSame(50.0, (float) $prepared['upgrade_surcharge']);
+        $this->assertSame(50.0, (float) $prepared['upgrade_surcharge']); // precio del admin
     }
 
     public function test_vehicle_option_is_optional(): void

@@ -81,11 +81,14 @@ class TourBookingHandler implements BookingHandlerInterface
             $requestedPax
         );
 
-        // Opción de vehículo elegida: cargo adicional fijo que no altera el precio base.
+        // Opción de vehículo elegida: cargo adicional fijo (precio definido por el admin)
+        // que no altera el precio base. Se referencia el vehículo del catálogo.
+        $upgradeVehicleId = null;
         $upgradeLabel = null;
         $upgradeSurcharge = null;
         if (isset($data['upgrade_option_index']) && $data['upgrade_option_index'] !== null && $data['upgrade_option_index'] !== '') {
             $option = $this->resolveVehicleOption($tour, (int) $data['upgrade_option_index']);
+            $upgradeVehicleId = $option['vehicle_id'];
             $upgradeLabel = $option['name'];
             $upgradeSurcharge = round((float) $option['surcharge'], 2);
         }
@@ -93,6 +96,7 @@ class TourBookingHandler implements BookingHandlerInterface
         return [
             'bookable_type'      => Tour::class,
             'bookable_id'        => $tour->id,
+            'upgrade_vehicle_id' => $upgradeVehicleId,
             'upgrade_label'      => $upgradeLabel,
             'starts_at'          => Carbon::parse($data['booking_date'])->startOfDay(),
             'ends_at'            => null,
@@ -112,7 +116,7 @@ class TourBookingHandler implements BookingHandlerInterface
      * Resuelve la opción de vehículo (configurada por tour) según su índice.
      * Lanza ValidationException si el índice no corresponde a una opción válida.
      *
-     * @return array{name: string, surcharge: float}
+     * @return array{vehicle_id: int|null, name: string, surcharge: float}
      */
     private function resolveVehicleOption(Tour $tour, int $index): array
     {

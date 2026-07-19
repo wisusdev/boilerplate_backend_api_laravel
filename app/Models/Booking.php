@@ -35,6 +35,7 @@ class Booking extends Model
         'user_id',
         'bookable_type',
         'bookable_id',
+        'upgrade_vehicle_id',
         'upgrade_label',
         'starts_at',
         'ends_at',
@@ -93,6 +94,15 @@ class Booking extends Model
     public function transportDetail(): HasOne
     {
         return $this->hasOne(TransportBookingDetail::class);
+    }
+
+    /**
+     * Vehículo referenciado por la opción elegida (tours). Puede ser null si la opción
+     * no estaba ligada a un vehículo o si el vehículo fue eliminado (nullOnDelete).
+     */
+    public function upgradeVehicle(): BelongsTo
+    {
+        return $this->belongsTo(TransportVehicle::class, 'upgrade_vehicle_id');
     }
 
     /**
