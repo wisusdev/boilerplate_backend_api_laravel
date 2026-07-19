@@ -28,6 +28,7 @@ class SettingSeeder extends Seeder
 				"phone" => "+503 1234-5678",
 				"address" => "1234 Main St, San Salvador, El Salvador",
 				"timezone" => "America/El_Salvador",
+				"offers_subscription_enabled" => true,
 			])],
 
 			['key' => 'payment_gateway', 'value' => json_encode([

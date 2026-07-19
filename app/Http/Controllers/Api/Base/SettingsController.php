@@ -44,7 +44,7 @@ class SettingsController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $isAdmin = optional($request->user())->hasRole(['admin', 'super-admin']);
+        $isAdmin = (bool) optional($request->user())->hasRole(['admin', 'super-admin']);
         $keys    = $isAdmin ? self::ALL_KEYS : self::PUBLIC_KEYS;
 
         $settings = Setting::whereIn('key', $keys)->get()
@@ -104,6 +104,7 @@ class SettingsController extends Controller
             'social_facebook', 'social_instagram', 'social_twitter', 'social_youtube', 'social_tiktok',
             'timezone',
             'max_daily_bookings',
+            'offers_subscription_enabled',
         ];
         foreach ($appFields as $f) {
             if (array_key_exists($f, $attrs)) {
