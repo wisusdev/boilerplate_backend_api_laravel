@@ -17,6 +17,7 @@ return new class extends Migration
             $table->dateTime('ends_at')->nullable();
             $table->unsignedInteger('party_size')->default(1);
             $table->decimal('total_price', 12, 2);
+            $table->json('service_fees')->nullable(); // snapshot de add-ons cobrados
             $table->string('currency_code', 3)->default('USD');
             $table->string('status', 20)->default('pending');
             $table->text('notes')->nullable();

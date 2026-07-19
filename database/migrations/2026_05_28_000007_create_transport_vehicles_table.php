@@ -14,11 +14,21 @@ return new class extends Migration
             $table->string('vehicle_type');
             $table->text('description')->nullable();
             $table->string('location');
+
+            // Tarifas (con precio de oferta opcional)
             $table->decimal('hourly_rate', 12, 2)->nullable();
+            $table->decimal('sale_hourly_rate', 12, 2)->nullable();
             $table->decimal('daily_rate', 12, 2)->nullable();
+            $table->decimal('sale_daily_rate', 12, 2)->nullable();
+
             $table->unsignedInteger('capacity');
             $table->string('currency_code', 3)->default('USD');
             $table->json('features')->nullable();
+
+            // SEO (opcional por producto)
+            $table->string('meta_title')->nullable();
+            $table->string('meta_description', 500)->nullable();
+
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

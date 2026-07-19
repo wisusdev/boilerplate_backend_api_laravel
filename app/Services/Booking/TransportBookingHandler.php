@@ -68,9 +68,18 @@ class TransportBookingHandler implements BookingHandlerInterface
         $hours = max($pickup->diffInHours($dropoff, false), 1);
         $days = max((int) ceil($pickup->diffInHours($dropoff) / 24), 1);
 
+        // Aplica la tarifa de oferta cuando existe y es menor que la tarifa base.
+        $effectiveRate = function (?float $rate, ?float $saleRate): float {
+            $rate = (float) ($rate ?? 0);
+            if ($saleRate !== null && (float) $saleRate < $rate) {
+                return (float) $saleRate;
+            }
+            return $rate;
+        };
+
         $base = $rentalType === 'daily'
-            ? (float) ($vehicle->daily_rate ?? 0) * $days
-            : (float) ($vehicle->hourly_rate ?? 0) * $hours;
+            ? $effectiveRate($vehicle->daily_rate, $vehicle->sale_daily_rate) * $days
+            : $effectiveRate($vehicle->hourly_rate, $vehicle->sale_hourly_rate) * $hours;
 
         return round($base * max($quantity, 1), 2);
     }
