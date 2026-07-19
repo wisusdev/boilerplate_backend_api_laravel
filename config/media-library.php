@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\MediaLibrary\DatePathGenerator;
+use App\Support\MediaLibrary\UniqueFileNamer;
 use Spatie\ImageOptimizer\Optimizers\Avifenc;
 use Spatie\ImageOptimizer\Optimizers\Cwebp;
 use Spatie\ImageOptimizer\Optimizers\Gifsicle;
@@ -136,12 +138,12 @@ return [
     /*
      * This is the class that is responsible for naming generated files.
      */
-    'file_namer' => DefaultFileNamer::class,
+    'file_namer' => UniqueFileNamer::class,
 
     /*
      * The class that contains the strategy for determining a media file's path.
      */
-    'path_generator' => DefaultPathGenerator::class,
+    'path_generator' => DatePathGenerator::class,
 
     /*
      * The class that contains the strategy for determining how to remove files.
