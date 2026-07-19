@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Booking;
+use App\Models\Coupon;
 use App\Models\Currency;
 use App\Models\CustomInquiry;
 use App\Models\Invoice;
@@ -43,6 +44,27 @@ class TravelModuleSeeder extends Seeder
 
         $this->seedCustomInquiries($users);
         $this->seedReviews();
+        $this->seedCoupons();
+    }
+
+    private function seedCoupons(): void
+    {
+        $coupons = [
+            [
+                'code' => 'BIENVENIDO10', 'description' => '10% de descuento de bienvenida',
+                'type' => Coupon::TYPE_PERCENTAGE, 'value' => 10, 'max_discount' => 50,
+                'applies_to' => 'all', 'is_active' => true,
+            ],
+            [
+                'code' => 'GRUPO20', 'description' => '$20 de descuento para grupos de 5+',
+                'type' => Coupon::TYPE_FIXED, 'value' => 20, 'min_pax' => 5,
+                'applies_to' => 'tour', 'usage_limit' => 100, 'is_active' => true,
+            ],
+        ];
+
+        foreach ($coupons as $coupon) {
+            Coupon::query()->updateOrCreate(['code' => $coupon['code']], $coupon);
+        }
     }
 
     private function seedCurrencies(): void
@@ -88,6 +110,17 @@ class TravelModuleSeeder extends Seeder
                 'location'      => 'Santa Ana',
                 'category_id'   => $categories['Volcanes'] ?? null,
                 'currency_code' => 'USD',
+                // Tarifas de grupo: 2+ pax 10% off, 5+ pax 18% off por persona.
+                'pricing_tiers' => [
+                    ['min_pax' => 2, 'discount_percent' => 10],
+                    ['min_pax' => 5, 'discount_percent' => 18],
+                ],
+                // Opciones de vehículo (además de la gratuita implícita).
+                'vehicle_options' => [
+                    ['name' => 'Sedán privado', 'surcharge' => 20],
+                    ['name' => 'Van con A/C', 'surcharge' => 35],
+                    ['name' => 'Microbús', 'surcharge' => 50],
+                ],
                 'itinerary'     => ['Pickup 4:30 AM', 'Hike to crater', 'Breakfast stop'],
                 'highlights'    => ['Crater views', 'Local guide', 'Photos included'],
                 'map_url'       => 'https://maps.google.com/?q=Volcan+de+Santa+Ana',
@@ -254,6 +287,7 @@ class TravelModuleSeeder extends Seeder
         for ($i = 1; $i <= $count; $i++) {
             $type = $types[$i % count($types)];
             $place = $places[$i % count($places)];
+            $capacity = 4 + ($i % 12);
 
             $out[] = [
                 'title'         => ucfirst($type) . " de transporte #{$i}",
@@ -262,7 +296,7 @@ class TravelModuleSeeder extends Seeder
                 'location'      => $place,
                 'hourly_rate'   => 12 + (($i % 10) * 2),
                 'daily_rate'    => 80 + (($i % 12) * 10),
-                'capacity'      => 4 + ($i % 12),
+                'capacity'      => $capacity,
                 'currency_code' => 'USD',
                 'features'      => $featureSets[$i % count($featureSets)],
             ];

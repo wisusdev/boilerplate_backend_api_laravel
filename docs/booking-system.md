@@ -41,11 +41,20 @@ bookings (base)
 | `starts_at` | datetime | Inicio del servicio (fecha a medianoche para tours) |
 | `ends_at` | datetime nullable | Fin del servicio (null para tours de un día) |
 | `party_size` | uint | Personas (tours) o cantidad de vehículos (transport) |
-| `total_price` | decimal(12,2) | Precio calculado al momento de la reserva |
+| `total_price` | decimal(12,2) | Precio final calculado al momento de la reserva (ya con extras, opción de vehículo y descuento de cupón) |
+| `service_fees` | json nullable | Snapshot de los add-ons cobrados (tours). Ver [tours.md](tours.md) |
+| `upgrade_label` | varchar nullable | Nombre de la opción de vehículo elegida (tours). Configurada por tour |
+| `upgrade_surcharge` | decimal(12,2) nullable | Cargo de la opción de vehículo (snapshot) |
+| `coupon_id` | bigint FK → coupons nullable | Cupón aplicado (`nullOnDelete`). Ver [coupons.md](coupons.md) |
+| `discount_amount` | decimal(12,2) nullable | Descuento aplicado por el cupón (snapshot) |
+| `pickup_address` | varchar(500) nullable | Dirección de recogida indicada por el cliente (tours) |
+| `pickup_lat` / `pickup_lng` | decimal(10,7) nullable | Marcador de recogida en el mapa (tours) |
 | `currency_code` | char(3) | ISO 4217. Default: `USD` |
 | `status` | varchar(20) | `pending` \| `confirmed` \| `cancelled` |
 | `notes` | text nullable | Notas libres del cliente |
 | `created_at` / `updated_at` | timestamp | |
+
+> **Columnas en desuso:** `upgrade_vehicle_id` existe pero ya no se usa (la opción de vehículo pasó de basarse en el módulo de transporte a configurarse por tour). Se conserva para evitar una migración destructiva; puede eliminarse en una limpieza futura.
 
 > `booking_type` no es columna: se deriva de `bookable_type` (ver accessor `getBookingTypeAttribute` en el modelo `Booking`).
 
@@ -114,11 +123,35 @@ Reserva de una experiencia de tour para una fecha y número de personas.
 | `booking_date` | `Y-m-d` | Fecha del tour (debe ser hoy o futuro) |
 | `pax_count` | integer ≥ 1 | Número de personas |
 
-**Cálculo de precio:** `tour.price × pax_count`
+**Campos opcionales:**
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `service_fees` | array&lt;int&gt; | Índices de `tour.service_fees` seleccionados (add-ons) |
+| `upgrade_option_index` | integer ≥ 0 | Índice de la opción de vehículo elegida en `tour.vehicle_options` (omitir = "Sin vehículo") |
+| `coupon_code` | string | Código de cupón a aplicar. Ver [coupons.md](coupons.md) |
+| `pickup_address` | string(500) | Dirección de recogida |
+| `pickup_lat` / `pickup_lng` | numeric | Marcador de recogida (ambos o ninguno) |
+| `notes` | string | Notas del cliente |
+
+**Cálculo de precio (pipeline):**
+
+1. **Precio por persona base:** `sale_price` si es menor que `price`, si no `price`.
+2. **Tarifa de grupo escalonada:** se aplica el descuento `%` del tramo de `tour.pricing_tiers` con mayor `min_pax ≤ pax_count`.
+3. **Subtotal:** `precio_por_persona × pax_count`.
+4. **+ Servicios extra** (`service_fees`): cada add-on suma `amount` (fijo) o `amount × pax` (por persona).
+5. **+ Opción de vehículo** (`upgrade_option_index`): suma el `surcharge` de la opción configurada en el tour.
+6. **− Cupón** (`coupon_code`): descuento sobre el total anterior (ver [coupons.md](coupons.md)).
+7. **= `total_price`**.
+
+> El precio base del tour **nunca se altera**; tramos, extras, opción de vehículo y cupón se resuelven en el servidor a partir de la configuración del tour y del cupón (los montos que envíe el cliente son solo para previsualización).
 
 **Validaciones de negocio:**
 - La capacidad disponible en la fecha debe ser ≥ `pax_count`
+- La antelación mínima (`tour.min_advance_days`) debe respetarse
 - Si el setting `app.max_daily_bookings` está configurado, no puede superarse ese límite diario
+- `upgrade_option_index` debe existir entre las opciones del tour
+- El cupón debe ser válido (vigencia, ámbito, mínimos, límites de uso)
 
 **Mapeo a la tabla `bookings`:**
 
@@ -187,6 +220,12 @@ Authorization: Bearer {token}
       "tour_id": 1,
       "booking_date": "2026-06-15",
       "pax_count": 3,
+      "service_fees": [0, 2],
+      "upgrade_option_index": 1,
+      "coupon_code": "BIENVENIDO10",
+      "pickup_address": "Hotel Real, Col. Escalón",
+      "pickup_lat": 13.6989,
+      "pickup_lng": -89.1914,
       "notes": "Solicito guía en inglés"
     }
   }

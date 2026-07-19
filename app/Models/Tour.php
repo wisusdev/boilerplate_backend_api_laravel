@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasProductReviews;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,32 +14,60 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class Tour extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia;
+    use HasFactory, InteractsWithMedia, HasProductReviews;
 
     protected $fillable = [
         'title',
         'slug',
         'description',
         'price',
+        'sale_price',
+        'child_price',
+        'pricing_tiers',
+        'vehicle_options',
+        'booking_sections',
+        'duration_days',
+        'duration_nights',
+        'min_advance_days',
+        'cancellation_hours',
         'max_capacity',
         'location',
         'is_active',
+        'is_featured',
         'category_id',
         'currency_code',
         'itinerary',
         'highlights',
+        'includes',
+        'excludes',
+        'service_fees',
         'map_url',
         'map_markers',
         'faqs',
+        'meta_title',
+        'meta_description',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+        'child_price' => 'decimal:2',
+        'pricing_tiers' => 'array',
+        'vehicle_options' => 'array',
+        'booking_sections' => 'array',
+        'duration_days' => 'integer',
+        'duration_nights' => 'integer',
+        'min_advance_days' => 'integer',
+        'cancellation_hours' => 'integer',
         'category_id' => 'integer',
         'max_capacity' => 'integer',
         'is_active' => 'boolean',
+        'is_featured' => 'boolean',
         'itinerary' => 'array',
         'highlights' => 'array',
+        'includes' => 'array',
+        'excludes' => 'array',
+        'service_fees' => 'array',
         'map_markers' => 'array',
         'faqs' => 'array',
     ];
@@ -65,6 +94,11 @@ class Tour extends Model implements HasMedia
             $q->where('title', 'LIKE', "%{$value}%")
                 ->orWhere('location', 'LIKE', "%{$value}%");
         });
+    }
+
+    public function scopeIsFeatured($query, $value)
+    {
+        return $query->where('is_featured', filter_var($value, FILTER_VALIDATE_BOOLEAN));
     }
 
     protected static function booted(): void
@@ -126,6 +160,79 @@ class Tour extends Model implements HasMedia
     public function availabilities(): HasMany
     {
         return $this->hasMany(TourAvailability::class);
+    }
+
+    /**
+     * Precio efectivo por persona (oferta si aplica), antes de tramos escalonados.
+     */
+    public function effectiveUnitPrice(): float
+    {
+        return $this->sale_price !== null && (float) $this->sale_price < (float) $this->price
+            ? (float) $this->sale_price
+            : (float) $this->price;
+    }
+
+    /**
+     * Descuento porcentual del tramo aplicable a un tamaño de grupo dado.
+     * Se elige el tramo con mayor min_pax que no supere el nº de pasajeros.
+     */
+    public function tierDiscountPercent(int $pax): float
+    {
+        $tiers = is_array($this->pricing_tiers) ? $this->pricing_tiers : [];
+        $bestPct = 0.0;
+        $bestMin = -1;
+
+        foreach ($tiers as $tier) {
+            if (! is_array($tier)) {
+                continue;
+            }
+            $minPax = (int) ($tier['min_pax'] ?? 0);
+            $pct = (float) ($tier['discount_percent'] ?? 0);
+            if ($minPax <= $pax && $minPax > $bestMin) {
+                $bestMin = $minPax;
+                $bestPct = $pct;
+            }
+        }
+
+        return max(0.0, min(100.0, $bestPct));
+    }
+
+    /**
+     * Precio por persona para un grupo: precio efectivo con el descuento del tramo.
+     */
+    public function unitPriceFor(int $pax): float
+    {
+        $pct = $this->tierDiscountPercent($pax);
+        return round($this->effectiveUnitPrice() * (1 - $pct / 100), 2);
+    }
+
+    /**
+     * Opciones de vehículo de paga configuradas (lista saneada de {name, surcharge}).
+     *
+     * @return array<int, array{name: string, surcharge: float}>
+     */
+    public function vehicleOptionsList(): array
+    {
+        $options = is_array($this->vehicle_options) ? $this->vehicle_options : [];
+
+        return array_values(array_filter(array_map(function ($opt) {
+            if (! is_array($opt) || trim((string) ($opt['name'] ?? '')) === '') {
+                return null;
+            }
+            return [
+                'name'      => (string) $opt['name'],
+                'surcharge' => round((float) ($opt['surcharge'] ?? 0), 2),
+            ];
+        }, $options)));
+    }
+
+    /**
+     * Visibilidad de una sección del flujo de reserva. Por defecto, visible.
+     */
+    public function sectionVisible(string $key): bool
+    {
+        $sections = is_array($this->booking_sections) ? $this->booking_sections : [];
+        return ! array_key_exists($key, $sections) || (bool) $sections[$key];
     }
 
     public function getResourceType(): string

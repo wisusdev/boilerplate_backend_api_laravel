@@ -16,6 +16,10 @@ class BookingService
 {
     private array $handlers = [];
 
+    public function __construct(private readonly CouponService $couponService)
+    {
+    }
+
     public function registerHandler(string $type, BookingHandlerInterface $handler): void
     {
         $this->handlers[$type] = $handler;
@@ -31,6 +35,23 @@ class BookingService
             $prepared = $handler->prepare($data);
             $details = Arr::pull($prepared, 'details');
 
+            // Cupón (opcional): descuenta sobre el total ya calculado (tarifa + extras + upgrade).
+            $coupon = null;
+            if (! empty($data['coupon_code'])) {
+                $subtotal = (float) $prepared['total_price'];
+                $coupon = $this->couponService->validate($data['coupon_code'], [
+                    'user_id'      => $user->id,
+                    'booking_type' => $bookingType,
+                    'pax'          => (int) ($prepared['party_size'] ?? 0),
+                    'subtotal'     => $subtotal,
+                ]);
+
+                $discount = $coupon->discountFor($subtotal);
+                $prepared['coupon_id'] = $coupon->id;
+                $prepared['discount_amount'] = $discount;
+                $prepared['total_price'] = round($subtotal - $discount, 2);
+            }
+
             $booking = Booking::create(array_merge($prepared, [
                 'user_id' => $user->id,
                 'status'  => Booking::STATUS_PENDING,
@@ -40,6 +61,10 @@ class BookingService
                 $booking->transportDetail()->create($details);
             }
 
+            if ($coupon !== null) {
+                $this->couponService->redeem($coupon);
+            }
+
             return $booking;
         });
     }
@@ -47,7 +72,16 @@ class BookingService
     public function changeStatus(Booking $booking, string $status): Booking
     {
         return DB::transaction(function () use ($booking, $status): Booking {
+            $wasCancelled = $booking->status === Booking::STATUS_CANCELLED;
             $booking->update(['status' => $status]);
+
+            // Al cancelar una reserva con cupón, se libera el uso (si no estaba ya cancelada).
+            if ($status === Booking::STATUS_CANCELLED && ! $wasCancelled && $booking->coupon_id) {
+                $booking->loadMissing('coupon');
+                if ($booking->coupon) {
+                    $this->couponService->release($booking->coupon);
+                }
+            }
 
             if ($status === Booking::STATUS_CONFIRMED) {
                 $this->notifyConfirmation($booking);

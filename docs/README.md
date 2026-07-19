@@ -10,7 +10,8 @@ Documentación técnica del API REST del proyecto VamosPues. Construido con Lara
 | Usuarios y roles | [user-management.md](user-management.md) | Gestión de usuarios, roles y permisos (RBAC) |
 | Tours | [tours.md](tours.md) | Catálogo de tours, categorías, disponibilidad y galería |
 | Transporte | [transport.md](transport.md) | Vehículos de transporte, disponibilidad y galería |
-| Reservas | [booking-system.md](booking-system.md) | Sistema unificado de reservas (tours y transporte) |
+| Reservas | [booking-system.md](booking-system.md) | Sistema unificado de reservas: tramos de grupo, extras, opción de vehículo, recogida y cupones |
+| Cupones | [coupons.md](coupons.md) | Cupones de descuento (porcentaje/fijo), vigencia y límites de uso |
 | Pagos | [payments.md](payments.md) | PayPal, Stripe, Wompi y pagos manuales |
 | Facturación DTE | [dte-facturacion-electronica.md](dte-facturacion-electronica.md) | Facturas electrónicas para El Salvador (MH) |
 | Configuración | [settings.md](settings.md) | Ajustes generales de la aplicación |

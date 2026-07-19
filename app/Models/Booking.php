@@ -35,20 +35,33 @@ class Booking extends Model
         'user_id',
         'bookable_type',
         'bookable_id',
+        'upgrade_label',
         'starts_at',
         'ends_at',
         'party_size',
         'total_price',
+        'service_fees',
+        'upgrade_surcharge',
+        'coupon_id',
+        'discount_amount',
         'currency_code',
         'status',
         'notes',
+        'pickup_address',
+        'pickup_lat',
+        'pickup_lng',
     ];
 
     protected $casts = [
-        'starts_at'   => 'datetime',
-        'ends_at'     => 'datetime',
-        'party_size'  => 'integer',
-        'total_price' => 'decimal:2',
+        'starts_at'    => 'datetime',
+        'ends_at'      => 'datetime',
+        'party_size'   => 'integer',
+        'total_price'  => 'decimal:2',
+        'service_fees' => 'array',
+        'upgrade_surcharge' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'pickup_lat' => 'decimal:7',
+        'pickup_lng' => 'decimal:7',
     ];
 
     /**
@@ -80,6 +93,14 @@ class Booking extends Model
     public function transportDetail(): HasOne
     {
         return $this->hasOne(TransportBookingDetail::class);
+    }
+
+    /**
+     * Cupón aplicado a la reserva (opcional).
+     */
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     public function invoice(): HasOne

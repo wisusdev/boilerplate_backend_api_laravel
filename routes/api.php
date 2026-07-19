@@ -12,13 +12,16 @@ use App\Http\Controllers\Api\Base\PermissionsController;
 use App\Http\Controllers\Api\Base\RolesController;
 use App\Http\Controllers\Api\Base\UserController;
 use App\Http\Controllers\Api\Base\SettingsController;
+use App\Http\Controllers\Api\Travel\CouponController;
 use App\Http\Controllers\Api\Travel\CurrencyController;
 use App\Http\Controllers\Api\Travel\GalleryController;
 use App\Http\Controllers\Api\Travel\CustomInquiryController;
+use App\Http\Controllers\Api\Travel\SubscriberController;
 use App\Http\Controllers\Api\Travel\BookingController;
 use App\Http\Controllers\Api\Travel\InvoiceController;
 use App\Http\Controllers\Api\Travel\PaymentController;
 use App\Http\Controllers\Api\Travel\ReviewController;
+use App\Http\Controllers\Api\Travel\ProductReviewController;
 use App\Http\Controllers\Api\Travel\ReportController;
 use App\Http\Controllers\Api\Travel\TransportVehicleController;
 use App\Http\Controllers\Api\Travel\WebhookController;
@@ -115,7 +118,20 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/reviews', [ReviewController::class, 'store'])->name('api.v1.reviews.store');
         Route::patch('/reviews/{review}', [ReviewController::class, 'update'])->name('api.v1.reviews.update');
         Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('api.v1.reviews.destroy');
+
+        // Cupones (CRUD admin)
+        Route::prefix('coupons')->name('api.v1.coupons.')->group(function () {
+            Route::get('/', [CouponController::class, 'index'])->name('index');
+            Route::post('/', [CouponController::class, 'store'])->name('store');
+            Route::patch('/{coupon}', [CouponController::class, 'update'])->name('update');
+            Route::delete('/{coupon}', [CouponController::class, 'destroy'])->name('destroy');
+        });
     });
+
+    // Validación de cupón (cualquier usuario autenticado; previsualiza el descuento).
+    Route::post('/coupons/validate', [CouponController::class, 'validateCoupon'])
+        ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+        ->name('api.v1.coupons.validate');
 
     // Bookings
     Route::prefix('bookings')->name('api.v1.bookings.')->group(function () {
@@ -135,9 +151,28 @@ Route::middleware(['auth:api'])->group(function () {
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('receipt');
     });
 
+    // Product reviews (reseñas de usuario con compra verificada)
+    Route::prefix('product-reviews')->name('api.v1.product_reviews.')->group(function () {
+        Route::get('/eligibility', [ProductReviewController::class, 'eligibility'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('eligibility');
+        // Listado de moderación (todas las reseñas) — solo admin.
+        Route::get('/admin', [ProductReviewController::class, 'adminIndex'])
+            ->middleware('role:admin|super-admin')->name('admin-index');
+        Route::post('/', [ProductReviewController::class, 'store'])->name('store');
+        Route::patch('/{productReview}', [ProductReviewController::class, 'update'])->name('update');
+        Route::delete('/{productReview}', [ProductReviewController::class, 'destroy'])->name('destroy');
+    });
+
     Route::prefix('custom-inquiries')->name('api.v1.custom_inquiries.')->middleware('role:admin|super-admin')->group(function () {
         Route::get('/', [CustomInquiryController::class, 'index'])->name('index');
         Route::get('/{customInquiry}', [CustomInquiryController::class, 'show'])->name('show');
+    });
+
+    // Suscriptores a ofertas (leads) — gestión admin
+    Route::prefix('subscribers')->name('api.v1.subscribers.')->middleware('role:admin|super-admin')->group(function () {
+        Route::get('/', [SubscriberController::class, 'index'])->name('index');
+        Route::patch('/{subscriber}', [SubscriberController::class, 'update'])->name('update');
+        Route::delete('/{subscriber}', [SubscriberController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('payments')->name('api.v1.payments.')->group(function () {
@@ -194,6 +229,8 @@ Route::prefix('tours')->name('api.v1.tours.')->group(function () {
 
 Route::prefix('transport-vehicles')->name('api.v1.transport_vehicles.')->group(function () {
     Route::get('/', [TransportVehicleController::class, 'index'])->name('index');
+    // Tipos de vehículo disponibles (para poblar filtros en el frontend).
+    Route::get('/types', [TransportVehicleController::class, 'types'])->name('types');
     Route::get('/{transportVehicle}', [TransportVehicleController::class, 'show'])->name('show');
     Route::get('/{transportVehicle}/availability', [TransportVehicleController::class, 'checkAvailability'])->name('availability');
 });
@@ -207,7 +244,17 @@ Route::get('/tour-categories', [TourCategoryController::class, 'index'])->name('
 // Reviews (public read)
 Route::get('/reviews', [ReviewController::class, 'index'])->name('api.v1.reviews.index');
 
+// Product reviews (public read — reseñas aprobadas de un producto)
+Route::get('/product-reviews', [ProductReviewController::class, 'index'])->name('api.v1.product_reviews.index');
+
 Route::post('/custom-inquiries', [CustomInquiryController::class, 'store'])->name('api.v1.custom_inquiries.store')->middleware('throttle:forms');
+
+// Suscripción pública a ofertas (leads)
+Route::post('/subscribers', [SubscriberController::class, 'store'])->name('api.v1.subscribers.store')->middleware('throttle:forms');
+Route::post('/subscribers/unsubscribe', [SubscriberController::class, 'unsubscribe'])
+    ->name('api.v1.subscribers.unsubscribe')
+    ->middleware('throttle:forms')
+    ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class]);
 
 // Gallery (public read)
 Route::get('/gallery', [GalleryController::class, 'index'])->name('api.v1.gallery.index');

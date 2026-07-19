@@ -18,6 +18,8 @@ class TransportVehicleController extends Controller
     {
         $vehicles = TransportVehicle::query()
             ->with('media')
+            ->withCount(['approvedReviews as reviews_count'])
+            ->withAvg(['approvedReviews as reviews_avg'], 'rating')
             ->where('is_active', true)
             ->allowedFilters(['vehicleType', 'capacityMin', 'rateMin', 'rateMax', 'location', 'search'])
             ->allowedSorts(['daily_rate', 'hourly_rate', 'capacity', 'created_at'])
@@ -33,6 +35,29 @@ class TransportVehicleController extends Controller
         return TransportVehicleResource::make($transportVehicle);
     }
 
+    /**
+     * Tipos de vehículo distintos entre los vehículos activos.
+     * GET /transport-vehicles/types
+     */
+    public function types(): JsonResponse
+    {
+        $types = TransportVehicle::query()
+            ->where('is_active', true)
+            ->whereNotNull('vehicle_type')
+            ->where('vehicle_type', '!=', '')
+            ->distinct()
+            ->orderBy('vehicle_type')
+            ->pluck('vehicle_type')
+            ->values();
+
+        return response()->json([
+            'data' => [
+                'type'       => 'transport_vehicle_types',
+                'attributes' => ['types' => $types],
+            ],
+        ]);
+    }
+
     public function store(TransportVehicleRequest $request): TransportVehicleResource
     {
         $data = $request->validated()['data']['attributes'];
@@ -43,11 +68,15 @@ class TransportVehicleController extends Controller
             'description' => $data['description'] ?? null,
             'location' => $data['location'],
             'hourly_rate' => $data['hourly_rate'] ?? null,
+            'sale_hourly_rate' => $data['sale_hourly_rate'] ?? null,
             'daily_rate' => $data['daily_rate'] ?? null,
+            'sale_daily_rate' => $data['sale_daily_rate'] ?? null,
             'capacity' => $data['capacity'],
             'currency_code' => $data['currency_code'] ?? config('app.currency', 'USD'),
             'features' => $data['features'] ?? [],
             'is_active' => $data['is_active'] ?? true,
+            'meta_title' => $data['meta_title'] ?? null,
+            'meta_description' => $data['meta_description'] ?? null,
         ]);
 
         return TransportVehicleResource::make($vehicle->fresh());
@@ -63,11 +92,15 @@ class TransportVehicleController extends Controller
             'description' => $data['description'] ?? null,
             'location' => $data['location'] ?? null,
             'hourly_rate' => $data['hourly_rate'] ?? null,
+            'sale_hourly_rate' => $data['sale_hourly_rate'] ?? null,
             'daily_rate' => $data['daily_rate'] ?? null,
+            'sale_daily_rate' => $data['sale_daily_rate'] ?? null,
             'capacity' => $data['capacity'] ?? null,
             'currency_code' => $data['currency_code'] ?? null,
             'features' => $data['features'] ?? null,
             'is_active' => $data['is_active'] ?? null,
+            'meta_title' => array_key_exists('meta_title', $data) ? $data['meta_title'] : null,
+            'meta_description' => array_key_exists('meta_description', $data) ? $data['meta_description'] : null,
         ], fn ($v) => $v !== null));
 
         return TransportVehicleResource::make($transportVehicle->fresh());

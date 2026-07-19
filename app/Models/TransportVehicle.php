@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasProductReviews;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Booking;
@@ -12,7 +13,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class TransportVehicle extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia;
+    use HasFactory, InteractsWithMedia, HasProductReviews;
 
     protected $fillable = [
         'title',
@@ -20,16 +21,22 @@ class TransportVehicle extends Model implements HasMedia
         'description',
         'location',
         'hourly_rate',
+        'sale_hourly_rate',
         'daily_rate',
+        'sale_daily_rate',
         'capacity',
         'currency_code',
         'features',
         'is_active',
+        'meta_title',
+        'meta_description',
     ];
 
     protected $casts = [
         'hourly_rate' => 'decimal:2',
+        'sale_hourly_rate' => 'decimal:2',
         'daily_rate' => 'decimal:2',
+        'sale_daily_rate' => 'decimal:2',
         'capacity' => 'integer',
         'features' => 'array',
         'is_active' => 'boolean',

@@ -30,7 +30,7 @@
     @endphp
 
     <div class="head">
-        <div class="brand">{{ config('app.name', 'Cusca Adventures') }}</div>
+        <div class="brand">{{ config('app.name', 'Cusgo Adventures') }}</div>
         <div class="doc">Comprobante de reserva &middot; #{{ $booking->id }} &middot; emitido {{ now()->format('d/m/Y H:i') }}</div>
     </div>
 
@@ -45,6 +45,20 @@
         @if ($isTour)
             <tr><td class="k">Fecha del tour</td><td class="v">{{ $attrs['booking_date'] ?? '—' }}</td></tr>
             <tr><td class="k">Pasajeros</td><td class="v">{{ $attrs['pax_count'] ?? '—' }}</td></tr>
+            @if (!empty($attrs['upgrade_label']))
+                <tr><td class="k">Vehículo</td><td class="v">{{ $attrs['upgrade_label'] }} &middot; +{{ $money($attrs['upgrade_surcharge'] ?? 0) }}</td></tr>
+            @endif
+            @if (!empty($attrs['pickup_address']) || !empty($attrs['pickup_lat']))
+                <tr>
+                    <td class="k">Punto de recogida</td>
+                    <td class="v">
+                        {{ $attrs['pickup_address'] ?? '—' }}
+                        @if (!empty($attrs['pickup_lat']) && !empty($attrs['pickup_lng']))
+                            <br><span style="font-weight:normal;color:#6b7280;">{{ $attrs['pickup_lat'] }}, {{ $attrs['pickup_lng'] }}</span>
+                        @endif
+                    </td>
+                </tr>
+            @endif
         @else
             <tr><td class="k">Recogida</td><td class="v">{{ $attrs['pickup_at'] ?? '—' }} &middot; {{ $attrs['pickup_location'] ?? '' }}</td></tr>
             <tr><td class="k">Devolución</td><td class="v">{{ $attrs['dropoff_at'] ?? '—' }} &middot; {{ $attrs['dropoff_location'] ?? '' }}</td></tr>
@@ -58,12 +72,18 @@
         @if (!empty($attrs['payment_reference']))
             <tr><td class="k">Referencia</td><td class="v">{{ $attrs['payment_reference'] }}</td></tr>
         @endif
+        @if (!empty($attrs['discount_amount']) && (float) $attrs['discount_amount'] > 0)
+            <tr>
+                <td class="k">Descuento{{ !empty($attrs['coupon_code']) ? ' (' . $attrs['coupon_code'] . ')' : '' }}</td>
+                <td class="v">− {{ $money($attrs['discount_amount']) }}</td>
+            </tr>
+        @endif
         <tr><td class="k">Total</td><td class="v total">{{ $money($attrs['total_price'] ?? 0) }}</td></tr>
     </table>
 
     <div class="foot">
         Este comprobante refleja el estado de la reserva al momento de su emisión.<br>
-        {{ config('app.name', 'Cusca Adventures') }} &middot; Gracias por tu preferencia.
+        {{ config('app.name', 'Cusgo Adventures') }} &middot; Gracias por tu preferencia.
     </div>
 </body>
 </html>

@@ -17,6 +17,7 @@ class BookingResource extends JsonResource
         $bookable = $booking->relationLoaded('bookable')      ? $booking->bookable      : null;
         $payment  = $booking->relationLoaded('latestPayment') ? $booking->latestPayment : null;
         $detail   = $booking->relationLoaded('transportDetail') ? $booking->transportDetail : null;
+        $coupon   = $booking->relationLoaded('coupon') ? $booking->coupon : null;
 
         $isTour      = $booking->booking_type === Booking::TYPE_TOUR;
         $isTransport = $booking->booking_type === Booking::TYPE_TRANSPORT;
@@ -38,6 +39,15 @@ class BookingResource extends JsonResource
             'booking_date'         => $isTour ? $booking->starts_at?->toDateString() : null,
             'pax_count'            => $isTour ? $booking->party_size : null,
 
+            // Opción de vehículo elegida para el tour (null si no se eligió)
+            'upgrade_label'        => $isTour ? $booking->upgrade_label : null,
+            'upgrade_surcharge'    => $isTour ? $booking->upgrade_surcharge : null,
+
+            // Punto de recogida indicado por el cliente (tour)
+            'pickup_address'       => $isTour ? $booking->pickup_address : null,
+            'pickup_lat'           => $isTour ? $booking->pickup_lat : null,
+            'pickup_lng'           => $isTour ? $booking->pickup_lng : null,
+
             // Transport-specific (null for other types)
             'transport_vehicle_id' => $isTransport ? $booking->bookable_id : null,
             'vehicle_title'        => $isTransport ? $bookable?->title : null,
@@ -53,6 +63,13 @@ class BookingResource extends JsonResource
             'ends_at'              => $booking->ends_at,
             'party_size'           => $booking->party_size,
             'total_price'          => $booking->total_price,
+            'service_fees'         => $booking->service_fees ?? [],
+
+            // Cupón aplicado (null si no se usó)
+            'coupon_id'            => $booking->coupon_id,
+            'coupon_code'          => $coupon?->code,
+            'discount_amount'      => $booking->discount_amount,
+
             'currency_code'        => $booking->currency_code,
             'status'               => $booking->status,
             'notes'                => $booking->notes,
