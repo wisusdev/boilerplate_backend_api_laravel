@@ -20,11 +20,10 @@ class TransportVehicleResource extends JsonResource
             'description'        => $this->resource->description,
             'location'           => $this->resource->location,
             'hourly_rate'        => $this->resource->hourly_rate,
-            'sale_hourly_rate'   => $this->resource->sale_hourly_rate,
             'daily_rate'         => $this->resource->daily_rate,
-            'sale_daily_rate'    => $this->resource->sale_daily_rate,
             'capacity'           => $this->resource->capacity,
-            'currency_code'      => $this->resource->currency_code,
+            // Moneda GLOBAL del sitio (ya no se configura por vehículo).
+            'currency_code'      => \App\Support\SiteSettings::currency(),
             'features'           => $this->resource->features,
             'is_active'          => $this->resource->is_active,
             'meta_title'         => $this->resource->meta_title,

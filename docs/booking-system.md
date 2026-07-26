@@ -136,7 +136,7 @@ Reserva de una experiencia de tour para una fecha y número de personas.
 
 **Cálculo de precio (pipeline):**
 
-1. **Precio por persona base:** `sale_price` si es menor que `price`, si no `price`.
+1. **Precio por persona base:** `tour.price` (ya no existe precio de oferta; los descuentos vienen solo del cupón).
 2. **Tarifa de grupo escalonada:** se aplica el descuento `%` del tramo de `tour.pricing_tiers` con mayor `min_pax ≤ pax_count`.
 3. **Subtotal:** `precio_por_persona × pax_count`.
 4. **+ Servicios extra** (`service_fees`): cada add-on suma `amount` (fijo) o `amount × pax` (por persona).
@@ -148,10 +148,17 @@ Reserva de una experiencia de tour para una fecha y número de personas.
 
 **Validaciones de negocio:**
 - La capacidad disponible en la fecha debe ser ≥ `pax_count`
-- La antelación mínima (`tour.min_advance_days`) debe respetarse
+- La **antelación mínima GLOBAL** (`app.booking_min_advance_days`, ver [settings.md](settings.md)) debe respetarse
 - Si el setting `app.max_daily_bookings` está configurado, no puede superarse ese límite diario
 - `upgrade_option_index` debe existir entre las opciones del tour
 - El cupón debe ser válido (vigencia, ámbito, mínimos, límites de uso)
+
+> **Moneda y política globales:** la `currency_code` de la reserva se toma de la
+> **moneda global del sitio** (no del tour/vehículo). La **cancelación** por parte
+> del cliente se bloquea dentro de la ventana global `app.booking_cancellation_hours`
+> previa al inicio (el admin puede cancelar siempre). El **cupón aplicado** queda
+> registrado en la reserva (`coupon_id`, `coupon_code`, `discount_amount`) y se
+> muestra en el panel para su seguimiento.
 
 **Mapeo a la tabla `bookings`:**
 

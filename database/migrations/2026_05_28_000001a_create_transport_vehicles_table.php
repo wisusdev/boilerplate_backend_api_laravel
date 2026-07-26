@@ -20,6 +20,8 @@ return new class extends Migration
             $table->decimal('sale_hourly_rate', 12, 2)->nullable();
             $table->decimal('daily_rate', 12, 2)->nullable();
             $table->decimal('sale_daily_rate', 12, 2)->nullable();
+            // Cargo adicional fijo cuando el vehículo se ofrece como upgrade de un tour.
+            $table->decimal('upgrade_surcharge', 12, 2)->nullable();
 
             $table->unsignedInteger('capacity');
             $table->string('currency_code', 3)->default('USD');

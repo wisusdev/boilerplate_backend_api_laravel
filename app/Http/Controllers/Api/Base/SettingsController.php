@@ -105,6 +105,9 @@ class SettingsController extends Controller
             'timezone',
             'max_daily_bookings',
             'offers_subscription_enabled',
+            // Política de reserva GLOBAL (aplica a todos los tours y vehículos).
+            'booking_min_advance_days',
+            'booking_cancellation_hours',
         ];
         foreach ($appFields as $f) {
             if (array_key_exists($f, $attrs)) {

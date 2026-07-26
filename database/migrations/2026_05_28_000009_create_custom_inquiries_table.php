@@ -11,6 +11,10 @@ return new class extends Migration
         Schema::create('custom_inquiries', function (Blueprint $table) {
             $table->id();
             $table->uuid('user_id')->nullable()->index();
+            // Datos de contacto para consultas de invitados (sin cuenta).
+            $table->string('contact_name')->nullable();
+            $table->string('contact_email')->nullable();
+            $table->string('contact_phone')->nullable();
             $table->json('preferred_destinations');
             $table->date('travel_start_date')->nullable();
             $table->date('travel_end_date')->nullable();

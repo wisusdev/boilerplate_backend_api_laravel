@@ -2,6 +2,12 @@
 
 Sistema de cupones aplicables a las reservas (tours y transporte). El descuento se resuelve en el servidor al crear la reserva y se propaga a la factura mediante `bookings.total_price`.
 
+> **Único mecanismo de descuento:** ya no existe "precio de oferta" en tours ni
+> vehículos. La única forma de obtener un descuento es que el cliente aplique un
+> **cupón** al reservar. El cupón usado queda registrado en la reserva
+> (`coupon_id`, `coupon_code`, `discount_amount`) y se muestra en el panel de
+> administración para su seguimiento.
+
 ## Índice
 
 1. [Modelo `Coupon`](#modelo-coupon)

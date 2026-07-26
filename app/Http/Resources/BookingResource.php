@@ -37,7 +37,9 @@ class BookingResource extends JsonResource
             'tour_id'              => $isTour ? $booking->bookable_id : null,
             'tour_title'           => $isTour ? $bookable?->title : null,
             'tour_category'        => $isTour ? $bookable?->category?->name : null,
-            'booking_date'         => $isTour ? $booking->starts_at?->toDateString() : null,
+            // Fecha para agrupar en el calendario (común a tours y transporte:
+            // para transporte es la fecha de recogida = starts_at).
+            'booking_date'         => $booking->starts_at?->toDateString(),
             'pax_count'            => $isTour ? $booking->party_size : null,
 
             // Opción de vehículo elegida para el tour (null si no se eligió)

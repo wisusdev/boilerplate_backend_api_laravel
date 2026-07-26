@@ -43,6 +43,8 @@ Configuración general de la aplicación.
 | `app.social_links` | object | URLs de redes sociales (facebook, instagram, etc.) |
 | `app.timezone` | string | Zona horaria (p.ej. `America/El_Salvador`) |
 | `app.max_daily_bookings` | integer nullable | Límite de reservas de tour por día |
+| `app.booking_min_advance_days` | integer | **Política GLOBAL:** antelación mínima de reserva, en días (0 = sin restricción). Aplica a todos los tours y vehículos |
+| `app.booking_cancellation_hours` | integer | **Política GLOBAL:** horas previas al inicio en las que el cliente aún puede cancelar (0 = sin restricción). El admin puede cancelar siempre |
 
 ---
 
@@ -52,6 +54,8 @@ Credenciales de pasarelas de pago. Las credenciales sensibles se almacenan **cif
 
 | Clave | Descripción |
 |-------|-------------|
+| `payment_gateway.default_currency` | **Moneda GLOBAL del sitio** (ISO 4217, p. ej. `USD`). La usan todos los tours, vehículos y reservas; ya no se configura por entidad |
+| `payment_gateway.currency_symbol` | Símbolo de la moneda (p. ej. `$`) |
 | `payment_gateway.paypal.client_id` | PayPal Client ID |
 | `payment_gateway.paypal.client_secret` | PayPal Secret (cifrado) |
 | `payment_gateway.paypal.mode` | `sandbox` \| `live` |

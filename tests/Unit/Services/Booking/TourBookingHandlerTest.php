@@ -46,12 +46,13 @@ class TourBookingHandlerTest extends TestCase
         $this->assertNull($prepared['service_fees']);
     }
 
-    public function test_sale_price_is_charged_when_lower(): void
+    public function test_sale_price_column_is_ignored(): void
     {
+        // Ya no hay precio de oferta: la columna dormida se ignora y se cobra el base.
         $tour = $this->createTour(['price' => 100, 'sale_price' => 80]);
         $prepared = $this->handler->prepare($this->bookingData($tour, ['pax_count' => 2]));
 
-        $this->assertSame(160.0, (float) $prepared['total_price']);
+        $this->assertSame(200.0, (float) $prepared['total_price']);
     }
 
     public function test_service_fees_are_added_and_snapshotted(): void
@@ -158,9 +159,9 @@ class TourBookingHandlerTest extends TestCase
         $this->assertSame(480.0, (float) $prepared['total_price']);
     }
 
-    public function test_pricing_tier_stacks_on_sale_price(): void
+    public function test_pricing_tier_applies_on_base_price(): void
     {
-        // Oferta 80 sobre base 100; tramo 2+ = 10% off → 72/persona.
+        // sale_price se ignora; el tramo 2+ = 10% off aplica sobre el base 100 → 90/persona.
         $tour = $this->createTour([
             'price' => 100,
             'sale_price' => 80,
@@ -168,7 +169,7 @@ class TourBookingHandlerTest extends TestCase
         ]);
 
         $prepared = $this->handler->prepare($this->bookingData($tour, ['pax_count' => 2]));
-        $this->assertSame(144.0, (float) $prepared['total_price']); // 72 * 2
+        $this->assertSame(180.0, (float) $prepared['total_price']); // 90 * 2
     }
 
     public function test_pickup_point_is_stored(): void
@@ -197,7 +198,9 @@ class TourBookingHandlerTest extends TestCase
 
     public function test_min_advance_days_is_enforced(): void
     {
-        $tour = $this->createTour(['min_advance_days' => 5]);
+        // La antelación mínima ahora es GLOBAL (setting del sitio), no por tour.
+        $this->setGlobalMinAdvanceDays(5);
+        $tour = $this->createTour();
 
         $this->expectException(ValidationException::class);
         $this->handler->validate($this->bookingData($tour, ['booking_date' => now()->addDay()->toDateString()]));
@@ -205,9 +208,19 @@ class TourBookingHandlerTest extends TestCase
 
     public function test_min_advance_days_allows_far_enough_date(): void
     {
-        $tour = $this->createTour(['min_advance_days' => 5]);
+        $this->setGlobalMinAdvanceDays(5);
+        $tour = $this->createTour();
 
         $this->handler->validate($this->bookingData($tour, ['booking_date' => now()->addDays(6)->toDateString()]));
         $this->assertTrue(true); // no exception
+    }
+
+    private function setGlobalMinAdvanceDays(int $days): void
+    {
+        \App\Models\Setting::updateOrCreate(
+            ['key' => 'app'],
+            ['value' => json_encode(['booking_min_advance_days' => $days])]
+        );
+        \App\Support\SiteSettings::flush();
     }
 }

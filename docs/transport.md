@@ -22,10 +22,10 @@ Gestión del catálogo de vehículos de transporte disponibles para alquiler por
 | `vehicle_type` | string | Tipo: `van`, `bus`, `car`, `truck`, etc. |
 | `description` | text | Descripción del vehículo |
 | `location` | string | Base o ubicación del vehículo |
-| `hourly_rate` | decimal(12,2) | Tarifa por hora |
+| `hourly_rate` | decimal(12,2) | Tarifa por hora. **No hay tarifa de oferta**: los descuentos provienen solo de los cupones aplicados al reservar |
 | `daily_rate` | decimal(12,2) | Tarifa por día |
 | `capacity` | integer | Capacidad de pasajeros |
-| `currency_code` | char(3) | Moneda de las tarifas (ISO 4217). Validado contra `currencies.code`. |
+| `currency_code` | char(3) | Moneda (ISO 4217). **Solo lectura**: refleja la moneda GLOBAL del sitio; ya no se configura por vehículo (ver [settings.md](settings.md)) |
 | `features` | json array | Lista de características o equipamiento |
 | `is_active` | boolean | Visible en el catálogo público |
 
@@ -147,7 +147,6 @@ Authorization: Bearer {token}
       "hourly_rate": 35.00,
       "daily_rate": 200.00,
       "capacity": 15,
-      "currency_code": "USD",
       "features": ["Aire acondicionado", "GPS"],
       "is_active": true
     }

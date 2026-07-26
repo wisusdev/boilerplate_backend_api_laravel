@@ -6,6 +6,7 @@ Documentación técnica del API REST del proyecto VamosPues. Construido con Lara
 
 | Módulo | Archivo | Descripción |
 |--------|---------|-------------|
+| Instalador | [installer.md](installer.md) | Instalación limpia y creación del primer administrador (wizard web + comando artisan) |
 | Autenticación | [authentication.md](authentication.md) | Login, registro, OAuth social, recuperación de contraseña |
 | Usuarios y roles | [user-management.md](user-management.md) | Gestión de usuarios, roles y permisos (RBAC) |
 | Tours | [tours.md](tours.md) | Catálogo de tours, categorías, disponibilidad y galería |
@@ -18,6 +19,7 @@ Documentación técnica del API REST del proyecto VamosPues. Construido con Lara
 | Consultas personalizadas | [custom-inquiries.md](custom-inquiries.md) | Formulario de cotización a medida |
 | Galería | [gallery.md](gallery.md) | Gestión de la galería de imágenes pública |
 | Reportes | [reports.md](reports.md) | Estadísticas y resumen de operaciones |
+| Finanzas | [finance.md](finance.md) | Rentabilidad por tour: gastos, categorías, guías e ingresos derivados de reservas |
 | **Despliegue** | [deployment/README.md](deployment/README.md) | Guías de instalación por proveedor (AWS, GCP, DigitalOcean, Railway, VPS) |
 
 ---
@@ -76,4 +78,5 @@ Las acciones sobre recursos _singleton_ del usuario autenticado **no requieren `
 |-----|--------|
 | `super-admin` | Acceso total sin restricciones |
 | `admin` | Gestión completa de recursos |
+| `guia` | Miembro del equipo con acceso limitado; los gastos se le atribuyen |
 | `user` | Acceso propio (perfil, reservas, pagos) |

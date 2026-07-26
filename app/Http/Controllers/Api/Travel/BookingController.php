@@ -184,6 +184,19 @@ class BookingController extends Controller
             ]);
         }
 
+        // Ventana de cancelación GLOBAL: el cliente no puede cancelar dentro de las
+        // últimas N horas antes del inicio (el admin sí puede).
+        $cancellationHours = \App\Support\SiteSettings::cancellationHours();
+        $isAdmin = $request->user()?->hasRole(['admin', 'super-admin']) ?? false;
+        if (! $isAdmin && $cancellationHours > 0 && $booking->starts_at) {
+            $deadline = $booking->starts_at->copy()->subHours($cancellationHours);
+            if (now()->greaterThan($deadline)) {
+                throw ValidationException::withMessages([
+                    'status' => ["Las reservas solo pueden cancelarse hasta {$cancellationHours} hora(s) antes del inicio."],
+                ]);
+            }
+        }
+
         $booking = $this->bookingService->changeStatus($booking, Booking::STATUS_CANCELLED);
 
         $title = $this->bookableTitle($booking);

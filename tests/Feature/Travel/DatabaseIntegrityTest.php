@@ -82,18 +82,19 @@ class DatabaseIntegrityTest extends TestCase
             ->assertJsonPath('data.attributes.category', 'Volcanes');
     }
 
-    public function test_creating_tour_with_unknown_currency_is_rejected(): void
+    public function test_tour_uses_global_currency_ignoring_sent_value(): void
     {
         $this->usd();
         TourCategory::create(['name' => 'Playa', 'is_active' => true]);
         Passport::actingAs($this->admin());
 
+        // La moneda es GLOBAL del sitio: cualquier currency_code enviado se ignora.
         $this->apiJson('POST', '/api/v1/tours', [
             'data' => ['type' => 'tours', 'attributes' => [
-                'title' => 'Bad currency', 'description' => 'x', 'price' => 10,
+                'title' => 'Currency test', 'description' => 'x', 'price' => 10,
                 'max_capacity' => 5, 'location' => 'X', 'currency_code' => 'XXX',
             ]],
-        ])->assertJsonApiValidationErrors('data.attributes.currency_code');
+        ])->assertCreated()->assertJsonPath('data.attributes.currency_code', 'USD');
     }
 
     public function test_creating_tour_with_unknown_category_is_rejected(): void

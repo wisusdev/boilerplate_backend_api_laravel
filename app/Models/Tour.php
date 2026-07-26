@@ -163,13 +163,13 @@ class Tour extends Model implements HasMedia
     }
 
     /**
-     * Precio efectivo por persona (oferta si aplica), antes de tramos escalonados.
+     * Precio efectivo por persona, antes de tramos escalonados. Ya no hay
+     * "precio de oferta": los descuentos provienen solo de los cupones que el
+     * cliente ingresa al reservar.
      */
     public function effectiveUnitPrice(): float
     {
-        return $this->sale_price !== null && (float) $this->sale_price < (float) $this->price
-            ? (float) $this->sale_price
-            : (float) $this->price;
+        return (float) $this->price;
     }
 
     /**

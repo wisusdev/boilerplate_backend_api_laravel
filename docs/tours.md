@@ -22,24 +22,28 @@ Gestión del catálogo de experiencias de viaje. Incluye tours, categorías, dis
 | `id` | bigint | Clave primaria |
 | `title` | string | Título del tour |
 | `description` | text | Descripción completa |
-| `price` | decimal(12,2) | Precio por persona |
-| `sale_price` | decimal(12,2) nullable | Precio de oferta (se cobra si es menor que `price`) |
-| `child_price` | decimal(12,2) nullable | Precio para niños (informativo) |
+| `price` | decimal(12,2) | Precio por persona. **No hay precio de oferta**: los descuentos provienen solo de los cupones que el cliente aplica al reservar (ver [coupons.md](coupons.md)) |
 | `pricing_tiers` | json array nullable | Tarifas de grupo escalonadas: `[{min_pax, discount_percent}]`. Se aplica el tramo con mayor `min_pax ≤ pax` |
 | `service_fees` | json array nullable | Add-ons opcionales: `[{name, amount, calc}]` con `calc` = `fixed` \| `per_person` |
 | `vehicle_options` | json array nullable | Opciones de vehículo de paga (hasta 3): `[{name, surcharge}]`. El cliente ve además la opción gratuita "Sin vehículo" |
 | `booking_sections` | json object nullable | Visibilidad de secciones del flujo de reserva: `{vehicle, pickup, coupon, fare}` (bool). Ausente = todas visibles |
-| `min_advance_days` | integer nullable | Antelación mínima de reserva (días) |
 | `max_capacity` | integer | Capacidad máxima por fecha |
 | `location` | string | Ubicación o destino |
 | `category_id` | bigint FK → tour_categories nullable | Categoría normalizada (`nullOnDelete`). Reemplaza al antiguo campo de texto `category`. |
-| `currency_code` | char(3) | Moneda del precio (ISO 4217). Validado contra `currencies.code`. |
+| `currency_code` | char(3) | Moneda (ISO 4217). **Solo lectura**: refleja la moneda GLOBAL del sitio; ya no se configura por tour (ver [settings.md](settings.md)) |
 | `itinerary` | json array | Lista de pasos del itinerario |
 | `highlights` | json array | Puntos destacados del tour |
 | `map_url` | string nullable | URL de mapa embebido (Google Maps) |
 | `map_markers` | json array | Coordenadas para el mapa interactivo |
 | `faqs` | json array | Preguntas frecuentes |
 | `is_active` | boolean | Visible en el catálogo público |
+
+> **Configuración global (no por tour):** la **moneda**, la **antelación mínima
+> de reserva** y la **ventana de cancelación** ya no se configuran por tour: son
+> ajustes GLOBALES del sitio que aplican por igual a todos los tours y vehículos
+> (ver [settings.md](settings.md)). Los campos `sale_price`, `child_price`,
+> `min_advance_days` y `cancellation_hours` fueron retirados del formulario y de
+> la API (sus columnas quedan dormidas por compatibilidad).
 
 **Relaciones:**
 - `hasMany(Booking)` — reservas del tour
@@ -204,8 +208,6 @@ Authorization: Bearer {token}
       "title": "Nombre del tour",
       "description": "Descripción completa",
       "price": 65.00,
-      "sale_price": 58.50,
-      "currency_code": "USD",
       "category_id": 1,
       "max_capacity": 20,
       "location": "Santa Ana",

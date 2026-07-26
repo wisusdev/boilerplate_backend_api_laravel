@@ -76,11 +76,29 @@ php artisan event:cache
 ### 1.3 Seeders (con cuidado)
 
 - **No** ejecutes `migrate:fresh --seed` en producción: **borra toda la base de datos**.
-- Para datos base mínimos (roles, permisos, moneda) usa seeders idempotentes específicos, p. ej.:
+- El `db:seed` por defecto es una **instalación limpia**: siembra solo la
+  infraestructura base (settings, permisos y roles) y **no** crea ningún
+  administrador con credenciales fijas.
   ```bash
-  php artisan db:seed --class=RolesAndPermissionsSeeder --force
+  php artisan db:seed --force   # Setting + Permission + Role
   ```
-- `StockImageSeeder` y `TravelModuleSeeder` generan **datos de demo** (50+ tours, imágenes descargadas de internet). Son para entornos de **prueba**, no para producción.
+- `StockImageSeeder`, `TravelModuleSeeder` y `UserSeeder` generan **datos de demo** (usuarios de prueba, 50+ tours, imágenes descargadas de internet). Son para entornos de **prueba**, no para producción.
+
+### 1.3.1 Crear el primer administrador (instalador)
+
+Como el seed no crea un admin, créalo con el **instalador** (estilo WordPress):
+
+```bash
+php artisan app:install \
+  --first-name="Nombre" --last-name="Apellido" \
+  --email="admin@midominio.com" --password="una-password-segura" \
+  --site-name="Cusgo Adventures" --contact-email="info@midominio.com" \
+  --currency=USD --timezone=America/El_Salvador
+```
+
+Alternativamente, abre el frontend en `/install` (wizard web). El instalador se
+autobloquea una vez que ya existe un administrador. Ver
+[installer.md](../installer.md).
 
 ### 1.4 Workers y tareas programadas
 

@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Setting;
 use App\Models\Tour;
 use App\Services\TourAvailabilityService;
+use App\Support\SiteSettings;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -22,12 +23,13 @@ class TourBookingHandler implements BookingHandlerInterface
             ->lockForUpdate()
             ->firstOrFail();
 
-        // Antelación mínima: la fecha debe estar a al menos min_advance_days de hoy.
-        if ($tour->min_advance_days) {
-            $minDate = Carbon::today()->addDays((int) $tour->min_advance_days);
+        // Antelación mínima GLOBAL: la fecha debe estar a al menos N días de hoy.
+        $minAdvanceDays = SiteSettings::minAdvanceDays();
+        if ($minAdvanceDays > 0) {
+            $minDate = Carbon::today()->addDays($minAdvanceDays);
             if (Carbon::parse($data['booking_date'])->lt($minDate)) {
                 throw ValidationException::withMessages([
-                    'data.attributes.booking_date' => "Este tour requiere reservar con al menos {$tour->min_advance_days} día(s) de antelación.",
+                    'data.attributes.booking_date' => "Se requiere reservar con al menos {$minAdvanceDays} día(s) de antelación.",
                 ]);
             }
         }
@@ -104,7 +106,7 @@ class TourBookingHandler implements BookingHandlerInterface
             'total_price'        => round($subtotal + $feesTotal + (float) $upgradeSurcharge, 2),
             'service_fees'       => $feesSnapshot ?: null,
             'upgrade_surcharge'  => $upgradeSurcharge,
-            'currency_code'      => $tour->currency_code ?? 'USD',
+            'currency_code'      => SiteSettings::currency(),
             'notes'              => $data['notes'] ?? null,
             'pickup_address'     => $data['pickup_address'] ?? null,
             'pickup_lat'         => $data['pickup_lat'] ?? null,

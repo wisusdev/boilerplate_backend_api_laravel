@@ -126,8 +126,12 @@ php artisan passport:keys
 # 5. Ejecutar migraciones
 php artisan migrate --force
 
-# 6. Ejecutar seeders iniciales
+# 6. Ejecutar seeders iniciales (instalación limpia: settings, permisos y roles)
 php artisan db:seed --force
+
+# 6.1 Crear el primer administrador (instalador estilo WordPress).
+#     El seed NO crea admin; hazlo aquí o desde el wizard web en /install.
+php artisan app:install
 
 # 7. Optimizar para producción
 php artisan config:cache

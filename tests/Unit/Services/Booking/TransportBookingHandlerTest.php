@@ -78,6 +78,20 @@ class TransportBookingHandlerTest extends TestCase
         $this->assertEquals(100.0, $result['total_price']);
     }
 
+    public function test_prepare_uses_global_currency_ignoring_vehicle(): void
+    {
+        // La moneda es GLOBAL del sitio; la del vehículo (columna dormida) se ignora.
+        $vehicle = $this->createVehicle(['currency_code' => 'EUR', 'daily_rate' => 100.0]);
+
+        $result = $this->handler->prepare($this->baseData($vehicle, [
+            'pickup_at'  => '2026-08-01 08:00:00',
+            'dropoff_at' => '2026-08-02 08:00:00',
+            'rental_type' => 'daily',
+        ]));
+
+        $this->assertSame('USD', $result['currency_code']);
+    }
+
     public function test_prepare_uses_minimum_1_hour_for_short_rentals(): void
     {
         $vehicle = $this->createVehicle(['hourly_rate' => 30.0]);

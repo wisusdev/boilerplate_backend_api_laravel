@@ -22,6 +22,13 @@ return new class extends Migration
             $table->decimal('sale_price', 12, 2)->nullable();
             $table->decimal('child_price', 12, 2)->nullable();
 
+            // Precios escalonados por nº de pasajeros: [{min_pax:int, discount_percent:float}].
+            $table->json('pricing_tiers')->nullable();
+            // Opciones de vehículo de paga para el tour: [{name, surcharge}] (hasta 3).
+            $table->json('vehicle_options')->nullable();
+            // Visibilidad de las secciones del flujo de reserva: {vehicle, pickup, coupon, fare}.
+            $table->json('booking_sections')->nullable();
+
             // Duración y políticas de reserva
             $table->unsignedInteger('duration_days')->nullable();
             $table->unsignedInteger('duration_nights')->nullable();

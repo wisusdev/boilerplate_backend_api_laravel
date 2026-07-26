@@ -40,21 +40,12 @@ return new class extends Migration
             $table->index('is_active');
         });
 
-        Schema::table('bookings', function (Blueprint $table) {
-            $table->unsignedBigInteger('coupon_id')->nullable()->after('upgrade_surcharge');
-            $table->decimal('discount_amount', 12, 2)->nullable()->after('coupon_id');
-
-            $table->foreign('coupon_id')->references('id')->on('coupons')->nullOnDelete();
-        });
+        // La FK bookings.coupon_id → coupons se define en la migración de bookings,
+        // que corre después de esta (coupons se crea antes que bookings).
     }
 
     public function down(): void
     {
-        Schema::table('bookings', function (Blueprint $table) {
-            $table->dropForeign(['coupon_id']);
-            $table->dropColumn(['coupon_id', 'discount_amount']);
-        });
-
         Schema::dropIfExists('coupons');
     }
 };

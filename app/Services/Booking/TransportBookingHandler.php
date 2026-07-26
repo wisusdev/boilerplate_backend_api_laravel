@@ -4,6 +4,7 @@ namespace App\Services\Booking;
 
 use App\Models\Booking;
 use App\Models\TransportVehicle;
+use App\Support\SiteSettings;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -51,7 +52,7 @@ class TransportBookingHandler implements BookingHandlerInterface
             'ends_at'       => $data['dropoff_at'],
             'party_size'    => $quantity,
             'total_price'   => $totalPrice,
-            'currency_code' => $data['currency_code'] ?? $vehicle->currency_code,
+            'currency_code' => SiteSettings::currency(),
             'notes'         => $data['notes'] ?? null,
             'details'       => [
                 'pickup_location'  => $data['pickup_location'],
@@ -68,18 +69,10 @@ class TransportBookingHandler implements BookingHandlerInterface
         $hours = max($pickup->diffInHours($dropoff, false), 1);
         $days = max((int) ceil($pickup->diffInHours($dropoff) / 24), 1);
 
-        // Aplica la tarifa de oferta cuando existe y es menor que la tarifa base.
-        $effectiveRate = function (?float $rate, ?float $saleRate): float {
-            $rate = (float) ($rate ?? 0);
-            if ($saleRate !== null && (float) $saleRate < $rate) {
-                return (float) $saleRate;
-            }
-            return $rate;
-        };
-
+        // Ya no hay tarifa de oferta: el descuento proviene solo de los cupones.
         $base = $rentalType === 'daily'
-            ? $effectiveRate($vehicle->daily_rate, $vehicle->sale_daily_rate) * $days
-            : $effectiveRate($vehicle->hourly_rate, $vehicle->sale_hourly_rate) * $hours;
+            ? (float) ($vehicle->daily_rate ?? 0) * $days
+            : (float) ($vehicle->hourly_rate ?? 0) * $hours;
 
         return round($base * max($quantity, 1), 2);
     }

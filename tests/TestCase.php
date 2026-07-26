@@ -8,6 +8,15 @@ abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // La caché estática de SiteSettings persiste entre tests del mismo proceso;
+        // se reinicia para que cada test lea sus propios settings.
+        \App\Support\SiteSettings::flush();
+    }
+
     /**
      * Realiza una petición POST con cabeceras JSON:API (application/vnd.api+json),
      * requeridas por el middleware ValidateJsonApiHeaders.
