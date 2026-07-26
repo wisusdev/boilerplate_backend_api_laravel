@@ -29,9 +29,16 @@ class SettingSeeder extends Seeder
 				"address" => "1234 Main St, San Salvador, El Salvador",
 				"timezone" => "America/El_Salvador",
 				"offers_subscription_enabled" => true,
+				// Política de reserva GLOBAL (aplica a todos los tours y vehículos).
+				"booking_min_advance_days" => 0,
+				"booking_cancellation_hours" => 24,
+				// Lo pone en true el instalador (wizard /install o `php artisan app:install`).
+				"installed" => false,
 			])],
 
 			['key' => 'payment_gateway', 'value' => json_encode([
+				// Moneda GLOBAL del sitio (aplica a todos los tours y vehículos).
+				"default_currency" => "USD",
 				"currency" => "USD",
 				"currency_symbol" => "$",
 				"decimal_separator" => ".",

@@ -37,8 +37,9 @@ class PermissionSeeder extends Seeder
             'users:delete',
         ];
 
+        // Idempotente: permite re-ejecutar el seeder y que el instalador lo invoque.
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission, 'guard_name' => 'api']);
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'api']);
         }
     }
 }

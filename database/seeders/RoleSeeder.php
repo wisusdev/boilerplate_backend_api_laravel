@@ -17,10 +17,14 @@ class RoleSeeder extends Seeder
         $roles = [
             'user',
             'admin',
+            // Guía: miembro del equipo con acceso limitado (p. ej. registrar gastos
+            // que se le atribuyen). Los gastos referencian a un usuario con este rol.
+            'guia',
         ];
 
+        // Idempotente: permite re-ejecutar el seeder y que el instalador lo invoque.
         foreach ($roles as $role) {
-            $newRole = Role::create(['name' => $role, 'guard_name' => 'api']);
+            $newRole = Role::firstOrCreate(['name' => $role, 'guard_name' => 'api']);
             if ($newRole->name === 'admin') {
                 $newRole->givePermissionTo(Permission::all());
             }

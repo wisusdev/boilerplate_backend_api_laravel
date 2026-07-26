@@ -42,6 +42,14 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// Instalador (estilo WordPress). Público mientras no exista un administrador;
+// el POST se autobloquea (409) una vez instalado.
+Route::prefix('install')->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class,])->group(function () {
+    Route::get('/status', [InstallController::class, 'status'])->name('install.status');
+    Route::get('/requirements', [InstallController::class, 'requirements'])->name('install.requirements');
+    Route::post('/', [InstallController::class, 'install'])->name('install.run')->middleware('throttle:auth');
+});
+
 // Auth
 Route::prefix('auth')->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class,])->group(function () {
     Route::post('/login', [LoginController::class, 'login'])->name('auth.login')->middleware('throttle:auth');
