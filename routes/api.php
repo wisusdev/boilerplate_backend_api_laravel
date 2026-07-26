@@ -8,12 +8,17 @@ use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialAuthController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\Base\AccountController;
+use App\Http\Controllers\Api\Base\InstallController;
 use App\Http\Controllers\Api\Base\PermissionsController;
 use App\Http\Controllers\Api\Base\RolesController;
 use App\Http\Controllers\Api\Base\UserController;
 use App\Http\Controllers\Api\Base\SettingsController;
 use App\Http\Controllers\Api\Travel\CouponController;
 use App\Http\Controllers\Api\Travel\CurrencyController;
+use App\Http\Controllers\Api\Travel\ExpenseCategoryController;
+use App\Http\Controllers\Api\Travel\ExpenseController;
+use App\Http\Controllers\Api\Travel\FinanceController;
+use App\Http\Controllers\Api\Travel\GuideController;
 use App\Http\Controllers\Api\Travel\GalleryController;
 use App\Http\Controllers\Api\Travel\CustomInquiryController;
 use App\Http\Controllers\Api\Travel\SubscriberController;
@@ -134,6 +139,36 @@ Route::middleware(['auth:api'])->group(function () {
             Route::patch('/{coupon}', [CouponController::class, 'update'])->name('update');
             Route::delete('/{coupon}', [CouponController::class, 'destroy'])->name('destroy');
         });
+
+        // ── Finanzas: rentabilidad por tour (gastos + ingresos derivados de reservas) ──
+        // Dashboard de rentabilidad.
+        Route::get('/finance/summary', [FinanceController::class, 'summary'])->name('api.v1.finance.summary');
+
+        // Categorías de gasto (CRUD).
+        Route::prefix('expense-categories')->name('api.v1.expense-categories.')->group(function () {
+            Route::get('/', [ExpenseCategoryController::class, 'index'])->name('index');
+            Route::post('/', [ExpenseCategoryController::class, 'store'])->name('store');
+            Route::patch('/{expenseCategory}', [ExpenseCategoryController::class, 'update'])->name('update');
+            Route::delete('/{expenseCategory}', [ExpenseCategoryController::class, 'destroy'])->name('destroy');
+        });
+
+        // Gastos (CRUD + recibo).
+        Route::prefix('expenses')->name('api.v1.expenses.')->group(function () {
+            Route::get('/', [ExpenseController::class, 'index'])->name('index');
+            Route::post('/', [ExpenseController::class, 'store'])->name('store');
+            Route::patch('/{expense}', [ExpenseController::class, 'update'])->name('update');
+            Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
+            Route::post('/{expense}/receipt', [ExpenseController::class, 'uploadReceipt'])
+                ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('receipt.upload');
+        });
+
+        // Guías (usuarios con rol 'guia'): listar, otorgar y revocar el rol.
+        Route::prefix('guides')->name('api.v1.guides.')
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->group(function () {
+                Route::get('/', [GuideController::class, 'index'])->name('index');
+                Route::post('/', [GuideController::class, 'store'])->name('store');
+                Route::delete('/{user}', [GuideController::class, 'destroy'])->name('destroy');
+            });
     });
 
     // Validación de cupón (cualquier usuario autenticado; previsualiza el descuento).
