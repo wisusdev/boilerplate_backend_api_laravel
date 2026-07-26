@@ -42,7 +42,7 @@ comprobación obligatoria está en `error`. Cada comprobación se clasifica en u
 
 | Comprobación | Obligatorio | Detalle |
 |--------------|:----------:|---------|
-| Versión de PHP | ✔ | `>= 8.2.0` (alineado con `composer.json`) |
+| Versión de PHP | ✔ | `>= 8.3.0` (alineado con `composer.json`) |
 | Extensiones PHP | ✔ | `ctype, curl, dom, fileinfo, filter, gd, hash, mbstring, openssl, pcre, pdo, session, tokenizer, xml` |
 | Extensiones recomendadas | — | `bcmath, intl, zip` (solo `warning` si faltan) |
 | Dependencias de Composer | ✔ | `vendor/autoload.php` presente (`composer install`) |

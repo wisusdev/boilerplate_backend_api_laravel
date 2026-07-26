@@ -30,11 +30,13 @@ use Throwable;
 class InstallRequirementsService
 {
     public const GROUP_PROJECT = 'project';
+
     public const GROUP_PERMISSIONS = 'permissions';
+
     public const GROUP_ENVIRONMENT = 'environment';
 
-    /** Versión mínima de PHP soportada (alineada con composer.json `php: ^8.2`). */
-    private const MIN_PHP_VERSION = '8.2.0';
+    /** Versión mínima de PHP soportada (alineada con composer.json `php: ^8.3`). */
+    private const MIN_PHP_VERSION = '8.3.0';
 
     /**
      * Extensiones de PHP obligatorias. Combina las que Laravel exige de base con
@@ -82,7 +84,7 @@ class InstallRequirementsService
 
         return [
             'satisfied' => $satisfied,
-            'checks'    => $checks,
+            'checks' => $checks,
         ];
     }
 
@@ -113,7 +115,7 @@ class InstallRequirementsService
             status: $ok ? 'ok' : 'error',
             required: true,
             current: PHP_VERSION,
-            expected: '>= ' . self::MIN_PHP_VERSION,
+            expected: '>= '.self::MIN_PHP_VERSION,
             hint: $ok ? null : 'Actualiza PHP a la versión mínima requerida.',
         );
     }
@@ -164,13 +166,13 @@ class InstallRequirementsService
     private function checkWritablePaths(): array
     {
         $paths = [
-            'storage'                     => storage_path(),
-            'storage/framework'           => storage_path('framework'),
-            'storage/framework/cache'     => storage_path('framework/cache'),
-            'storage/framework/sessions'  => storage_path('framework/sessions'),
-            'storage/framework/views'     => storage_path('framework/views'),
-            'storage/logs'                => storage_path('logs'),
-            'bootstrap/cache'             => base_path('bootstrap/cache'),
+            'storage' => storage_path(),
+            'storage/framework' => storage_path('framework'),
+            'storage/framework/cache' => storage_path('framework/cache'),
+            'storage/framework/sessions' => storage_path('framework/sessions'),
+            'storage/framework/views' => storage_path('framework/views'),
+            'storage/logs' => storage_path('logs'),
+            'bootstrap/cache' => base_path('bootstrap/cache'),
         ];
 
         $recommended = self::RECOMMENDED_DIR_PERMISSION;
@@ -185,16 +187,16 @@ class InstallRequirementsService
             // referencia (p. ej. "0755 · solo lectura" frente a "0775 · con escritura").
             $current = ! $exists
                 ? 'no existe'
-                : $mode . ' · ' . ($writable ? 'con escritura' : 'solo lectura');
+                : $mode.' · '.($writable ? 'con escritura' : 'solo lectura');
 
             $checks[] = $this->result(
-                key: 'writable_' . str_replace('/', '_', $label),
+                key: 'writable_'.str_replace('/', '_', $label),
                 group: self::GROUP_PERMISSIONS,
                 label: "Escritura: {$label}",
                 status: $writable ? 'ok' : 'error',
                 required: true,
                 current: $current,
-                expected: $recommended . ' · con escritura',
+                expected: $recommended.' · con escritura',
                 hint: $writable
                     ? null
                     : "Otorga permisos de escritura a {$path} (ej. chmod -R {$recommended} y asigna la propiedad al usuario del servidor web).",
@@ -256,7 +258,7 @@ class InstallRequirementsService
                 label: 'Conexión a la base de datos',
                 status: 'ok',
                 required: true,
-                current: 'conectada (' . config('database.default') . ')',
+                current: 'conectada ('.config('database.default').')',
                 expected: 'conectada',
             );
         } catch (Throwable $e) {
@@ -268,7 +270,7 @@ class InstallRequirementsService
                 required: true,
                 current: 'sin conexión',
                 expected: 'conectada',
-                hint: 'Revisa las credenciales DB_* en el archivo .env. Detalle: ' . $e->getMessage(),
+                hint: 'Revisa las credenciales DB_* en el archivo .env. Detalle: '.$e->getMessage(),
             );
         }
     }
