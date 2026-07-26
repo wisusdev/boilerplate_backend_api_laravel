@@ -1,6 +1,15 @@
 # GitLab CI/CD para la API de Cusgo Adventures (Laravel)
 # Documentación: https://docs.gitlab.com/ee/ci/
 
+# El pipeline SOLO se ejecuta en Merge Requests: las pruebas actúan como
+# verificación previa antes de autorizar el merge a la rama principal (equivalente
+# a Looper Pro). No corre en cada push de rama.
+# Para limitarlo a MRs cuyo destino sea main/master, reemplaza la condición por:
+#   - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main|master)$/'
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
 stages:
   - validate
   - lint
