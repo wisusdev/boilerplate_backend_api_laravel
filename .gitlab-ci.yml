@@ -15,12 +15,12 @@ stages:
   - lint
   - test
 
-# Plantilla base: prepara PHP 8.2 con las extensiones que exige la app
+# Plantilla base: prepara PHP 8.3 con las extensiones que exige la app.
 # (ext-gd, ext-zip) e instala las dependencias de Composer.
 # Las pruebas usan SQLite en memoria (ver phpunit.xml), así que no hace falta
 # ningún servicio de base de datos.
 .php-base:
-  image: php:8.2-cli
+  image: php:8.3-cli
   before_script:
     - apt-get update -yqq
     - apt-get install -yqq git unzip libzip-dev libpng-dev libjpeg-dev libfreetype6-dev
@@ -38,7 +38,7 @@ stages:
 # Valida la sintaxis y estructura de composer.json.
 composer:validate:
   stage: validate
-  image: php:8.2-cli
+  image: php:8.3-cli
   cache: {}
   before_script:
     - apt-get update -yqq && apt-get install -yqq git unzip
@@ -49,7 +49,7 @@ composer:validate:
 # Comprueba errores de sintaxis en todos los archivos PHP del proyecto.
 php:lint:
   stage: lint
-  image: php:8.2-cli
+  image: php:8.3-cli
   cache: {}
   before_script: []
   script:
@@ -71,12 +71,10 @@ phpunit:
   stage: test
   parallel:
     matrix:
-      - PHP_VERSION: ['8.2', '8.3']
+      - PHP_VERSION: ['8.3']
   image: php:$PHP_VERSION-cli
   script:
     - cp .env.example .env
     - php artisan key:generate
-    # Passport firma los tokens con estas llaves; están gitignoreadas, así que se
-    # generan en el runner (sin ellas los tests de auth fallan con "Invalid key supplied").
     - php artisan passport:keys --force
     - php artisan test
