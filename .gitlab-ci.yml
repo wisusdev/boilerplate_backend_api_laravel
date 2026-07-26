@@ -1,0 +1,70 @@
+# GitLab CI/CD para la API de Cusgo Adventures (Laravel)
+# Documentación: https://docs.gitlab.com/ee/ci/
+
+stages:
+  - validate
+  - lint
+  - test
+
+# Plantilla base: prepara PHP 8.2 con las extensiones que exige la app
+# (ext-gd, ext-zip) e instala las dependencias de Composer.
+# Las pruebas usan SQLite en memoria (ver phpunit.xml), así que no hace falta
+# ningún servicio de base de datos.
+.php-base:
+  image: php:8.2-cli
+  before_script:
+    - apt-get update -yqq
+    - apt-get install -yqq git unzip libzip-dev libpng-dev libjpeg-dev libfreetype6-dev
+    - docker-php-ext-configure gd --with-freetype --with-jpeg > /dev/null
+    - docker-php-ext-install -j"$(nproc)" zip gd > /dev/null
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --prefer-dist --no-progress --no-interaction
+  cache:
+    key:
+      files:
+        - composer.lock
+    paths:
+      - vendor/
+
+# Valida la sintaxis y estructura de composer.json.
+composer:validate:
+  stage: validate
+  image: php:8.2-cli
+  cache: {}
+  before_script:
+    - apt-get update -yqq && apt-get install -yqq git unzip
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  script:
+    - composer validate --no-check-publish
+
+# Comprueba errores de sintaxis en todos los archivos PHP del proyecto.
+php:lint:
+  stage: lint
+  image: php:8.2-cli
+  cache: {}
+  before_script: []
+  script:
+    - find app config database routes tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+
+# Estilo de código con Laravel Pint. Informativo (allow_failure) porque hay
+# deuda de estilo previa; el objetivo es visibilizarla sin bloquear el pipeline.
+pint:
+  extends: .php-base
+  stage: lint
+  allow_failure: true
+  script:
+    - vendor/bin/pint --test
+
+# Ejecuta la suite de pruebas (Feature + Unit) en varias versiones de PHP.
+# Genera una APP_KEY efímera; la base de datos es SQLite en memoria.
+phpunit:
+  extends: .php-base
+  stage: test
+  parallel:
+    matrix:
+      - PHP_VERSION: ['8.2', '8.3']
+  image: php:$PHP_VERSION-cli
+  script:
+    - cp .env.example .env
+    - php artisan key:generate
+    - php artisan test
