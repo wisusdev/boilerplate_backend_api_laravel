@@ -19,3 +19,11 @@ yarn-error.log
 /.vscode
 .DS_Store
 storage/app/local/dte/
+
+# Base de datos SQLite local de desarrollo (DB_DATABASE=cusgo_adventures)
+/cusgo_adventures
+*.sqlite
+*.sqlite3
+
+# Ajustes locales de herramientas
+/.claude
