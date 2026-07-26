@@ -76,4 +76,7 @@ phpunit:
   script:
     - cp .env.example .env
     - php artisan key:generate
+    # Passport firma los tokens con estas llaves; están gitignoreadas, así que se
+    # generan en el runner (sin ellas los tests de auth fallan con "Invalid key supplied").
+    - php artisan passport:keys --force
     - php artisan test
