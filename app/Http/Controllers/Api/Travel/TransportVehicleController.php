@@ -7,6 +7,7 @@ use App\Http\Requests\TransportVehicleRequest;
 use App\Http\Resources\TransportVehicleResource;
 use App\Models\Booking;
 use App\Models\TransportVehicle;
+use App\Support\SiteSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -52,7 +53,7 @@ class TransportVehicleController extends Controller
 
         return response()->json([
             'data' => [
-                'type'       => 'transport_vehicle_types',
+                'type' => 'transport_vehicle_types',
                 'attributes' => ['types' => $types],
             ],
         ]);
@@ -71,7 +72,7 @@ class TransportVehicleController extends Controller
             'daily_rate' => $data['daily_rate'] ?? null,
             'capacity' => $data['capacity'],
             // Moneda GLOBAL del sitio (ya no se configura por vehículo).
-            'currency_code' => \App\Support\SiteSettings::currency(),
+            'currency_code' => SiteSettings::currency(),
             'features' => $data['features'] ?? [],
             'is_active' => $data['is_active'] ?? true,
             'meta_title' => $data['meta_title'] ?? null,
@@ -111,7 +112,7 @@ class TransportVehicleController extends Controller
     public function checkAvailability(Request $request, TransportVehicle $transportVehicle): JsonResponse
     {
         $request->validate([
-            'pickup_at'  => ['required', 'date'],
+            'pickup_at' => ['required', 'date'],
             'dropoff_at' => ['required', 'date', 'after:pickup_at'],
         ]);
 
@@ -125,11 +126,11 @@ class TransportVehicleController extends Controller
 
         return response()->json([
             'data' => [
-                'type'       => 'availability',
+                'type' => 'availability',
                 'attributes' => [
-                    'available'  => $overlapping === 0,
+                    'available' => $overlapping === 0,
                     'vehicle_id' => $transportVehicle->id,
-                    'pickup_at'  => $request->input('pickup_at'),
+                    'pickup_at' => $request->input('pickup_at'),
                     'dropoff_at' => $request->input('dropoff_at'),
                 ],
             ],

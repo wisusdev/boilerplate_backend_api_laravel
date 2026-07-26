@@ -21,17 +21,18 @@ class PaymentWebhookTest extends TestCase
     use RefreshDatabase;
 
     private const STRIPE_SECRET = 'whsec_test_secret';
-    private const WOMPI_SECRET  = 'wompi_test_secret';
+
+    private const WOMPI_SECRET = 'wompi_test_secret';
 
     protected function setUp(): void
     {
         parent::setUp();
 
         Setting::create([
-            'key'   => 'payment_gateway',
+            'key' => 'payment_gateway',
             'value' => json_encode([
                 'stripe_webhook_secret' => self::STRIPE_SECRET,
-                'wompi_webhook_secret'  => self::WOMPI_SECRET,
+                'wompi_webhook_secret' => self::WOMPI_SECRET,
             ]),
         ]);
     }
@@ -39,11 +40,11 @@ class PaymentWebhookTest extends TestCase
     private function makePayment(string $gateway, string $reference, string $status = 'pending'): Payment
     {
         $user = User::create([
-            'username'   => 'payer_' . uniqid(),
+            'username' => 'payer_'.uniqid(),
             'first_name' => 'Pay',
-            'last_name'  => 'Er',
-            'email'      => uniqid() . '@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'Er',
+            'email' => uniqid().'@example.com',
+            'password' => bcrypt('password123'),
         ]);
 
         $tour = Tour::create([
@@ -85,7 +86,7 @@ class PaymentWebhookTest extends TestCase
 
         $response = $this->call('POST', '/api/v1/payments/webhook/stripe', [], [], [], [
             'HTTP_STRIPE_SIGNATURE' => $this->stripeSignature($payload, self::STRIPE_SECRET),
-            'CONTENT_TYPE'          => 'application/json',
+            'CONTENT_TYPE' => 'application/json',
         ], $payload);
 
         $response->assertOk()->assertJson(['received' => true, 'status' => 'paid']);
@@ -102,8 +103,8 @@ class PaymentWebhookTest extends TestCase
         ]);
 
         $response = $this->call('POST', '/api/v1/payments/webhook/stripe', [], [], [], [
-            'HTTP_STRIPE_SIGNATURE' => 't=' . time() . ',v1=deadbeef',
-            'CONTENT_TYPE'          => 'application/json',
+            'HTTP_STRIPE_SIGNATURE' => 't='.time().',v1=deadbeef',
+            'CONTENT_TYPE' => 'application/json',
         ], $payload);
 
         $response->assertStatus(400);
@@ -115,11 +116,11 @@ class PaymentWebhookTest extends TestCase
         $this->makePayment('stripe', 'pi_old');
 
         $payload = json_encode(['type' => 'payment_intent.succeeded', 'data' => ['object' => ['id' => 'pi_old']]]);
-        $oldTs   = time() - 1000; // fuera de la tolerancia de 300s
+        $oldTs = time() - 1000; // fuera de la tolerancia de 300s
 
         $response = $this->call('POST', '/api/v1/payments/webhook/stripe', [], [], [], [
             'HTTP_STRIPE_SIGNATURE' => $this->stripeSignature($payload, self::STRIPE_SECRET, $oldTs),
-            'CONTENT_TYPE'          => 'application/json',
+            'CONTENT_TYPE' => 'application/json',
         ], $payload);
 
         $response->assertStatus(400);
@@ -133,7 +134,7 @@ class PaymentWebhookTest extends TestCase
 
         $response = $this->call('POST', '/api/v1/payments/webhook/stripe', [], [], [], [
             'HTTP_STRIPE_SIGNATURE' => $this->stripeSignature($payload, self::STRIPE_SECRET),
-            'CONTENT_TYPE'          => 'application/json',
+            'CONTENT_TYPE' => 'application/json',
         ], $payload);
 
         $response->assertOk()->assertJson(['status' => 'already_processed']);
@@ -147,7 +148,7 @@ class PaymentWebhookTest extends TestCase
 
         $this->call('POST', '/api/v1/payments/webhook/stripe', [], [], [], [
             'HTTP_STRIPE_SIGNATURE' => $this->stripeSignature($payload, self::STRIPE_SECRET),
-            'CONTENT_TYPE'          => 'application/json',
+            'CONTENT_TYPE' => 'application/json',
         ], $payload)->assertOk()->assertJson(['status' => 'failed']);
 
         $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'failed']);
@@ -159,7 +160,7 @@ class PaymentWebhookTest extends TestCase
 
         $this->call('POST', '/api/v1/payments/webhook/stripe', [], [], [], [
             'HTTP_STRIPE_SIGNATURE' => $this->stripeSignature($payload, self::STRIPE_SECRET),
-            'CONTENT_TYPE'          => 'application/json',
+            'CONTENT_TYPE' => 'application/json',
         ], $payload)->assertOk()->assertJson(['status' => 'ignored']);
     }
 
@@ -169,12 +170,12 @@ class PaymentWebhookTest extends TestCase
     {
         $payment = $this->makePayment('wompi', 'WTX_111');
 
-        $payload   = json_encode(['idTransaccion' => 'WTX_111', 'estado' => 'APROBADA']);
+        $payload = json_encode(['idTransaccion' => 'WTX_111', 'estado' => 'APROBADA']);
         $signature = hash_hmac('sha256', $payload, self::WOMPI_SECRET);
 
         $this->call('POST', '/api/v1/payments/webhook/wompi', [], [], [], [
             'HTTP_X_EVENT_SIGNATURE' => $signature,
-            'CONTENT_TYPE'           => 'application/json',
+            'CONTENT_TYPE' => 'application/json',
         ], $payload)->assertOk()->assertJson(['status' => 'paid']);
 
         $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'paid']);
@@ -187,7 +188,7 @@ class PaymentWebhookTest extends TestCase
 
         $this->call('POST', '/api/v1/payments/webhook/wompi', [], [], [], [
             'HTTP_X_EVENT_SIGNATURE' => 'wrong_signature',
-            'CONTENT_TYPE'           => 'application/json',
+            'CONTENT_TYPE' => 'application/json',
         ], $payload)->assertStatus(400);
 
         $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
@@ -205,7 +206,7 @@ class PaymentWebhookTest extends TestCase
 
         $payload = json_encode([
             'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
-            'resource'   => ['supplementary_data' => ['related_ids' => ['order_id' => 'ORDER_999']]],
+            'resource' => ['supplementary_data' => ['related_ids' => ['order_id' => 'ORDER_999']]],
         ]);
 
         $this->call('POST', '/api/v1/payments/webhook/paypal', [], [], [], [
@@ -225,7 +226,7 @@ class PaymentWebhookTest extends TestCase
 
         $payload = json_encode([
             'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
-            'resource'   => ['supplementary_data' => ['related_ids' => ['order_id' => 'ORDER_000']]],
+            'resource' => ['supplementary_data' => ['related_ids' => ['order_id' => 'ORDER_000']]],
         ]);
 
         $this->call('POST', '/api/v1/payments/webhook/paypal', [], [], [], [

@@ -17,8 +17,7 @@ class InstallController extends Controller
     public function __construct(
         private readonly InstallService $installer,
         private readonly InstallRequirementsService $requirements,
-    ) {
-    }
+    ) {}
 
     /**
      * Verificación de requisitos previos (pre-flight): versión de PHP,
@@ -61,7 +60,7 @@ class InstallController extends Controller
             return response()->json([
                 'errors' => [[
                     'status' => '409',
-                    'title'  => 'app.alreadyInstalled',
+                    'title' => 'app.alreadyInstalled',
                     'detail' => 'La aplicación ya está instalada.',
                 ]],
             ], 409);
@@ -77,9 +76,9 @@ class InstallController extends Controller
             return response()->json([
                 'errors' => [[
                     'status' => '422',
-                    'title'  => 'app.requirementsNotMet',
+                    'title' => 'app.requirementsNotMet',
                     'detail' => 'El entorno no cumple los requisitos previos para la instalación.',
-                    'meta'   => ['checks' => $failed],
+                    'meta' => ['checks' => $failed],
                 ]],
             ], 422);
         }
@@ -90,10 +89,10 @@ class InstallController extends Controller
             'data' => [
                 'type' => 'install',
                 'attributes' => [
-                    'status'    => true,
+                    'status' => true,
                     'installed' => true,
-                    'message'   => 'message.installed',
-                    'email'     => $user->email,
+                    'message' => 'message.installed',
+                    'email' => $user->email,
                 ],
             ],
         ], 201);

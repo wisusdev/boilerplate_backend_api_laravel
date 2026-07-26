@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -35,11 +34,11 @@ class ForgotPassword extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-                    ->greeting('Hello!')
-                    ->line('Hello ' . $this->name . ',')
-                    ->line('You are receiving this email because we received a password reset request for your account.')
-                    ->action('Reset Password', $this->url)
-                    ->line('If you did not request a password reset, no further action is required.');
+            ->greeting('Hello!')
+            ->line('Hello '.$this->name.',')
+            ->line('You are receiving this email because we received a password reset request for your account.')
+            ->action('Reset Password', $this->url)
+            ->line('If you did not request a password reset, no further action is required.');
     }
 
     /**

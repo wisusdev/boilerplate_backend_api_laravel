@@ -63,17 +63,17 @@ class AccountController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($request->input('data.attributes.current_password'), $user->password)) {
+        if (! Hash::check($request->input('data.attributes.current_password'), $user->password)) {
             throw ValidationException::withMessages([
                 'current_password' => ['validation.passwordIncorrect'],
             ]);
         }
 
         $user->update([
-            'password' => $request->input('data.attributes.password')
+            'password' => $request->input('data.attributes.password'),
         ]);
 
-        $user->notify(new PasswordChangeNotification());
+        $user->notify(new PasswordChangeNotification);
 
         return response()->json([
             'data' => [
@@ -82,7 +82,7 @@ class AccountController extends Controller
                     'status' => true,
                     'message' => 'message.passwordChangedSuccessfully',
                 ],
-            ]
+            ],
         ]);
     }
 
@@ -93,10 +93,10 @@ class AccountController extends Controller
 
         DB::table('password_reset_tokens')->updateOrInsert(['email' => $user->email], [
             'token' => $token,
-            'created_at' => now()->addHours(6)
+            'created_at' => now()->addHours(6),
         ]);
 
-        $url = config('app.frontend_url') . '/account/delete-account-verify?token=' . $token;
+        $url = config('app.frontend_url').'/account/delete-account-verify?token='.$token;
 
         // Send email
         $user->notify(new VerifyDeleteAccountNotification($url, $user->first_name));
@@ -108,7 +108,7 @@ class AccountController extends Controller
                     'status' => true,
                     'message' => 'message.deleteAccountEmailSent',
                 ],
-            ]
+            ],
         ]);
     }
 
@@ -118,7 +118,7 @@ class AccountController extends Controller
         $account = DB::table('password_reset_tokens')->where('token', $token)->first();
 
         // verify
-        if (!$account) {
+        if (! $account) {
             throw ValidationException::withMessages([
                 'token' => ['validation.tokenInvalid'],
             ]);
@@ -133,7 +133,7 @@ class AccountController extends Controller
 
         $user = User::whereEmail($account->email)->first();
 
-        if (!$user) {
+        if (! $user) {
             throw ValidationException::withMessages([
                 'token' => ['validation.userNotFound'],
             ]);
@@ -146,7 +146,7 @@ class AccountController extends Controller
         DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
         // Send email to a user
-        $user->notify(new DeleteAccountConfirmationNotification());
+        $user->notify(new DeleteAccountConfirmationNotification);
 
         $user->tokens()->delete();
         $user->delete();
@@ -157,7 +157,7 @@ class AccountController extends Controller
     private function processAvatarUpload(string $base64Data): string
     {
         // Extraer el tipo MIME y los datos base64
-        if (!preg_match('/^data:([a-zA-Z0-9][a-zA-Z0-9\/+]*);base64,(.+)$/', $base64Data, $matches)) {
+        if (! preg_match('/^data:([a-zA-Z0-9][a-zA-Z0-9\/+]*);base64,(.+)$/', $base64Data, $matches)) {
             throw new \InvalidArgumentException('Formato base64 inválido');
         }
 
@@ -176,17 +176,17 @@ class AccountController extends Controller
         }
 
         // Generar nombre único para el archivo
-        $fileName = config('app.destination_path') . '/' . Str::uuid() . '.webp';
-        $fullPath = storage_path('app/public/' . $fileName);
+        $fileName = config('app.destination_path').'/'.Str::uuid().'.webp';
+        $fullPath = storage_path('app/public/'.$fileName);
 
         // Crear directorio si no existe
         $directory = dirname($fullPath);
-        if (!file_exists($directory)) {
+        if (! file_exists($directory)) {
             mkdir($directory, 0755, true);
         }
 
         // Convertir y guardar como WebP
-        if (!imagewebp($image, $fullPath, 80)) { // 80 es la calidad (0-100)
+        if (! imagewebp($image, $fullPath, 80)) { // 80 es la calidad (0-100)
             imagedestroy($image);
             throw new \RuntimeException('Error al guardar la imagen como WebP');
         }

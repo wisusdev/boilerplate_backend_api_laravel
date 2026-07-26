@@ -15,6 +15,7 @@ use App\Notifications\AdminAlertNotification;
 use App\Notifications\BookingNotification;
 use App\Services\BookingService;
 use App\Services\TourAvailabilityService;
+use App\Support\SiteSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\JsonResponse;
@@ -30,8 +31,7 @@ class BookingController extends Controller
     public function __construct(
         private readonly BookingService $bookingService,
         private readonly TourAvailabilityService $availabilityService
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -57,6 +57,7 @@ class BookingController extends Controller
         $this->ensureOwnerOrAdmin($request, $booking);
 
         $booking->load(['user', 'transportDetail', 'upgradeVehicle', 'coupon', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])]);
+
         return BookingResource::make($booking);
     }
 
@@ -100,13 +101,13 @@ class BookingController extends Controller
         }
 
         $customer = $request->input('data.attributes.customer');
-        $userId   = $request->input('data.attributes.user_id');
+        $userId = $request->input('data.attributes.user_id');
 
         if (is_array($customer) && (! empty($customer['id']) || ! empty($customer['email']))) {
             $request->validate([
-                'data.attributes.customer.id'    => ['sometimes', 'nullable', 'uuid', 'exists:users,id'],
+                'data.attributes.customer.id' => ['sometimes', 'nullable', 'uuid', 'exists:users,id'],
                 'data.attributes.customer.email' => ['required_without:data.attributes.customer.id', 'nullable', 'email', 'max:255'],
-                'data.attributes.customer.name'  => ['sometimes', 'nullable', 'string', 'max:255'],
+                'data.attributes.customer.name' => ['sometimes', 'nullable', 'string', 'max:255'],
                 'data.attributes.customer.phone' => ['sometimes', 'nullable', 'string', 'max:50'],
             ]);
 
@@ -129,16 +130,16 @@ class BookingController extends Controller
             return $existing;
         }
 
-        $name  = trim($c['name'] ?? '') ?: 'Cliente';
+        $name = trim($c['name'] ?? '') ?: 'Cliente';
         $parts = preg_split('/\s+/', $name, 2);
 
         $user = User::create([
             'first_name' => $parts[0],
-            'last_name'  => $parts[1] ?? '',
-            'email'      => $c['email'],
-            'phone'      => $c['phone'] ?? null,
-            'username'   => $this->uniqueUsername($c['email']),
-            'password'   => Hash::make(Str::random(40)),
+            'last_name' => $parts[1] ?? '',
+            'email' => $c['email'],
+            'phone' => $c['phone'] ?? null,
+            'username' => $this->uniqueUsername($c['email']),
+            'password' => Hash::make(Str::random(40)),
         ]);
         $user->assignRole('user');
 
@@ -150,7 +151,7 @@ class BookingController extends Controller
         $base = Str::lower(preg_replace('/[^a-z0-9]/i', '', Str::before($email, '@'))) ?: 'cliente';
         $username = $base;
         while (User::where('username', $username)->exists()) {
-            $username = $base . random_int(100, 9999);
+            $username = $base.random_int(100, 9999);
         }
 
         return $username;
@@ -186,7 +187,7 @@ class BookingController extends Controller
 
         // Ventana de cancelación GLOBAL: el cliente no puede cancelar dentro de las
         // últimas N horas antes del inicio (el admin sí puede).
-        $cancellationHours = \App\Support\SiteSettings::cancellationHours();
+        $cancellationHours = SiteSettings::cancellationHours();
         $isAdmin = $request->user()?->hasRole(['admin', 'super-admin']) ?? false;
         if (! $isAdmin && $cancellationHours > 0 && $booking->starts_at) {
             $deadline = $booking->starts_at->copy()->subHours($cancellationHours);
@@ -203,10 +204,10 @@ class BookingController extends Controller
         $booking->user?->notify(new BookingNotification(
             'Reserva cancelada',
             "Tu reserva de \"{$title}\" fue cancelada.",
-            ['reserva' => '#' . $booking->id]
+            ['reserva' => '#'.$booking->id]
         ));
         $this->notifyAdmins('Reserva cancelada por el cliente', 'Una reserva fue cancelada.', [
-            'reserva' => '#' . $booking->id,
+            'reserva' => '#'.$booking->id,
             'detalle' => $title,
         ]);
 
@@ -236,7 +237,7 @@ class BookingController extends Controller
             $booking->update(['starts_at' => $data['date']]);
         } else {
             $data = $request->validate([
-                'pickup_at'  => ['required', 'date', 'after:now'],
+                'pickup_at' => ['required', 'date', 'after:now'],
                 'dropoff_at' => ['required', 'date', 'after:pickup_at'],
             ]);
 
@@ -261,10 +262,10 @@ class BookingController extends Controller
         $booking->user?->notify(new BookingNotification(
             'Reserva reagendada',
             "Tu reserva de \"{$title}\" fue reagendada.",
-            ['reserva' => '#' . $booking->id, 'nueva_fecha' => $booking->starts_at?->toDayDateTimeString()]
+            ['reserva' => '#'.$booking->id, 'nueva_fecha' => $booking->starts_at?->toDayDateTimeString()]
         ));
         $this->notifyAdmins('Reserva reagendada por el cliente', 'Una reserva cambió de fecha.', [
-            'reserva' => '#' . $booking->id,
+            'reserva' => '#'.$booking->id,
             'detalle' => $title,
         ]);
 
@@ -282,13 +283,13 @@ class BookingController extends Controller
 
         BookingMessage::create([
             'booking_id' => $booking->id,
-            'user_id'    => $request->user()->id,
-            'message'    => $data['message'],
+            'user_id' => $request->user()->id,
+            'message' => $data['message'],
         ]);
 
         $title = $this->bookableTitle($booking);
         $this->notifyAdmins('Nuevo mensaje sobre una reserva', 'Un cliente envió un mensaje sobre su reserva.', [
-            'reserva' => '#' . $booking->id,
+            'reserva' => '#'.$booking->id,
             'detalle' => $title,
             'mensaje' => $data['message'],
         ]);
@@ -300,7 +301,7 @@ class BookingController extends Controller
 
         return response()->json([
             'data' => [
-                'type'       => 'booking-messages',
+                'type' => 'booking-messages',
                 'attributes' => ['status' => true, 'message' => 'message.bookingMessageSent'],
             ],
         ]);
@@ -316,10 +317,10 @@ class BookingController extends Controller
         $this->loadRelations($booking);
         $pdf = Pdf::loadView('pdf.booking-receipt', [
             'booking' => $booking,
-            'attrs'   => (new BookingResource($booking))->toJsonApi(),
+            'attrs' => (new BookingResource($booking))->toJsonApi(),
         ]);
 
-        return $pdf->download('comprobante-reserva-' . $booking->id . '.pdf');
+        return $pdf->download('comprobante-reserva-'.$booking->id.'.pdf');
     }
 
     private function loadRelations(Booking $booking): Booking
@@ -329,7 +330,7 @@ class BookingController extends Controller
 
     private function bookableTitle(Booking $booking): string
     {
-        return $booking->bookable?->title ?? ('Reserva #' . $booking->id);
+        return $booking->bookable?->title ?? ('Reserva #'.$booking->id);
     }
 
     private function notifyAdmins(string $title, string $body, array $details = []): void

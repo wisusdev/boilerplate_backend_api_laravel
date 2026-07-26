@@ -2,8 +2,10 @@
 
 namespace Tests\Unit\Services\Booking;
 
+use App\Models\Setting;
 use App\Models\Tour;
 use App\Services\Booking\TourBookingHandler;
+use App\Support\SiteSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -177,8 +179,8 @@ class TourBookingHandlerTest extends TestCase
         $tour = $this->createTour();
         $prepared = $this->handler->prepare($this->bookingData($tour, [
             'pickup_address' => 'Hotel Real, San Salvador',
-            'pickup_lat'     => 13.6989,
-            'pickup_lng'     => -89.1914,
+            'pickup_lat' => 13.6989,
+            'pickup_lng' => -89.1914,
         ]));
 
         $this->assertSame('Hotel Real, San Salvador', $prepared['pickup_address']);
@@ -217,10 +219,10 @@ class TourBookingHandlerTest extends TestCase
 
     private function setGlobalMinAdvanceDays(int $days): void
     {
-        \App\Models\Setting::updateOrCreate(
+        Setting::updateOrCreate(
             ['key' => 'app'],
             ['value' => json_encode(['booking_min_advance_days' => $days])]
         );
-        \App\Support\SiteSettings::flush();
+        SiteSettings::flush();
     }
 }

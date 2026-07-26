@@ -14,14 +14,12 @@ use Illuminate\Validation\ValidationException;
 
 class CouponController extends Controller
 {
-    public function __construct(private readonly CouponService $couponService)
-    {
-    }
+    public function __construct(private readonly CouponService $couponService) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
         $coupons = Coupon::query()
-            ->when($request->filled('search'), fn ($q) => $q->where('code', 'LIKE', '%' . $request->string('search')->toString() . '%'))
+            ->when($request->filled('search'), fn ($q) => $q->where('code', 'LIKE', '%'.$request->string('search')->toString().'%'))
             ->when($request->filled('is_active'), fn ($q) => $q->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN)))
             ->latest()
             ->jsonPaginate();
@@ -63,27 +61,27 @@ class CouponController extends Controller
         $attrs = $request->input('data.attributes', $request->all());
 
         $data = validator($attrs, [
-            'code'         => ['required', 'string', 'max:60'],
+            'code' => ['required', 'string', 'max:60'],
             'booking_type' => ['sometimes', 'nullable', 'string', 'in:tour,transport'],
-            'pax'          => ['sometimes', 'nullable', 'integer', 'min:1'],
-            'amount'       => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'pax' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'amount' => ['sometimes', 'nullable', 'numeric', 'min:0'],
         ])->validate();
 
         $subtotal = (float) ($data['amount'] ?? 0);
 
         try {
             $coupon = $this->couponService->validate($data['code'], [
-                'user_id'      => $request->user()?->id,
+                'user_id' => $request->user()?->id,
                 'booking_type' => $data['booking_type'] ?? null,
-                'pax'          => (int) ($data['pax'] ?? 0),
-                'subtotal'     => $subtotal,
+                'pax' => (int) ($data['pax'] ?? 0),
+                'subtotal' => $subtotal,
             ]);
         } catch (ValidationException $e) {
             return response()->json([
                 'data' => [
-                    'type'       => 'coupon_validation',
+                    'type' => 'coupon_validation',
                     'attributes' => [
-                        'valid'   => false,
+                        'valid' => false,
                         'message' => $e->validator->errors()->first('data.attributes.coupon_code'),
                     ],
                 ],
@@ -92,12 +90,12 @@ class CouponController extends Controller
 
         return response()->json([
             'data' => [
-                'type'       => 'coupon_validation',
+                'type' => 'coupon_validation',
                 'attributes' => [
-                    'valid'    => true,
-                    'code'     => $coupon->code,
-                    'type'     => $coupon->type,
-                    'value'    => $coupon->value,
+                    'valid' => true,
+                    'code' => $coupon->code,
+                    'type' => $coupon->type,
+                    'value' => $coupon->value,
                     'discount' => $subtotal > 0 ? $coupon->discountFor($subtotal) : null,
                 ],
             ],

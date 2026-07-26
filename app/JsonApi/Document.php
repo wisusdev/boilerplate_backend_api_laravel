@@ -6,21 +6,21 @@ use Illuminate\Support\Collection;
 
 class Document extends Collection
 {
-
-    static public function type(string $type): self
+    public static function type(string $type): self
     {
         return new self([
             'data' => [
                 'type' => $type,
-            ]
+            ],
         ]);
     }
 
     public function id(string $id): self
     {
         if ($id) {
-            $this->items['data']['id'] = (string)$id;
+            $this->items['data']['id'] = (string) $id;
         }
+
         return $this;
     }
 
@@ -29,12 +29,14 @@ class Document extends Collection
         unset($attributes['_relationships']);
 
         $this->items['data']['attributes'] = $attributes;
+
         return $this;
     }
 
     public function links(array $links): self
     {
         $this->items['data']['links'] = $links;
+
         return $this;
     }
 
@@ -46,6 +48,7 @@ class Document extends Collection
                 'id' => $value->getRouteKey(),
             ];
         }
+
         return $this;
     }
 
@@ -57,6 +60,7 @@ class Document extends Collection
                 'related' => route("api.v1.{$this->items['data']['type']}.{$value}", $this->items['data']['id']),
             ];
         }
+
         return $this;
     }
 }

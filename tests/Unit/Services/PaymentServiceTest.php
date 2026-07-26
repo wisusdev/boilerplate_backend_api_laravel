@@ -20,7 +20,7 @@ class PaymentServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new PaymentService();
+        $this->service = new PaymentService;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -28,32 +28,32 @@ class PaymentServiceTest extends TestCase
     private function createBooking(): Booking
     {
         $user = User::create([
-            'username'   => 'tester',
+            'username' => 'tester',
             'first_name' => 'Test',
-            'last_name'  => 'User',
-            'email'      => 'tester@example.com',
-            'password'   => bcrypt('pass'),
+            'last_name' => 'User',
+            'email' => 'tester@example.com',
+            'password' => bcrypt('pass'),
         ]);
 
         $tour = Tour::create([
-            'title'        => 'Test Tour',
-            'description'  => 'Desc',
-            'price'        => 80,
+            'title' => 'Test Tour',
+            'description' => 'Desc',
+            'price' => 80,
             'max_capacity' => 10,
-            'location'     => 'San Salvador',
+            'location' => 'San Salvador',
             'currency_code' => 'USD',
-            'is_active'    => true,
+            'is_active' => true,
         ]);
 
         return Booking::create([
             'bookable_type' => Tour::class,
-            'bookable_id'   => $tour->id,
-            'starts_at'     => '2026-09-01 00:00:00',
-            'party_size'    => 2,
-            'total_price'   => 160,
+            'bookable_id' => $tour->id,
+            'starts_at' => '2026-09-01 00:00:00',
+            'party_size' => 2,
+            'total_price' => 160,
             'currency_code' => 'USD',
-            'status'        => Booking::STATUS_PENDING,
-            'user_id'       => $user->id,
+            'status' => Booking::STATUS_PENDING,
+            'user_id' => $user->id,
         ]);
     }
 
@@ -64,11 +64,11 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
 
         $payment = $this->service->create($booking, [
-            'gateway'       => 'paypal',
-            'method'        => 'paypal',
-            'amount'        => 160.00,
+            'gateway' => 'paypal',
+            'method' => 'paypal',
+            'amount' => 160.00,
             'currency_code' => 'USD',
-            'status'        => 'pending',
+            'status' => 'pending',
         ]);
 
         $this->assertInstanceOf(Payment::class, $payment);
@@ -78,7 +78,7 @@ class PaymentServiceTest extends TestCase
         $this->assertNull($payment->paid_at);
         $this->assertDatabaseHas('payments', [
             'gateway' => 'paypal',
-            'status'  => 'pending',
+            'status' => 'pending',
         ]);
     }
 
@@ -87,11 +87,11 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
 
         $payment = $this->service->create($booking, [
-            'gateway'       => 'manual',
-            'method'        => 'cash',
-            'amount'        => 80.00,
+            'gateway' => 'manual',
+            'method' => 'cash',
+            'amount' => 80.00,
             'currency_code' => 'USD',
-            'status'        => 'paid',
+            'status' => 'paid',
         ]);
 
         $this->assertEquals('paid', $payment->status);
@@ -103,11 +103,11 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
 
         $payment = $this->service->create($booking, [
-            'gateway'       => 'stripe',
-            'method'        => 'card',
-            'amount'        => 50.00,
+            'gateway' => 'stripe',
+            'method' => 'card',
+            'amount' => 50.00,
             'currency_code' => 'USD',
-            'status'        => 'pending',
+            'status' => 'pending',
         ]);
 
         $this->assertNull($payment->paid_at);
@@ -118,10 +118,10 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
 
         $payment = $this->service->create($booking, [
-            'gateway'               => 'paypal',
-            'amount'                => 100.00,
-            'currency_code'         => 'USD',
-            'status'                => 'pending',
+            'gateway' => 'paypal',
+            'amount' => 100.00,
+            'currency_code' => 'USD',
+            'status' => 'pending',
             'transaction_reference' => 'PAYPAL_ORDER_XYZ123',
         ]);
 
@@ -133,10 +133,10 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
 
         $payment = $this->service->create($booking, [
-            'gateway'       => 'manual',
-            'amount'        => 80.00,
+            'gateway' => 'manual',
+            'amount' => 80.00,
             'currency_code' => 'USD',
-            'status'        => 'pending',
+            'status' => 'pending',
         ]);
 
         $this->assertEquals(Booking::class, $payment->payable_type);
@@ -149,8 +149,8 @@ class PaymentServiceTest extends TestCase
 
         $payment = $this->service->create($booking, [
             'gateway' => 'manual',
-            'amount'  => 50.00,
-            'status'  => 'pending',
+            'amount' => 50.00,
+            'status' => 'pending',
         ]);
 
         $this->assertEquals('USD', $payment->currency_code);
@@ -163,8 +163,8 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
         $payment = $this->service->create($booking, [
             'gateway' => 'paypal',
-            'amount'  => 160.00,
-            'status'  => 'pending',
+            'amount' => 160.00,
+            'status' => 'pending',
         ]);
 
         $updated = $this->service->markPaid($payment, 'CAPTURE_ABC');
@@ -178,8 +178,8 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
         $payment = $this->service->create($booking, [
             'gateway' => 'stripe',
-            'amount'  => 100.00,
-            'status'  => 'pending',
+            'amount' => 100.00,
+            'status' => 'pending',
         ]);
 
         $updated = $this->service->markPaid($payment);
@@ -192,9 +192,9 @@ class PaymentServiceTest extends TestCase
     {
         $booking = $this->createBooking();
         $payment = $this->service->create($booking, [
-            'gateway'               => 'paypal',
-            'amount'                => 160.00,
-            'status'                => 'pending',
+            'gateway' => 'paypal',
+            'amount' => 160.00,
+            'status' => 'pending',
             'transaction_reference' => 'OLD_ORDER_ID',
         ]);
 
@@ -208,14 +208,14 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
         $payment = $this->service->create($booking, [
             'gateway' => 'paypal',
-            'amount'  => 160.00,
-            'status'  => 'pending',
+            'amount' => 160.00,
+            'status' => 'pending',
         ]);
 
         $gatewayResponse = [
-            'id'     => 'CAPTURE_123',
+            'id' => 'CAPTURE_123',
             'status' => 'COMPLETED',
-            'payer'  => ['email_address' => 'buyer@example.com'],
+            'payer' => ['email_address' => 'buyer@example.com'],
         ];
 
         $updated = $this->service->markPaid($payment, 'CAPTURE_123', $gatewayResponse);
@@ -228,9 +228,9 @@ class PaymentServiceTest extends TestCase
     {
         $booking = $this->createBooking();
         $payment = $this->service->create($booking, [
-            'gateway'               => 'wompi',
-            'amount'                => 80.00,
-            'status'                => 'pending',
+            'gateway' => 'wompi',
+            'amount' => 80.00,
+            'status' => 'pending',
             'transaction_reference' => 'WOMPI_TXN_999',
         ]);
 

@@ -17,9 +17,7 @@ use Illuminate\Http\Request;
  */
 class WebhookController extends Controller
 {
-    public function __construct(private readonly PaymentWebhookService $service)
-    {
-    }
+    public function __construct(private readonly PaymentWebhookService $service) {}
 
     public function handle(string $gateway, Request $request): JsonResponse
     {
@@ -27,8 +25,8 @@ class WebhookController extends Controller
             $result = match ($gateway) {
                 'stripe' => $this->service->handleStripe($request),
                 'paypal' => $this->service->handlePaypal($request),
-                'wompi'  => $this->service->handleWompi($request),
-                default  => abort(404),
+                'wompi' => $this->service->handleWompi($request),
+                default => abort(404),
             };
         } catch (InvalidWebhookSignatureException $e) {
             return response()->json(['received' => false, 'error' => 'invalid signature'], 400);

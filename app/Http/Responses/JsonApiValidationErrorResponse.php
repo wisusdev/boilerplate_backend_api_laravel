@@ -5,8 +5,8 @@ namespace App\Http\Responses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
-class JsonApiValidationErrorResponse extends JsonResponse {
-
+class JsonApiValidationErrorResponse extends JsonResponse
+{
     public function __construct(ValidationException $exception, int $status = 422)
     {
         $data = $this->formatJsonApiErrors($exception);
@@ -15,22 +15,22 @@ class JsonApiValidationErrorResponse extends JsonResponse {
         parent::__construct($data, $status, $headers);
     }
 
-    public function formatJsonApiErrors(ValidationException $exception) : array
+    public function formatJsonApiErrors(ValidationException $exception): array
     {
         $title = $exception->getMessage();
 
         return [
             'errors' => collect($exception->errors())
-                ->map(function ($message, $field) use ($title) {
+                ->map(function ($message, $field) {
                     return [
                         'title' => $field,
                         'detail' => $message[0],
                         'source' => [
-                            'pointer' => "/".str_replace(".", "/", $field)
-                        ]
+                            'pointer' => '/'.str_replace('.', '/', $field),
+                        ],
                     ];
                 })
-                ->values()
+                ->values(),
         ];
     }
 }

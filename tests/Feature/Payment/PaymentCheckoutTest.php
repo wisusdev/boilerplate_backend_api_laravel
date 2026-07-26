@@ -3,7 +3,6 @@
 namespace Tests\Feature\Payment;
 
 use App\Models\Booking;
-use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\User;
 use App\Services\PaypalService;
@@ -22,37 +21,38 @@ class PaymentCheckoutTest extends TestCase
     private function createAuthenticatedUser(): User
     {
         $user = User::create([
-            'username'   => 'checkout_user',
+            'username' => 'checkout_user',
             'first_name' => 'Checkout',
-            'last_name'  => 'User',
-            'email'      => 'checkout@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'User',
+            'email' => 'checkout@example.com',
+            'password' => bcrypt('password123'),
         ]);
         Passport::actingAs($user);
+
         return $user;
     }
 
     private function createBooking(User $user): Booking
     {
         $tour = Tour::create([
-            'title'        => 'Beach Tour',
-            'description'  => 'Sun & sand',
-            'price'        => 100,
+            'title' => 'Beach Tour',
+            'description' => 'Sun & sand',
+            'price' => 100,
             'max_capacity' => 8,
-            'location'     => 'La Libertad',
+            'location' => 'La Libertad',
             'currency_code' => 'USD',
-            'is_active'    => true,
+            'is_active' => true,
         ]);
 
         return Booking::create([
             'bookable_type' => Tour::class,
-            'bookable_id'   => $tour->id,
-            'starts_at'     => '2026-10-15 00:00:00',
-            'party_size'    => 2,
-            'total_price'   => 200,
+            'bookable_id' => $tour->id,
+            'starts_at' => '2026-10-15 00:00:00',
+            'party_size' => 2,
+            'total_price' => 200,
             'currency_code' => 'USD',
-            'status'        => Booking::STATUS_PENDING,
-            'user_id'       => $user->id,
+            'status' => Booking::STATUS_PENDING,
+            'user_id' => $user->id,
         ]);
     }
 
@@ -60,12 +60,12 @@ class PaymentCheckoutTest extends TestCase
     {
         return [
             'data' => [
-                'type'       => 'payment-checkout',
+                'type' => 'payment-checkout',
                 'attributes' => array_merge([
-                    'gateway'       => $gateway,
-                    'payable_type'  => 'booking',
-                    'payable_id'    => $booking->id,
-                    'amount'        => 200.00,
+                    'gateway' => $gateway,
+                    'payable_type' => 'booking',
+                    'payable_id' => $booking->id,
+                    'amount' => 200.00,
                     'currency_code' => 'USD',
                 ], $extra),
             ],
@@ -76,7 +76,7 @@ class PaymentCheckoutTest extends TestCase
 
     public function test_checkout_paypal_crea_pago_pendiente_y_retorna_approve_url(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $booking = $this->createBooking($user);
 
         $this->mock(PaypalService::class, function ($mock) {
@@ -84,7 +84,7 @@ class PaymentCheckoutTest extends TestCase
                 ->once()
                 ->with(200.00, 'USD', \Mockery::any(), \Mockery::any())
                 ->andReturn([
-                    'order_id'    => 'PAYPAL_ORDER_TEST123',
+                    'order_id' => 'PAYPAL_ORDER_TEST123',
                     'approve_url' => 'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL_ORDER_TEST123',
                 ]);
         });
@@ -98,15 +98,15 @@ class PaymentCheckoutTest extends TestCase
         $this->assertStringContainsString('sandbox.paypal.com', $attrs['approve_url']);
 
         $this->assertDatabaseHas('payments', [
-            'gateway'               => 'paypal',
-            'status'                => 'pending',
+            'gateway' => 'paypal',
+            'status' => 'pending',
             'transaction_reference' => 'PAYPAL_ORDER_TEST123',
         ]);
     }
 
     public function test_checkout_paypal_falla_si_el_servicio_lanza_excepcion(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $booking = $this->createBooking($user);
 
         $this->mock(PaypalService::class, function ($mock) {
@@ -125,7 +125,7 @@ class PaymentCheckoutTest extends TestCase
 
     public function test_checkout_stripe_crea_pago_pendiente_y_retorna_client_secret(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $booking = $this->createBooking($user);
 
         $this->mock(StripeService::class, function ($mock) {
@@ -133,7 +133,7 @@ class PaymentCheckoutTest extends TestCase
                 ->once()
                 ->with(200.00, 'USD')
                 ->andReturn([
-                    'client_secret'     => 'pi_test_secret_abc123',
+                    'client_secret' => 'pi_test_secret_abc123',
                     'payment_intent_id' => 'pi_test_abc123',
                 ]);
             $mock->shouldReceive('getPublicKey')
@@ -151,8 +151,8 @@ class PaymentCheckoutTest extends TestCase
         $this->assertEquals('pk_test_public_key', $attrs['public_key']);
 
         $this->assertDatabaseHas('payments', [
-            'gateway'               => 'stripe',
-            'status'                => 'pending',
+            'gateway' => 'stripe',
+            'status' => 'pending',
             'transaction_reference' => 'pi_test_abc123',
         ]);
     }
@@ -161,14 +161,14 @@ class PaymentCheckoutTest extends TestCase
 
     public function test_checkout_wompi_crea_pago_pendiente_y_retorna_redirect_url_3ds(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $booking = $this->createBooking($user);
 
         $wompiResponse = (object) [
-            'idTransaccion'       => 'WOMPI_TXN_999',
+            'idTransaccion' => 'WOMPI_TXN_999',
             'urlCompletarPago3Ds' => 'https://3ds.wompi.sv/verify/WOMPI_TXN_999',
-            'monto'               => 200.00,
-            'esReal'              => false,
+            'monto' => 200.00,
+            'esReal' => false,
         ];
 
         $this->mock(WompiService::class, function ($mock) use ($wompiResponse) {
@@ -178,18 +178,18 @@ class PaymentCheckoutTest extends TestCase
         });
 
         $cardData = [
-            'card_number'      => '4111111111111111',
-            'cvv'              => '123',
+            'card_number' => '4111111111111111',
+            'cvv' => '123',
             'expiration_month' => 12,
-            'expiration_year'  => 27,
-            'first_name'       => 'Juan',
-            'last_name'        => 'Pérez',
-            'email'            => 'juan@example.com',
-            'city'             => 'San Salvador',
-            'address'          => 'Calle 1',
-            'state'            => 'SS',
-            'postal_code'      => '01101',
-            'phone'            => '75551234',
+            'expiration_year' => 27,
+            'first_name' => 'Juan',
+            'last_name' => 'Pérez',
+            'email' => 'juan@example.com',
+            'city' => 'San Salvador',
+            'address' => 'Calle 1',
+            'state' => 'SS',
+            'postal_code' => '01101',
+            'phone' => '75551234',
         ];
 
         $response = $this->postJsonApi(
@@ -204,8 +204,8 @@ class PaymentCheckoutTest extends TestCase
         $this->assertStringContainsString('wompi.sv', $attrs['redirect_url']);
 
         $this->assertDatabaseHas('payments', [
-            'gateway'               => 'wompi',
-            'status'                => 'pending',
+            'gateway' => 'wompi',
+            'status' => 'pending',
             'transaction_reference' => 'WOMPI_TXN_999',
         ]);
     }
@@ -227,12 +227,12 @@ class PaymentCheckoutTest extends TestCase
 
         $response = $this->postJsonApi('/api/v1/payments/checkout', [
             'data' => [
-                'type'       => 'payment-checkout',
+                'type' => 'payment-checkout',
                 'attributes' => [
-                    'gateway'      => 'paypal',
+                    'gateway' => 'paypal',
                     'payable_type' => 'booking',
-                    'payable_id'   => 99999,
-                    'amount'       => 100,
+                    'payable_id' => 99999,
+                    'amount' => 100,
                     'currency_code' => 'USD',
                 ],
             ],
@@ -243,7 +243,7 @@ class PaymentCheckoutTest extends TestCase
 
     public function test_checkout_falla_con_gateway_no_soportado(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $booking = $this->createBooking($user);
 
         $this->withoutExceptionHandling();

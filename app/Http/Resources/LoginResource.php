@@ -23,7 +23,7 @@ class LoginResource extends JsonResource
                     'last_name' => $this->resource->user->last_name,
                     'username' => $this->resource->user->username,
                     'email' => $this->resource->user->email,
-                    'avatar' => $this->resource->user->avatar ? asset('storage' . $this->resource->user->avatar) : null,
+                    'avatar' => $this->resource->user->avatar ? asset('storage'.$this->resource->user->avatar) : null,
                     'language' => $this->resource->user->language,
                 ],
             ],
@@ -34,7 +34,7 @@ class LoginResource extends JsonResource
                     'token' => $this->resource->token,
                     'token_type' => $this->resource->token_type,
                     'expires_at' => $this->resource->expires_at,
-                ]
+                ],
             ],
         ];
     }

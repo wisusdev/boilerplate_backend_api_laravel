@@ -14,31 +14,30 @@ class JsonApiTestResponse
     {
         return function ($field) {
             /** @var TestResponse $this */
-
             $pointer = "/data/attributes/{$field}";
 
             if (Str::of($field)->startsWith('data')) {
-                $pointer = "/" . str_replace('.', '/', $field);
+                $pointer = '/'.str_replace('.', '/', $field);
             } elseif (Str::of($field)->startsWith('relationships')) {
-                $pointer = "/data/" . str_replace('.', '/', $field) . "/data/id";
+                $pointer = '/data/'.str_replace('.', '/', $field).'/data/id';
             }
 
             try {
                 $this->assertJsonFragment([
-                    'source' => ['pointer' => $pointer]
+                    'source' => ['pointer' => $pointer],
                 ]);
             } catch (ExpectationFailedException $e) {
-                PHPUnit::fail("Failed to find a validation error for {$field}." . PHP_EOL . PHP_EOL . $e->getMessage());
+                PHPUnit::fail("Failed to find a validation error for {$field}.".PHP_EOL.PHP_EOL.$e->getMessage());
             }
 
             try {
                 $this->assertJsonStructure([
                     'errors' => [
-                        ['title', 'detail', 'source' => ['pointer']]
-                    ]
+                        ['title', 'detail', 'source' => ['pointer']],
+                    ],
                 ]);
             } catch (ExpectationFailedException $e) {
-                PHPUnit::fail("Failed to find the correct validation error message for {$field}." . PHP_EOL . PHP_EOL . $e->getMessage());
+                PHPUnit::fail("Failed to find the correct validation error message for {$field}.".PHP_EOL.PHP_EOL.$e->getMessage());
             }
 
             $this->assertHeader('Content-Type', 'application/vnd.api+json')->assertStatus(422);
@@ -53,15 +52,15 @@ class JsonApiTestResponse
             return $this->assertJson([
                 'data' => [
                     'type' => $model->getResourceType(),
-                    'id' => (string)$model->getRouteKey(),
+                    'id' => (string) $model->getRouteKey(),
                     'attributes' => $attributes,
                     'links' => [
-                        'self' => route('api.v1.' . $model->getResourceType() . '.show', $model)
-                    ]
+                        'self' => route('api.v1.'.$model->getResourceType().'.show', $model),
+                    ],
                 ],
             ])->assertHeader(
                 'Location',
-                route('api.v1.' . $model->getResourceType() . '.show', $model)
+                route('api.v1.'.$model->getResourceType().'.show', $model)
             );
         };
     }
@@ -73,9 +72,9 @@ class JsonApiTestResponse
             foreach ($relationships as $relationship) {
                 $this->assertJsonFragment([
                     'links' => [
-                        'self' => route('api.v1.' . $model->getResourceType() . '.relationships.' . $relationship, $model),
-                        'related' => route('api.v1.' . $model->getResourceType() . '.' . $relationship, $model)
-                    ]
+                        'self' => route('api.v1.'.$model->getResourceType().'.relationships.'.$relationship, $model),
+                        'related' => route('api.v1.'.$model->getResourceType().'.'.$relationship, $model),
+                    ],
                 ]);
             }
 
@@ -91,16 +90,16 @@ class JsonApiTestResponse
                 'data' => [
                     '*' => [
                         'attributes' => $attributesKeys,
-                    ]
-                ]
+                    ],
+                ],
             ]);
             foreach ($models as $model) {
                 $this->assertJsonFragment([
-                    'id' => (string)$model->getRouteKey(),
+                    'id' => (string) $model->getRouteKey(),
                     'type' => $model->getResourceType(),
                     'links' => [
-                        'self' => route('api.v1.' . $model->getResourceType() . '.show', $model)
-                    ]
+                        'self' => route('api.v1.'.$model->getResourceType().'.show', $model),
+                    ],
                 ]);
             }
 
@@ -115,19 +114,19 @@ class JsonApiTestResponse
             try {
                 $this->assertJsonStructure([
                     'errors' => [
-                        '*' => ['title', 'detail']
-                    ]
+                        '*' => ['title', 'detail'],
+                    ],
                 ]);
             } catch (ExpectationFailedException $e) {
                 PHPUnit::fail(
                     'Error objects MUST be returned as an array keyed by errors in the lop level of a JSON API document.'
-                    . PHP_EOL . PHP_EOL . $e->getMessage()
+                    .PHP_EOL.PHP_EOL.$e->getMessage()
                 );
             }
 
             $title && $this->assertJsonFragment(['title' => $title]);
             $detail && $this->assertJsonFragment(['detail' => $detail]);
-            $status && $this->assertJsonFragment(['status' => (string)$status])->assertStatus((int) $status);
+            $status && $this->assertJsonFragment(['status' => (string) $status])->assertStatus((int) $status);
 
             return $this;
         };

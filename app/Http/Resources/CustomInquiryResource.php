@@ -12,7 +12,7 @@ class CustomInquiryResource extends JsonResource
     public function toJsonApi(): array
     {
         $user = $this->resource->user; // puede ser null (lead anónimo desde la web)
-        $userName = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : null;
+        $userName = $user ? trim(($user->first_name ?? '').' '.($user->last_name ?? '')) : null;
 
         return [
             'user_id' => $this->resource->user_id,

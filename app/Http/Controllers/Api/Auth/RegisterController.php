@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
-use App\Models\User;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -30,13 +30,13 @@ class RegisterController extends Controller
         $user->sendEmailVerificationNotification();
 
         return response()->json([
-           'data' => [
-               'type' => 'users',
-               'attributes' => [
-                   'status' => true,
-                   'message' => 'message.recordCreated',
-               ],
-           ]
+            'data' => [
+                'type' => 'users',
+                'attributes' => [
+                    'status' => true,
+                    'message' => 'message.recordCreated',
+                ],
+            ],
         ], 201);
     }
 
@@ -50,7 +50,7 @@ class RegisterController extends Controller
 
         $username = $base;
         while (User::query()->where('username', $username)->exists()) {
-            $username = $base . random_int(100, 9999);
+            $username = $base.random_int(100, 9999);
         }
 
         return $username;

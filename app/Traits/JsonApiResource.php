@@ -19,14 +19,14 @@ trait JsonApiResource
      */
     public function toArray(Request $request): array
     {
-        $showRoute = 'api.v1.' .  $this->resource->getResourceType() . '.show';
+        $showRoute = 'api.v1.'.$this->resource->getResourceType().'.show';
         $links = [];
 
         if (Route::has($showRoute)) {
             $links['self'] = route($showRoute, $this->resource);
         }
 
-        if($request->filled('include')){
+        if ($request->filled('include')) {
             $this->with['included'] = [];
             foreach ($this->getIncludes() as $resource) {
                 if ($resource->resource instanceof MissingValue) {
@@ -55,7 +55,7 @@ trait JsonApiResource
 
     public function withResponse($request, $response)
     {
-        $showRoute = 'api.v1.' . $this->getResourceType() . '.show';
+        $showRoute = 'api.v1.'.$this->getResourceType().'.show';
 
         if (Route::has($showRoute)) {
             $response->header(
@@ -72,7 +72,7 @@ trait JsonApiResource
                 return true;
             }
 
-            $fields = explode(',', request('fields.' . $this->getResourceType()));
+            $fields = explode(',', request('fields.'.$this->getResourceType()));
 
             if ($value === $this->getRouteKey()) {
                 return in_array($this->getRouteKeyName(), $fields);
@@ -86,7 +86,7 @@ trait JsonApiResource
     {
         $collection = parent::collection($resources);
 
-        if(request()->filled('include')){
+        if (request()->filled('include')) {
             $included = [];
             foreach ($resources as $resource) {
                 foreach ($resource->getIncludes() as $include) {
@@ -100,7 +100,7 @@ trait JsonApiResource
         }
 
         $collection->with['links'] = [
-            'self' => $resources->path()
+            'self' => $resources->path(),
         ];
 
         return $collection;

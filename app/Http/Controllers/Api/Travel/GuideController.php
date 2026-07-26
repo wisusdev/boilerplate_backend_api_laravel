@@ -57,9 +57,9 @@ class GuideController extends Controller
     {
         return [
             'type' => 'guides',
-            'id'   => (string) $user->id,
+            'id' => (string) $user->id,
             'attributes' => [
-                'name'  => trim($user->first_name . ' ' . $user->last_name) ?: $user->username,
+                'name' => trim($user->first_name.' '.$user->last_name) ?: $user->username,
                 'email' => $user->email,
             ],
         ];

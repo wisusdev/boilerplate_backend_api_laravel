@@ -2,21 +2,23 @@
 
 namespace Tests\Feature\Base;
 
+use App\Models\ExpenseCategory;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class InstallTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function req(string $method, string $uri, array $payload = []): \Illuminate\Testing\TestResponse
+    private function req(string $method, string $uri, array $payload = []): TestResponse
     {
         return $this->call($method, $uri, [], [], [], [
-            'HTTP_ACCEPT'  => 'application/json',
+            'HTTP_ACCEPT' => 'application/json',
             'CONTENT_TYPE' => 'application/json',
         ], $payload ? json_encode($payload) : null);
     }
@@ -24,15 +26,15 @@ class InstallTest extends TestCase
     private function payload(array $overrides = []): array
     {
         return array_merge([
-            'first_name'            => 'Jesus',
-            'last_name'             => 'Avelar',
-            'email'                 => 'admin@cusgo.test',
-            'password'              => 'secret123',
+            'first_name' => 'Jesus',
+            'last_name' => 'Avelar',
+            'email' => 'admin@cusgo.test',
+            'password' => 'secret123',
             'password_confirmation' => 'secret123',
-            'site_name'             => 'Cusgo Adventures',
-            'contact_email'         => 'info@cusgo.test',
-            'currency'              => 'USD',
-            'timezone'              => 'America/Lima',
+            'site_name' => 'Cusgo Adventures',
+            'contact_email' => 'info@cusgo.test',
+            'currency' => 'USD',
+            'timezone' => 'America/Lima',
         ], $overrides);
     }
 
@@ -40,11 +42,11 @@ class InstallTest extends TestCase
     {
         Role::findOrCreate('admin', 'api');
         $user = User::create([
-            'username'   => 'existing',
+            'username' => 'existing',
             'first_name' => 'Ex',
-            'last_name'  => 'Ist',
-            'email'      => 'existing@cusgo.test',
-            'password'   => bcrypt('secret123'),
+            'last_name' => 'Ist',
+            'email' => 'existing@cusgo.test',
+            'password' => bcrypt('secret123'),
         ]);
         $user->assignRole('admin');
 
@@ -128,7 +130,7 @@ class InstallTest extends TestCase
         $this->assertGreaterThan(0, Permission::count());
         $this->assertTrue(Role::where('name', 'admin')->exists());
         $this->assertTrue(Role::where('name', 'guia')->exists());
-        $this->assertGreaterThan(0, \App\Models\ExpenseCategory::count());
+        $this->assertGreaterThan(0, ExpenseCategory::count());
 
         // El admin recibió TODOS los permisos (p. ej. el que rompía /admin/users).
         $admin = User::where('email', 'admin@cusgo.test')->firstOrFail();
@@ -164,14 +166,14 @@ class InstallTest extends TestCase
     public function test_artisan_command_installs(): void
     {
         $this->artisan('app:install', [
-            '--first-name'    => 'Jesus',
-            '--last-name'     => 'Avelar',
-            '--email'         => 'cli@cusgo.test',
-            '--password'      => 'secret123',
-            '--site-name'     => 'Cusgo CLI',
+            '--first-name' => 'Jesus',
+            '--last-name' => 'Avelar',
+            '--email' => 'cli@cusgo.test',
+            '--password' => 'secret123',
+            '--site-name' => 'Cusgo CLI',
             '--contact-email' => 'cli-info@cusgo.test',
-            '--currency'      => 'PEN',
-            '--timezone'      => 'America/Lima',
+            '--currency' => 'PEN',
+            '--timezone' => 'America/Lima',
         ])->assertExitCode(0);
 
         $admin = User::where('email', 'cli@cusgo.test')->firstOrFail();

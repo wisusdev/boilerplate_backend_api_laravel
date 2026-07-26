@@ -94,14 +94,14 @@ class SubscriberController extends Controller
                     'Nuevo suscriptor a ofertas',
                     'Un nuevo lead se ha suscrito para recibir ofertas.',
                     [
-                        'email'  => $subscriber->email,
-                        'name'   => $subscriber->name ?? '—',
+                        'email' => $subscriber->email,
+                        'name' => $subscriber->name ?? '—',
                         'source' => $subscriber->source ?? '—',
                     ]
                 ));
             }
         } catch (\Throwable $e) {
-            Log::warning('No se pudieron enviar los correos de suscripción: ' . $e->getMessage(), [
+            Log::warning('No se pudieron enviar los correos de suscripción: '.$e->getMessage(), [
                 'subscriber_id' => $subscriber->id,
             ]);
         }
@@ -125,7 +125,7 @@ class SubscriberController extends Controller
 
         return response()->json([
             'data' => [
-                'type'       => 'subscribe_result',
+                'type' => 'subscribe_result',
                 'attributes' => ['unsubscribed' => true],
             ],
         ]);

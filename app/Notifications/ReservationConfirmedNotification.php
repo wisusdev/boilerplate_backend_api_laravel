@@ -11,9 +11,7 @@ class ReservationConfirmedNotification extends Notification implements ShouldQue
 {
     use Queueable;
 
-    public function __construct(private string $title, private string $body, private array $details = [])
-    {
-    }
+    public function __construct(private string $title, private string $body, private array $details = []) {}
 
     public function via(object $notifiable): array
     {
@@ -28,7 +26,7 @@ class ReservationConfirmedNotification extends Notification implements ShouldQue
             ->line($this->body);
 
         foreach ($this->details as $label => $value) {
-            $mail->line(ucfirst(str_replace('_', ' ', (string) $label)) . ': ' . (is_array($value) ? json_encode($value) : $value));
+            $mail->line(ucfirst(str_replace('_', ' ', (string) $label)).': '.(is_array($value) ? json_encode($value) : $value));
         }
 
         return $mail;

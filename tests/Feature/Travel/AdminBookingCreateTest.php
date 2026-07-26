@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Travel;
 
-use App\Models\Booking;
 use App\Models\Currency;
 use App\Models\Role;
 use App\Models\Tour;
@@ -27,10 +26,13 @@ class AdminBookingCreateTest extends TestCase
     private function makeUser(string $email, ?string $role = null): User
     {
         $u = User::create([
-            'username' => 'u' . uniqid(), 'first_name' => 'T', 'last_name' => 'U',
+            'username' => 'u'.uniqid(), 'first_name' => 'T', 'last_name' => 'U',
             'email' => $email, 'password' => bcrypt('password123'),
         ]);
-        if ($role) { $u->assignRole($role); }
+        if ($role) {
+            $u->assignRole($role);
+        }
+
         return $u;
     }
 
@@ -58,10 +60,10 @@ class AdminBookingCreateTest extends TestCase
 
         $res = $this->postBooking([
             'booking_type' => 'tour',
-            'tour_id'      => $tour->id,
+            'tour_id' => $tour->id,
             'booking_date' => now()->addDays(3)->toDateString(),
-            'pax_count'    => 2,
-            'customer'     => ['name' => 'Ana Pérez', 'email' => 'walkin@example.com', 'phone' => '+503 7000 0000'],
+            'pax_count' => 2,
+            'customer' => ['name' => 'Ana Pérez', 'email' => 'walkin@example.com', 'phone' => '+503 7000 0000'],
         ]);
 
         $res->assertStatus(201);
@@ -80,10 +82,10 @@ class AdminBookingCreateTest extends TestCase
 
         $res = $this->postBooking([
             'booking_type' => 'tour',
-            'tour_id'      => $tour->id,
+            'tour_id' => $tour->id,
             'booking_date' => now()->addDays(3)->toDateString(),
-            'pax_count'    => 1,
-            'customer'     => ['id' => $client->id],
+            'pax_count' => 1,
+            'customer' => ['id' => $client->id],
         ]);
 
         $res->assertStatus(201);
@@ -99,10 +101,10 @@ class AdminBookingCreateTest extends TestCase
 
         $res = $this->postBooking([
             'booking_type' => 'tour',
-            'tour_id'      => $tour->id,
+            'tour_id' => $tour->id,
             'booking_date' => now()->addDays(3)->toDateString(),
-            'pax_count'    => 1,
-            'customer'     => ['id' => $other->id],
+            'pax_count' => 1,
+            'customer' => ['id' => $other->id],
         ]);
 
         $res->assertStatus(201);

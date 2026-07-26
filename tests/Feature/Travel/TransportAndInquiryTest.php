@@ -2,9 +2,15 @@
 
 namespace Tests\Feature\Travel;
 
+use App\Models\Currency;
+use App\Models\Setting;
 use App\Models\TransportVehicle;
 use App\Models\User;
+use App\Notifications\AdminAlertNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -20,7 +26,7 @@ class TransportAndInquiryTest extends TestCase
         ];
     }
 
-    private function apiJson(string $method, string $uri, array $payload): \Illuminate\Testing\TestResponse
+    private function apiJson(string $method, string $uri, array $payload): TestResponse
     {
         return $this->call(
             $method,
@@ -81,20 +87,20 @@ class TransportAndInquiryTest extends TestCase
         // La reserva vive en la tabla unificada `bookings` (polimórfica)...
         $this->assertDatabaseHas('bookings', [
             'bookable_type' => TransportVehicle::class,
-            'bookable_id'   => $vehicle->id,
-            'user_id'       => $user->id,
+            'bookable_id' => $vehicle->id,
+            'user_id' => $user->id,
         ]);
         // ...y los campos específicos en la tabla de extensión 1:1.
         $this->assertDatabaseHas('transport_booking_details', [
-            'pickup_location'  => 'Airport',
+            'pickup_location' => 'Airport',
             'dropoff_location' => 'Hotel',
-            'rental_type'      => 'hourly',
+            'rental_type' => 'hourly',
         ]);
     }
 
     public function test_custom_inquiry_store_creates_record(): void
     {
-        \App\Models\Currency::create([
+        Currency::create([
             'code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$',
             'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
         ]);
@@ -133,15 +139,15 @@ class TransportAndInquiryTest extends TestCase
 
     public function test_inquiry_notifica_a_los_correos_configurados(): void
     {
-        \Illuminate\Support\Facades\Notification::fake();
-        \App\Models\Currency::create([
+        Notification::fake();
+        Currency::create([
             'code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$',
             'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
         ]);
 
         // Campo dedicado de notificaciones: admite uno o varios correos.
-        \App\Models\Setting::create([
-            'key'   => 'app',
+        Setting::create([
+            'key' => 'app',
             'value' => json_encode([
                 'contact_email' => 'publico@empresa.com',
                 'inquiry_notification_emails' => 'ventas@empresa.com, reservas@empresa.com',
@@ -156,9 +162,9 @@ class TransportAndInquiryTest extends TestCase
         ])->assertCreated();
 
         foreach (['ventas@empresa.com', 'reservas@empresa.com'] as $email) {
-            \Illuminate\Support\Facades\Notification::assertSentTo(
-                new \Illuminate\Notifications\AnonymousNotifiable,
-                \App\Notifications\AdminAlertNotification::class,
+            Notification::assertSentTo(
+                new AnonymousNotifiable,
+                AdminAlertNotification::class,
                 fn ($n, $channels, $notifiable) => $notifiable->routes['mail'] === $email
             );
         }
@@ -166,14 +172,14 @@ class TransportAndInquiryTest extends TestCase
 
     public function test_inquiry_usa_correo_publico_si_no_hay_dedicados(): void
     {
-        \Illuminate\Support\Facades\Notification::fake();
-        \App\Models\Currency::create([
+        Notification::fake();
+        Currency::create([
             'code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$',
             'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
         ]);
 
-        \App\Models\Setting::create([
-            'key'   => 'app',
+        Setting::create([
+            'key' => 'app',
             'value' => json_encode(['contact_email' => 'publico@empresa.com']),
         ]);
 
@@ -184,9 +190,9 @@ class TransportAndInquiryTest extends TestCase
             ],
         ])->assertCreated();
 
-        \Illuminate\Support\Facades\Notification::assertSentTo(
-            new \Illuminate\Notifications\AnonymousNotifiable,
-            \App\Notifications\AdminAlertNotification::class,
+        Notification::assertSentTo(
+            new AnonymousNotifiable,
+            AdminAlertNotification::class,
             fn ($n, $channels, $notifiable) => $notifiable->routes['mail'] === 'publico@empresa.com'
         );
     }

@@ -15,9 +15,9 @@ class VerifyEmailController extends Controller
     {
         $user = User::where('id', $request->route('id'))->first();
 
-        if (!$user) {
+        if (! $user) {
             throw ValidationException::withMessages([
-                'email' => ['validation.invalidEmail']
+                'email' => ['validation.invalidEmail'],
             ]);
         }
 
@@ -37,11 +37,11 @@ class VerifyEmailController extends Controller
     {
         if ($request->user()->hasVerifiedEmail()) {
             throw ValidationException::withMessages([
-                'email' => ['validation.emailAlreadyVerified']
+                'email' => ['validation.emailAlreadyVerified'],
             ]);
         }
 
-        $request->user()->notify(new VerifyEmail());
+        $request->user()->notify(new VerifyEmail);
 
         return response()->json(['message' => 'message.emailVerificationSent']);
     }

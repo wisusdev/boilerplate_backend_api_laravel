@@ -30,9 +30,9 @@ class ExpenseCategorySeeder extends Seeder
             ExpenseCategory::updateOrCreate(
                 ['slug' => Str::slug($category['name'])],
                 [
-                    'name'       => $category['name'],
-                    'icon'       => $category['icon'],
-                    'is_active'  => true,
+                    'name' => $category['name'],
+                    'icon' => $category['icon'],
+                    'is_active' => true,
                     'sort_order' => $i,
                 ]
             );

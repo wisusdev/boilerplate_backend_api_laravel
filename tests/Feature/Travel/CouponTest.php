@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Tour;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -25,22 +26,23 @@ class CouponTest extends TestCase
     private function makeUser(?string $role = null): User
     {
         $user = User::create([
-            'username'   => 'u' . uniqid(),
+            'username' => 'u'.uniqid(),
             'first_name' => 'Test',
-            'last_name'  => 'User',
-            'email'      => uniqid() . '@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'User',
+            'email' => uniqid().'@example.com',
+            'password' => bcrypt('password123'),
         ]);
         if ($role) {
             $user->assignRole($role);
         }
+
         return $user;
     }
 
-    private function apiJson(string $method, string $uri, array $payload = []): \Illuminate\Testing\TestResponse
+    private function apiJson(string $method, string $uri, array $payload = []): TestResponse
     {
         return $this->call($method, $uri, [], [], [], [
-            'HTTP_ACCEPT'  => 'application/vnd.api+json',
+            'HTTP_ACCEPT' => 'application/vnd.api+json',
             'CONTENT_TYPE' => 'application/vnd.api+json',
         ], $payload ? json_encode($payload) : null);
     }
@@ -123,10 +125,10 @@ class CouponTest extends TestCase
                 'type' => 'bookings',
                 'attributes' => [
                     'booking_type' => 'tour',
-                    'tour_id'      => $tour->id,
+                    'tour_id' => $tour->id,
                     'booking_date' => now()->addDays(5)->toDateString(),
-                    'pax_count'    => 2,
-                    'coupon_code'  => 'TEN',
+                    'pax_count' => 2,
+                    'coupon_code' => 'TEN',
                 ],
             ],
         ]);
@@ -154,13 +156,13 @@ class CouponTest extends TestCase
         ])->assertSuccessful()->json('data.id');
 
         // El dueño confirma la reserva → se genera la factura con el total descontado.
-        $this->apiJson('PATCH', '/api/v1/bookings/' . $booking, [
+        $this->apiJson('PATCH', '/api/v1/bookings/'.$booking, [
             'data' => ['id' => (string) $booking, 'type' => 'bookings', 'attributes' => ['status' => 'confirmed']],
         ])->assertOk();
 
         $this->assertDatabaseHas('invoices', [
             'booking_id' => $booking,
-            'amount'     => 180,
+            'amount' => 180,
         ]);
     }
 
@@ -180,7 +182,7 @@ class CouponTest extends TestCase
         $this->assertSame(1, (int) $coupon->fresh()->used_count);
 
         // Cancelar libera el uso.
-        $this->call('POST', '/api/v1/bookings/' . $booking . '/cancel', [], [], [], [
+        $this->call('POST', '/api/v1/bookings/'.$booking.'/cancel', [], [], [], [
             'HTTP_ACCEPT' => 'application/json',
         ])->assertOk();
 
@@ -198,10 +200,10 @@ class CouponTest extends TestCase
                 'type' => 'bookings',
                 'attributes' => [
                     'booking_type' => 'tour',
-                    'tour_id'      => $tour->id,
+                    'tour_id' => $tour->id,
                     'booking_date' => now()->addDays(5)->toDateString(),
-                    'pax_count'    => 2,
-                    'coupon_code'  => 'GRP',
+                    'pax_count' => 2,
+                    'coupon_code' => 'GRP',
                 ],
             ],
         ])->assertJsonApiValidationErrors('data.attributes.coupon_code');

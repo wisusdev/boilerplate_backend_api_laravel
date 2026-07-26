@@ -34,6 +34,7 @@ class RouteServiceProvider extends ServiceProvider
             if (app()->environment('testing')) {
                 return Limit::none();
             }
+
             return Limit::perMinute(6)->by($request->ip());
         });
 
@@ -43,6 +44,7 @@ class RouteServiceProvider extends ServiceProvider
             if (app()->environment('testing')) {
                 return Limit::none();
             }
+
             return [
                 Limit::perMinute(5)->by($request->ip()),
                 Limit::perHour(20)->by($request->ip()),
@@ -54,6 +56,7 @@ class RouteServiceProvider extends ServiceProvider
             if (app()->environment('testing')) {
                 return Limit::none();
             }
+
             return [
                 Limit::perMinute(3)->by($request->ip()),
                 Limit::perHour(10)->by($request->ip()),
@@ -66,6 +69,7 @@ class RouteServiceProvider extends ServiceProvider
                 return Limit::none();
             }
             $key = $request->user()?->id ?: $request->ip();
+
             return [
                 Limit::perMinute(2)->by($key),
                 Limit::perHour(6)->by($key),
@@ -77,6 +81,7 @@ class RouteServiceProvider extends ServiceProvider
             if (app()->environment('testing')) {
                 return Limit::none();
             }
+
             return [
                 Limit::perMinute(8)->by($request->ip()),
                 Limit::perHour(40)->by($request->ip()),

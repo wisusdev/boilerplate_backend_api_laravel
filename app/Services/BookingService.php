@@ -16,9 +16,7 @@ class BookingService
 {
     private array $handlers = [];
 
-    public function __construct(private readonly CouponService $couponService)
-    {
-    }
+    public function __construct(private readonly CouponService $couponService) {}
 
     public function registerHandler(string $type, BookingHandlerInterface $handler): void
     {
@@ -40,10 +38,10 @@ class BookingService
             if (! empty($data['coupon_code'])) {
                 $subtotal = (float) $prepared['total_price'];
                 $coupon = $this->couponService->validate($data['coupon_code'], [
-                    'user_id'      => $user->id,
+                    'user_id' => $user->id,
                     'booking_type' => $bookingType,
-                    'pax'          => (int) ($prepared['party_size'] ?? 0),
-                    'subtotal'     => $subtotal,
+                    'pax' => (int) ($prepared['party_size'] ?? 0),
+                    'subtotal' => $subtotal,
                 ]);
 
                 $discount = $coupon->discountFor($subtotal);
@@ -54,7 +52,7 @@ class BookingService
 
             $booking = Booking::create(array_merge($prepared, [
                 'user_id' => $user->id,
-                'status'  => Booking::STATUS_PENDING,
+                'status' => Booking::STATUS_PENDING,
             ]));
 
             if ($details !== null) {
@@ -103,18 +101,18 @@ class BookingService
                 $isTransport ? 'Your vehicle rental has been confirmed successfully.' : 'Your trip booking has been confirmed successfully.',
                 $isTransport ? [
                     'booking_id' => $booking->id,
-                    'vehicle'    => $booking->bookable?->title,
-                    'pickup_at'  => $booking->starts_at?->toDateTimeString(),
+                    'vehicle' => $booking->bookable?->title,
+                    'pickup_at' => $booking->starts_at?->toDateTimeString(),
                 ] : [
-                    'booking_id'   => $booking->id,
-                    'tour'         => $booking->bookable?->title,
+                    'booking_id' => $booking->id,
+                    'tour' => $booking->bookable?->title,
                     'booking_date' => $booking->starts_at?->toDateString(),
                 ]
             ));
 
             if ($booking->invoice) {
                 $booking->user->notify(new InvoiceCreatedNotification(
-                    'INV-' . str_pad((string) $booking->invoice->id, 6, '0', STR_PAD_LEFT),
+                    'INV-'.str_pad((string) $booking->invoice->id, 6, '0', STR_PAD_LEFT),
                     (string) $booking->invoice->amount
                 ));
             }
@@ -125,9 +123,9 @@ class BookingService
                 'Booking confirmed',
                 'A booking has been confirmed and may require back-office attention.',
                 [
-                    'booking_id'   => $booking->id,
+                    'booking_id' => $booking->id,
                     'booking_type' => $booking->booking_type,
-                    'bookable_id'  => $booking->bookable_id,
+                    'bookable_id' => $booking->bookable_id,
                 ]
             ));
         }

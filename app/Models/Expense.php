@@ -24,7 +24,7 @@ class Expense extends Model implements HasMedia
     ];
 
     protected $casts = [
-        'amount'   => 'decimal:2',
+        'amount' => 'decimal:2',
         'spent_at' => 'date',
     ];
 

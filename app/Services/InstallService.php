@@ -12,8 +12,8 @@ use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Spatie\Permission\PermissionRegistrar;
 use RuntimeException;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Instalador al estilo WordPress: crea el primer usuario administrador y
@@ -59,11 +59,11 @@ class InstallService
             $this->ensureBaseDataSeeded();
 
             $user = User::create([
-                'username'   => $this->generateUsername($data['email'] ?? $data['first_name'] ?? 'admin'),
+                'username' => $this->generateUsername($data['email'] ?? $data['first_name'] ?? 'admin'),
                 'first_name' => $data['first_name'],
-                'last_name'  => $data['last_name'],
-                'email'      => $data['email'],
-                'password'   => bcrypt($data['password']),
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'password' => bcrypt($data['password']),
             ]);
 
             // Marca el correo como verificado: el admin fundador no necesita verificación.
@@ -86,12 +86,12 @@ class InstallService
     private function ensureBaseDataSeeded(): void
     {
         if (Setting::query()->count() === 0) {
-            (new SettingSeeder())->run();
+            (new SettingSeeder)->run();
         }
 
-        (new PermissionSeeder())->run();
-        (new RoleSeeder())->run();
-        (new ExpenseCategorySeeder())->run();
+        (new PermissionSeeder)->run();
+        (new RoleSeeder)->run();
+        (new ExpenseCategorySeeder)->run();
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
@@ -117,9 +117,15 @@ class InstallService
     private function storeSiteSettings(array $data): void
     {
         $app = $this->readSetting('app');
-        if (! empty($data['site_name']))    { $app['name'] = $data['site_name']; }
-        if (! empty($data['contact_email'])) { $app['email'] = $data['contact_email']; }
-        if (! empty($data['timezone']))     { $app['timezone'] = $data['timezone']; }
+        if (! empty($data['site_name'])) {
+            $app['name'] = $data['site_name'];
+        }
+        if (! empty($data['contact_email'])) {
+            $app['email'] = $data['contact_email'];
+        }
+        if (! empty($data['timezone'])) {
+            $app['timezone'] = $data['timezone'];
+        }
         $app['installed'] = true;
         $app['installed_at'] = now()->toIso8601String();
         Setting::updateOrCreate(['key' => 'app'], ['value' => json_encode($app)]);
@@ -150,7 +156,7 @@ class InstallService
 
         $username = $base;
         while (User::query()->where('username', $username)->exists()) {
-            $username = $base . random_int(100, 9999);
+            $username = $base.random_int(100, 9999);
         }
 
         return $username;

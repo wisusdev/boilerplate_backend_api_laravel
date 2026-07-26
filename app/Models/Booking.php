@@ -15,10 +15,13 @@ class Booking extends Model
     use HasFactory;
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_CONFIRMED = 'confirmed';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     public const TYPE_TOUR = 'tour';
+
     public const TYPE_TRANSPORT = 'transport';
 
     /**
@@ -27,7 +30,7 @@ class Booking extends Model
      * que ambos campos puedan desincronizarse.
      */
     public const BOOKABLE_MAP = [
-        self::TYPE_TOUR      => Tour::class,
+        self::TYPE_TOUR => Tour::class,
         self::TYPE_TRANSPORT => TransportVehicle::class,
     ];
 
@@ -54,10 +57,10 @@ class Booking extends Model
     ];
 
     protected $casts = [
-        'starts_at'    => 'datetime',
-        'ends_at'      => 'datetime',
-        'party_size'   => 'integer',
-        'total_price'  => 'decimal:2',
+        'starts_at' => 'datetime',
+        'ends_at' => 'datetime',
+        'party_size' => 'integer',
+        'total_price' => 'decimal:2',
         'service_fees' => 'array',
         'upgrade_surcharge' => 'decimal:2',
         'discount_amount' => 'decimal:2',

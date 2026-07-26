@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\DB;
 class UniqueSlugForBusiness implements ValidationRule
 {
     protected string $table;
+
     protected ?int $businessId;
+
     protected ?int $ignoreId;
 
     public function __construct(string $table, ?int $businessId = null, ?int $ignoreId = null)

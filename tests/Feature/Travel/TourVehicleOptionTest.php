@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Travel;
 
+use App\Models\Currency;
+use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TransportVehicle;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -13,10 +16,10 @@ class TourVehicleOptionTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function apiJson(string $method, string $uri, array $payload = []): \Illuminate\Testing\TestResponse
+    private function apiJson(string $method, string $uri, array $payload = []): TestResponse
     {
         return $this->call($method, $uri, [], [], [], [
-            'HTTP_ACCEPT'  => 'application/vnd.api+json',
+            'HTTP_ACCEPT' => 'application/vnd.api+json',
             'CONTENT_TYPE' => 'application/vnd.api+json',
         ], $payload ? json_encode($payload) : null);
     }
@@ -24,11 +27,11 @@ class TourVehicleOptionTest extends TestCase
     private function user(): User
     {
         return User::create([
-            'username'   => 'veh' . uniqid(),
+            'username' => 'veh'.uniqid(),
             'first_name' => 'Veh',
-            'last_name'  => 'Option',
-            'email'      => uniqid() . '@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'Option',
+            'email' => uniqid().'@example.com',
+            'password' => bcrypt('password123'),
         ]);
     }
 
@@ -63,7 +66,7 @@ class TourVehicleOptionTest extends TestCase
     {
         $tour = $this->tour(['booking_sections' => ['coupon' => false]]);
 
-        $response = $this->apiJson('GET', '/api/v1/tours/' . $tour->slug);
+        $response = $this->apiJson('GET', '/api/v1/tours/'.$tour->slug);
 
         $response->assertOk();
         $response->assertJsonPath('data.attributes.vehicle_options.2.name', 'Microbús');
@@ -101,11 +104,11 @@ class TourVehicleOptionTest extends TestCase
         $response->assertJsonPath('data.attributes.upgrade_vehicle_id', $microbusVehicleId);
         $response->assertJsonPath('data.attributes.upgrade_vehicle_title', 'Microbús');
         $this->assertDatabaseHas('bookings', [
-            'bookable_id'        => $tour->id,
+            'bookable_id' => $tour->id,
             'upgrade_vehicle_id' => $microbusVehicleId,
-            'upgrade_label'      => 'Microbús',
-            'upgrade_surcharge'  => 50,
-            'total_price'        => 250,
+            'upgrade_label' => 'Microbús',
+            'upgrade_surcharge' => 50,
+            'total_price' => 250,
         ]);
     }
 
@@ -130,8 +133,8 @@ class TourVehicleOptionTest extends TestCase
 
     public function test_admin_can_configure_vehicle_options_and_sections(): void
     {
-        \App\Models\Role::findOrCreate('admin', 'api');
-        \App\Models\Currency::create(['code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$', 'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true]);
+        Role::findOrCreate('admin', 'api');
+        Currency::create(['code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$', 'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true]);
         $admin = $this->user();
         $admin->assignRole('admin');
         Passport::actingAs($admin);

@@ -18,14 +18,14 @@ class TourCategoryController extends Controller
             ->get();
 
         return response()->json([
-            'data' => $categories->map(fn($c) => [
-                'id'         => (string) $c->id,
-                'type'       => 'tour_categories',
+            'data' => $categories->map(fn ($c) => [
+                'id' => (string) $c->id,
+                'type' => 'tour_categories',
                 'attributes' => [
-                    'name'       => $c->name,
-                    'slug'       => $c->slug,
-                    'color'      => $c->color,
-                    'is_active'  => $c->is_active,
+                    'name' => $c->name,
+                    'slug' => $c->slug,
+                    'color' => $c->color,
+                    'is_active' => $c->is_active,
                     'sort_order' => $c->sort_order,
                     'created_at' => $c->created_at,
                     'updated_at' => $c->updated_at,
@@ -39,9 +39,9 @@ class TourCategoryController extends Controller
         $attrs = $request->input('data.attributes', $request->all());
 
         $validated = validator($attrs, [
-            'name'       => 'required|string|max:100|unique:tour_categories,name',
-            'color'      => 'sometimes|nullable|string|max:20',
-            'is_active'  => 'sometimes|boolean',
+            'name' => 'required|string|max:100|unique:tour_categories,name',
+            'color' => 'sometimes|nullable|string|max:20',
+            'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
         ])->validate();
 
@@ -49,8 +49,8 @@ class TourCategoryController extends Controller
 
         return response()->json([
             'data' => [
-                'id'         => (string) $cat->id,
-                'type'       => 'tour_categories',
+                'id' => (string) $cat->id,
+                'type' => 'tour_categories',
                 'attributes' => $cat->only(['name', 'slug', 'color', 'is_active', 'sort_order', 'created_at', 'updated_at']),
             ],
         ], 201);
@@ -61,9 +61,9 @@ class TourCategoryController extends Controller
         $attrs = $request->input('data.attributes', $request->all());
 
         $validated = validator($attrs, [
-            'name'       => 'sometimes|string|max:100|unique:tour_categories,name,' . $tourCategory->id,
-            'color'      => 'sometimes|nullable|string|max:20',
-            'is_active'  => 'sometimes|boolean',
+            'name' => 'sometimes|string|max:100|unique:tour_categories,name,'.$tourCategory->id,
+            'color' => 'sometimes|nullable|string|max:20',
+            'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
         ])->validate();
 
@@ -71,8 +71,8 @@ class TourCategoryController extends Controller
 
         return response()->json([
             'data' => [
-                'id'         => (string) $tourCategory->id,
-                'type'       => 'tour_categories',
+                'id' => (string) $tourCategory->id,
+                'type' => 'tour_categories',
                 'attributes' => $tourCategory->only(['name', 'slug', 'color', 'is_active', 'sort_order', 'created_at', 'updated_at']),
             ],
         ]);
@@ -81,6 +81,7 @@ class TourCategoryController extends Controller
     public function destroy(TourCategory $tourCategory): JsonResponse
     {
         $tourCategory->delete();
+
         return response()->json(null, 204);
     }
 }

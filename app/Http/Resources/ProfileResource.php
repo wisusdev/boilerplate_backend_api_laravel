@@ -17,11 +17,11 @@ class ProfileResource extends JsonResource
                 'last_name' => $this->resource->last_name,
                 'username' => $this->resource->username,
                 'email' => $this->resource->email,
-                'avatar' => $this->resource->avatar ? asset('storage' . $this->resource->avatar) : null,
+                'avatar' => $this->resource->avatar ? asset('storage'.$this->resource->avatar) : null,
                 'language' => $this->resource->language,
                 'phone' => $this->resource->phone,
                 'phone_secondary' => $this->resource->phone_secondary,
-            ]
+            ],
         ];
     }
 }

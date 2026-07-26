@@ -20,47 +20,48 @@ class PaymentVerifyTest extends TestCase
     private function createAuthenticatedUser(): User
     {
         $user = User::create([
-            'username'   => 'verifier',
+            'username' => 'verifier',
             'first_name' => 'Verify',
-            'last_name'  => 'User',
-            'email'      => 'verifier@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'User',
+            'email' => 'verifier@example.com',
+            'password' => bcrypt('password123'),
         ]);
         Passport::actingAs($user);
+
         return $user;
     }
 
     private function createPendingPayment(User $user, string $gateway, string $transactionRef): Payment
     {
         $tour = Tour::create([
-            'title'        => 'Trekking Tour',
-            'description'  => 'Mountain walk',
-            'price'        => 60,
+            'title' => 'Trekking Tour',
+            'description' => 'Mountain walk',
+            'price' => 60,
             'max_capacity' => 6,
-            'location'     => 'Suchitoto',
+            'location' => 'Suchitoto',
             'currency_code' => 'USD',
-            'is_active'    => true,
+            'is_active' => true,
         ]);
 
         $booking = Booking::create([
             'bookable_type' => Tour::class,
-            'bookable_id'   => $tour->id,
-            'starts_at'     => '2026-11-01 00:00:00',
-            'party_size'    => 1,
-            'total_price'   => 60,
+            'bookable_id' => $tour->id,
+            'starts_at' => '2026-11-01 00:00:00',
+            'party_size' => 1,
+            'total_price' => 60,
             'currency_code' => 'USD',
-            'status'        => Booking::STATUS_PENDING,
-            'user_id'       => $user->id,
+            'status' => Booking::STATUS_PENDING,
+            'user_id' => $user->id,
         ]);
 
         return Payment::create([
-            'payable_type'          => Booking::class,
-            'payable_id'            => $booking->id,
-            'gateway'               => $gateway,
-            'method'                => $gateway,
-            'amount'                => 60.00,
-            'currency_code'         => 'USD',
-            'status'                => 'pending',
+            'payable_type' => Booking::class,
+            'payable_id' => $booking->id,
+            'gateway' => $gateway,
+            'method' => $gateway,
+            'amount' => 60.00,
+            'currency_code' => 'USD',
+            'status' => 'pending',
             'transaction_reference' => $transactionRef,
         ]);
     }
@@ -69,11 +70,11 @@ class PaymentVerifyTest extends TestCase
     {
         return [
             'data' => [
-                'type'       => 'payment-verify',
+                'type' => 'payment-verify',
                 'attributes' => [
-                    'gateway'    => $payment->gateway,
+                    'gateway' => $payment->gateway,
                     'payment_id' => $payment->id,
-                    'token'      => $token,
+                    'token' => $token,
                 ],
             ],
         ];
@@ -83,7 +84,7 @@ class PaymentVerifyTest extends TestCase
 
     public function test_verify_paypal_captura_orden_y_marca_pago_como_paid(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'paypal', 'PAYPAL_ORDER_777');
 
         $this->mock(PaypalService::class, function ($mock) {
@@ -91,9 +92,9 @@ class PaymentVerifyTest extends TestCase
                 ->once()
                 ->with('PAYPAL_ORDER_777')
                 ->andReturn([
-                    'id'     => 'CAPTURE_PAYPAL_001',
+                    'id' => 'CAPTURE_PAYPAL_001',
                     'status' => 'COMPLETED',
-                    'payer'  => ['email_address' => 'buyer@paypal.com'],
+                    'payer' => ['email_address' => 'buyer@paypal.com'],
                 ]);
         });
 
@@ -105,22 +106,22 @@ class PaymentVerifyTest extends TestCase
         $this->assertEquals('CAPTURE_PAYPAL_001', $attrs['transaction_reference']);
 
         $this->assertDatabaseHas('payments', [
-            'id'                    => $payment->id,
-            'status'                => 'paid',
+            'id' => $payment->id,
+            'status' => 'paid',
             'transaction_reference' => 'CAPTURE_PAYPAL_001',
         ]);
     }
 
     public function test_verify_paypal_retorna_failed_cuando_captura_no_es_completed(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'paypal', 'PAYPAL_ORDER_888');
 
         $this->mock(PaypalService::class, function ($mock) {
             $mock->shouldReceive('captureOrder')
                 ->once()
                 ->andReturn([
-                    'id'     => 'CAPTURE_PENDING',
+                    'id' => 'CAPTURE_PENDING',
                     'status' => 'PENDING', // no es COMPLETED
                 ]);
         });
@@ -131,14 +132,14 @@ class PaymentVerifyTest extends TestCase
         $this->assertEquals('failed', $response->json('data.attributes.status'));
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $payment->id,
+            'id' => $payment->id,
             'status' => 'pending', // no cambió
         ]);
     }
 
     public function test_verify_paypal_retorna_422_cuando_captura_lanza_excepcion(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'paypal', 'PAYPAL_ORDER_ERR');
 
         $this->mock(PaypalService::class, function ($mock) {
@@ -157,7 +158,7 @@ class PaymentVerifyTest extends TestCase
 
     public function test_verify_stripe_marca_pago_como_paid_sin_llamada_externa(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'stripe', 'pi_test_intent_123');
 
         // Stripe no debería hacer ninguna llamada HTTP desde el servidor
@@ -169,14 +170,14 @@ class PaymentVerifyTest extends TestCase
         $this->assertEquals('paid', $attrs['status']);
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $payment->id,
+            'id' => $payment->id,
             'status' => 'paid',
         ]);
     }
 
     public function test_verify_stripe_actualiza_paid_at(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'stripe', 'pi_test_456');
 
         $this->assertNull($payment->paid_at);
@@ -190,7 +191,7 @@ class PaymentVerifyTest extends TestCase
 
     public function test_verify_wompi_marca_pago_como_paid_tras_3ds(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'wompi', 'WOMPI_TXN_444');
 
         $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'WOMPI_TXN_444'));
@@ -199,7 +200,7 @@ class PaymentVerifyTest extends TestCase
         $this->assertEquals('paid', $response->json('data.attributes.status'));
 
         $this->assertDatabaseHas('payments', [
-            'id'     => $payment->id,
+            'id' => $payment->id,
             'status' => 'paid',
         ]);
     }
@@ -221,11 +222,11 @@ class PaymentVerifyTest extends TestCase
 
         $response = $this->postJsonApi('/api/v1/payments/verify', [
             'data' => [
-                'type'       => 'payment-verify',
+                'type' => 'payment-verify',
                 'attributes' => [
-                    'gateway'    => 'stripe',
+                    'gateway' => 'stripe',
                     'payment_id' => 99999,
-                    'token'      => 'some_token',
+                    'token' => 'some_token',
                 ],
             ],
         ]);
@@ -235,7 +236,7 @@ class PaymentVerifyTest extends TestCase
 
     public function test_verify_devuelve_id_del_pago_en_respuesta(): void
     {
-        $user    = $this->createAuthenticatedUser();
+        $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'stripe', 'pi_abc');
 
         $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'pi_abc'));

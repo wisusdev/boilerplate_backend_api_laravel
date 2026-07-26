@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Travel;
 
+use App\Models\Currency;
 use App\Models\Role;
 use App\Models\Tour;
+use App\Models\TourCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -21,7 +24,7 @@ class TourCatalogTest extends TestCase
         ];
     }
 
-    private function apiJson(string $method, string $uri, array $payload): \Illuminate\Testing\TestResponse
+    private function apiJson(string $method, string $uri, array $payload): TestResponse
     {
         return $this->call(
             $method,
@@ -69,7 +72,7 @@ class TourCatalogTest extends TestCase
     private function makeTour(array $attrs = []): Tour
     {
         return Tour::create(array_merge([
-            'title' => 'Tour ' . uniqid(),
+            'title' => 'Tour '.uniqid(),
             'description' => 'Desc',
             'price' => 100,
             'max_capacity' => 10,
@@ -96,14 +99,14 @@ class TourCatalogTest extends TestCase
 
     public function test_index_filtra_por_categoria(): void
     {
-        $playa = \App\Models\TourCategory::create(['name' => 'Playa', 'is_active' => true]);
-        $volcan = \App\Models\TourCategory::create(['name' => 'Volcanes', 'is_active' => true]);
+        $playa = TourCategory::create(['name' => 'Playa', 'is_active' => true]);
+        $volcan = TourCategory::create(['name' => 'Volcanes', 'is_active' => true]);
 
         $this->makeTour(['title' => 'Surf', 'category_id' => $playa->id]);
         $this->makeTour(['title' => 'Cráter', 'category_id' => $volcan->id]);
 
         $response = $this->withHeaders($this->apiHeaders())
-            ->get('/api/v1/tours?filter[categoryId]=' . $playa->id);
+            ->get('/api/v1/tours?filter[categoryId]='.$playa->id);
 
         $response->assertOk();
         $response->assertJsonFragment(['title' => 'Surf']);
@@ -160,7 +163,7 @@ class TourCatalogTest extends TestCase
 
     public function test_store_creates_a_tour(): void
     {
-        \App\Models\Currency::create([
+        Currency::create([
             'code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$',
             'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
         ]);

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use App\Models\User;
 
 class SocialAuthController extends Controller
 {
@@ -37,7 +37,7 @@ class SocialAuthController extends Controller
 
             return response()->json([
                 'access_token' => $token,
-                'user' => $user
+                'user' => $user,
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Invalid token'], 401);
@@ -65,18 +65,19 @@ class SocialAuthController extends Controller
     private function verifyGoogleToken($token): array
     {
         $response = Http::get('https://www.googleapis.com/oauth2/v2/userinfo', [
-            'access_token' => $token
+            'access_token' => $token,
         ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception('Invalid Google token');
         }
 
         $data = $response->json();
+
         return [
             'email' => $data['email'],
             'name' => $data['name'],
-            'provider_id' => $data['id']
+            'provider_id' => $data['id'],
         ];
     }
 
@@ -87,17 +88,18 @@ class SocialAuthController extends Controller
     {
         $response = Http::get('https://graph.facebook.com/me', [
             'access_token' => $token,
-            'fields' => 'id,name,email'
+            'fields' => 'id,name,email',
         ]);
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception('Invalid Facebook token');
         }
 
         $data = $response->json();
+
         return [
             'email' => $data['email'],
             'name' => $data['name'],
-            'provider_id' => $data['id']
+            'provider_id' => $data['id'],
         ];
 
     }

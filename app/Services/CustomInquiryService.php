@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\Models\CustomInquiry;
 use App\Models\Setting;
+use App\Models\User;
 use App\Notifications\AdminAlertNotification;
 use Illuminate\Support\Facades\Notification;
-use App\Models\User;
 
 class CustomInquiryService
 {
@@ -62,8 +62,7 @@ class CustomInquiryService
             }
         }
 
-        $emails = array_values(array_unique(array_filter(array_merge($settingsEmails, $configEmails), fn ($email) =>
-            is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL)
+        $emails = array_values(array_unique(array_filter(array_merge($settingsEmails, $configEmails), fn ($email) => is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL)
         )));
 
         return $emails;

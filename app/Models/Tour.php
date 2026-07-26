@@ -14,7 +14,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class Tour extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, HasProductReviews;
+    use HasFactory, HasProductReviews, InteractsWithMedia;
 
     protected $fillable = [
         'title',
@@ -121,6 +121,7 @@ class Tour extends Model implements HasMedia
             $slug = "{$base}-{$i}";
             $i++;
         }
+
         return $slug;
     }
 
@@ -203,6 +204,7 @@ class Tour extends Model implements HasMedia
     public function unitPriceFor(int $pax): float
     {
         $pct = $this->tierDiscountPercent($pax);
+
         return round($this->effectiveUnitPrice() * (1 - $pct / 100), 2);
     }
 
@@ -220,10 +222,11 @@ class Tour extends Model implements HasMedia
             if (! is_array($opt) || trim((string) ($opt['name'] ?? '')) === '') {
                 return null;
             }
+
             return [
                 'vehicle_id' => isset($opt['vehicle_id']) && $opt['vehicle_id'] !== '' ? (int) $opt['vehicle_id'] : null,
-                'name'       => (string) $opt['name'],
-                'surcharge'  => round((float) ($opt['surcharge'] ?? 0), 2),
+                'name' => (string) $opt['name'],
+                'surcharge' => round((float) ($opt['surcharge'] ?? 0), 2),
             ];
         }, $options)));
     }
@@ -234,6 +237,7 @@ class Tour extends Model implements HasMedia
     public function sectionVisible(string $key): bool
     {
         $sections = is_array($this->booking_sections) ? $this->booking_sections : [];
+
         return ! array_key_exists($key, $sections) || (bool) $sections[$key];
     }
 

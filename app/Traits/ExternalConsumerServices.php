@@ -2,21 +2,11 @@
 
 namespace App\Traits;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
-
 trait ExternalConsumerServices
 {
-	/**
-	 * Make a request to an external service
-	 *
-	 * @param string $method
-	 * @param string $requestUri
-	 * @param array $body
-	 * @param array $header
-	 * @param bool $isJson
-	 * @return string
-	 */
+    /**
+     * Make a request to an external service
+     */
     public function makeRequest(string $method, string $requestUri, array $body = [], array $header = [], bool $isJson = false): string
     {
         $curl = curl_init();
@@ -37,13 +27,13 @@ trait ExternalConsumerServices
         curl_setopt_array($curl, $curlOptions);
 
         $response = curl_exec($curl);
-		$curlInfo = curl_getinfo($curl);
+        $curlInfo = curl_getinfo($curl);
         curl_close($curl);
 
-		$responseArray = json_decode($response, true);
-		$responseArray['http_code'] = $curlInfo['http_code'];
-		logs()->info("response of $requestUri", $responseArray);
+        $responseArray = json_decode($response, true);
+        $responseArray['http_code'] = $curlInfo['http_code'];
+        logs()->info("response of $requestUri", $responseArray);
 
-		return json_encode($responseArray);
+        return json_encode($responseArray);
     }
 }

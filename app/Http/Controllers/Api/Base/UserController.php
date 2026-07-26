@@ -7,9 +7,9 @@ use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
@@ -22,8 +22,8 @@ class UserController extends Controller
         $this->authorize('index', User::class);
 
         $users = User::query()
-			->allowedFilters(['first_name', 'last_name', 'email', 'username'])
-			->allowedSorts(['id', 'first_name', 'last_name', 'email', 'username'])
+            ->allowedFilters(['first_name', 'last_name', 'email', 'username'])
+            ->allowedSorts(['id', 'first_name', 'last_name', 'email', 'username'])
             ->sparseFieldset()
             ->jsonPaginate();
 
@@ -52,6 +52,7 @@ class UserController extends Controller
     public function show(User $user): UserResource
     {
         $this->authorize('show', $user);
+
         return UserResource::make($user);
     }
 
@@ -69,13 +70,13 @@ class UserController extends Controller
             'email' => $request->input('data.attributes.email'),
         ];
 
-        if ($request->has('data.attributes.password') && !empty($request->input('data.attributes.password'))) {
+        if ($request->has('data.attributes.password') && ! empty($request->input('data.attributes.password'))) {
             $data['password'] = $request->input('data.attributes.password');
         }
 
         $user->update($data);
 
-        if($user->email !== $request->input('data.attributes.email')) {
+        if ($user->email !== $request->input('data.attributes.email')) {
             $user->email_verified_at = null;
             $user->save(['timestamps' => false]);
             $user->sendEmailVerificationNotification();
@@ -98,8 +99,8 @@ class UserController extends Controller
 
         // Elimina también los refresh tokens si los estás usando
         DB::table('oauth_refresh_tokens')
-        ->whereIn('access_token_id', $user->tokens()->pluck('id'))
-        ->delete();
+            ->whereIn('access_token_id', $user->tokens()->pluck('id'))
+            ->delete();
 
         // Elimina el usuario
         $user->delete();

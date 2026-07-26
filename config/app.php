@@ -1,5 +1,10 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\AuthServiceProvider;
+use App\Providers\EventServiceProvider;
+use App\Providers\JsonApiServiceProvider;
+use App\Providers\RouteServiceProvider;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
 
@@ -56,11 +61,11 @@ return [
     */
 
     'url' => env('APP_URL', 'http://localhost'),
-	'frontend_url' => env('APP_FRONT_URL', 'http://localhost:4200'),
+    'frontend_url' => env('APP_FRONT_URL', 'http://localhost:4200'),
 
     'asset_url' => env('ASSET_URL'),
 
-	'destination_path' => '/uploads/' . date('Y') . '/' . date('m') . '/' . date('d'),
+    'destination_path' => '/uploads/'.date('Y').'/'.date('m').'/'.date('d'),
 
     /*
     |--------------------------------------------------------------------------
@@ -166,12 +171,12 @@ return [
         /*
          * Application Service Providers...
          */
-        App\Providers\AppServiceProvider::class,
-        App\Providers\AuthServiceProvider::class,
+        AppServiceProvider::class,
+        AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,
-        App\Providers\RouteServiceProvider::class,
-        App\Providers\JsonApiServiceProvider::class,
+        EventServiceProvider::class,
+        RouteServiceProvider::class,
+        JsonApiServiceProvider::class,
     ])->toArray(),
 
     /*

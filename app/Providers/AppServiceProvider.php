@@ -16,6 +16,7 @@ class AppServiceProvider extends ServiceProvider
             $service = new BookingService($app->make(CouponService::class));
             $service->registerHandler('tour', $app->make(TourBookingHandler::class));
             $service->registerHandler('transport', $app->make(TransportBookingHandler::class));
+
             return $service;
         });
     }

@@ -14,6 +14,7 @@ use App\Models\Setting;
 class SiteSettings
 {
     private static ?array $app = null;
+
     private static ?array $pg = null;
 
     /** Moneda global (código ISO, p. ej. "USD"). */

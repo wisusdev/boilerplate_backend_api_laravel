@@ -25,17 +25,17 @@ class GalleryController extends Controller
     {
         if ($request->hasFile('images')) {
             $request->validate([
-                'images'   => ['required', 'array', 'min:1', 'max:20'],
+                'images' => ['required', 'array', 'min:1', 'max:20'],
                 'images.*' => ['required', 'image', 'max:10240'],
-                'caption'  => ['nullable', 'string', 'max:255'],
+                'caption' => ['nullable', 'string', 'max:255'],
             ]);
 
             $nextOrder = (int) (GalleryItem::max('sort_order') ?? 0) + 1;
-            $created   = collect();
+            $created = collect();
 
             foreach ($request->file('images') as $file) {
                 $item = GalleryItem::create([
-                    'caption'    => $request->input('caption') ?? null,
+                    'caption' => $request->input('caption') ?? null,
                     'sort_order' => $nextOrder++,
                 ]);
 
@@ -47,13 +47,13 @@ class GalleryController extends Controller
         }
 
         $validated = $request->validate([
-            'image'      => ['required', 'image', 'max:10240'],
-            'caption'    => ['nullable', 'string', 'max:255'],
+            'image' => ['required', 'image', 'max:10240'],
+            'caption' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $item = GalleryItem::create([
-            'caption'    => $validated['caption'] ?? null,
+            'caption' => $validated['caption'] ?? null,
             'sort_order' => $validated['sort_order'] ?? (int) (GalleryItem::max('sort_order') ?? 0) + 1,
         ]);
 

@@ -18,9 +18,9 @@ class UnauthorizedException extends Exception
                 [
                     'title' => 'Unauthorized',
                     'detail' => 'You are not authorized to access this resource.',
-                    'status' => '403'
-                ]
-            ]
+                    'status' => '403',
+                ],
+            ],
         ], 403);
     }
 }

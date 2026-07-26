@@ -55,12 +55,11 @@ php:lint:
   script:
     - find app config database routes tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
 
-# Estilo de código con Laravel Pint. Informativo (allow_failure) porque hay
-# deuda de estilo previa; el objetivo es visibilizarla sin bloquear el pipeline.
+# Estilo de código con Laravel Pint (bloqueante). Ejecuta `vendor/bin/pint` en
+# local para autocorregir antes de subir.
 pint:
   extends: .php-base
   stage: lint
-  allow_failure: true
   script:
     - vendor/bin/pint --test
 

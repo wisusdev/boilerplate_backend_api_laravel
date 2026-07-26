@@ -8,9 +8,7 @@ use Illuminate\Http\JsonResponse;
 
 class FinanceController extends Controller
 {
-    public function __construct(private readonly ProfitabilityService $profitability)
-    {
-    }
+    public function __construct(private readonly ProfitabilityService $profitability) {}
 
     /**
      * Dashboard de rentabilidad: totales, ranking por tour y datos de gráficos.
@@ -19,7 +17,7 @@ class FinanceController extends Controller
     {
         return response()->json([
             'data' => [
-                'type'       => 'finance-summary',
+                'type' => 'finance-summary',
                 'attributes' => $this->profitability->summary(),
             ],
         ]);

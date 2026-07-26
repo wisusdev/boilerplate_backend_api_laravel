@@ -27,10 +27,10 @@ class UserSeeder extends Seeder
         $admin = User::firstOrCreate(
             ['email' => 'admin@cusgo.com'],
             [
-                'username'          => 'admin',
-                'first_name'        => 'Admin',
-                'last_name'         => 'Cusgo',
-                'password'          => bcrypt('password123'),
+                'username' => 'admin',
+                'first_name' => 'Admin',
+                'last_name' => 'Cusgo',
+                'password' => bcrypt('password123'),
                 'email_verified_at' => now(),
             ]
         );

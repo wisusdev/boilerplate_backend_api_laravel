@@ -14,7 +14,7 @@ class ProductReviewResource extends JsonResource
     {
         $user = $this->resource->user;
         $displayName = $user
-            ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->username ?? 'Usuario')
+            ? trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: ($user->username ?? 'Usuario')
             : 'Usuario';
 
         // Devuelve el tipo corto (tour|transport) en lugar del FQCN.
@@ -26,17 +26,17 @@ class ProductReviewResource extends JsonResource
             : null;
 
         return [
-            'rating'           => $this->resource->rating,
-            'comment'          => $this->resource->comment,
-            'is_approved'      => $this->resource->is_approved,
-            'admin_reply'      => $this->resource->admin_reply,
-            'replied_at'       => $this->resource->replied_at,
-            'user_name'        => $displayName,
-            'reviewable_type'  => $shortType,
-            'reviewable_id'    => $this->resource->reviewable_id,
+            'rating' => $this->resource->rating,
+            'comment' => $this->resource->comment,
+            'is_approved' => $this->resource->is_approved,
+            'admin_reply' => $this->resource->admin_reply,
+            'replied_at' => $this->resource->replied_at,
+            'user_name' => $displayName,
+            'reviewable_type' => $shortType,
+            'reviewable_id' => $this->resource->reviewable_id,
             'reviewable_title' => $reviewableTitle,
-            'created_at'       => $this->resource->created_at,
-            'updated_at'       => $this->resource->updated_at,
+            'created_at' => $this->resource->created_at,
+            'updated_at' => $this->resource->updated_at,
         ];
     }
 }

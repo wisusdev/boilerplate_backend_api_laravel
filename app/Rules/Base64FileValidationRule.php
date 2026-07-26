@@ -8,6 +8,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 class Base64FileValidationRule implements ValidationRule
 {
     private array $allowedMimeTypes;
+
     private int $maxSize;
 
     public function __construct(array $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], int $maxSize = 2048)
@@ -24,8 +25,9 @@ class Base64FileValidationRule implements ValidationRule
         }
 
         // Verificar formato base64 con data URI
-        if (!preg_match('/^data:([a-zA-Z0-9][a-zA-Z0-9\/+]*);base64,(.+)$/', $value, $matches)) {
+        if (! preg_match('/^data:([a-zA-Z0-9][a-zA-Z0-9\/+]*);base64,(.+)$/', $value, $matches)) {
             $fail(__('validation.invalid_base64_format', ['attribute' => $attribute]));
+
             return;
         }
 
@@ -33,11 +35,12 @@ class Base64FileValidationRule implements ValidationRule
         $base64Data = $matches[2];
 
         // Verificar tipo MIME
-        if (!in_array($mimeType, $this->allowedMimeTypes)) {
+        if (! in_array($mimeType, $this->allowedMimeTypes)) {
             $fail(__('validation.invalid_file_type', [
                 'attribute' => $attribute,
-                'allowed' => implode(', ', $this->allowedMimeTypes)
+                'allowed' => implode(', ', $this->allowedMimeTypes),
             ]));
+
             return;
         }
 
@@ -45,6 +48,7 @@ class Base64FileValidationRule implements ValidationRule
         $decodedData = base64_decode($base64Data, true);
         if ($decodedData === false || base64_encode($decodedData) !== $base64Data) {
             $fail(__('validation.invalid_base64', ['attribute' => $attribute]));
+
             return;
         }
 
@@ -53,8 +57,9 @@ class Base64FileValidationRule implements ValidationRule
         if ($fileSizeKB > $this->maxSize) {
             $fail(__('validation.file_too_large', [
                 'attribute' => $attribute,
-                'max' => $this->maxSize
+                'max' => $this->maxSize,
             ]));
+
             return;
         }
 
@@ -65,6 +70,7 @@ class Base64FileValidationRule implements ValidationRule
 
         if ($actualMimeType !== $mimeType) {
             $fail(__('validation.mime_type_mismatch', ['attribute' => $attribute]));
+
             return;
         }
     }

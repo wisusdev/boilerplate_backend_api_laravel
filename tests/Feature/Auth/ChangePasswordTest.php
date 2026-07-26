@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -13,10 +14,10 @@ class ChangePasswordTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function patchJsonApi(string $uri, array $data): \Illuminate\Testing\TestResponse
+    private function patchJsonApi(string $uri, array $data): TestResponse
     {
         return $this->call('PATCH', $uri, [], [], [], [
-            'HTTP_ACCEPT'  => 'application/vnd.api+json',
+            'HTTP_ACCEPT' => 'application/vnd.api+json',
             'CONTENT_TYPE' => 'application/vnd.api+json',
         ], json_encode($data));
     }
@@ -24,11 +25,11 @@ class ChangePasswordTest extends TestCase
     private function makeUser(string $password = 'OldPass123'): User
     {
         return User::create([
-            'username'   => 'changepw',
+            'username' => 'changepw',
             'first_name' => 'Change',
-            'last_name'  => 'Pw',
-            'email'      => 'changepw@example.com',
-            'password'   => $password, // el cast 'hashed' lo encripta
+            'last_name' => 'Pw',
+            'email' => 'changepw@example.com',
+            'password' => $password, // el cast 'hashed' lo encripta
         ]);
     }
 
@@ -41,10 +42,10 @@ class ChangePasswordTest extends TestCase
         // PATCH a un recurso singleton del usuario autenticado: sin data.id.
         $response = $this->patchJsonApi('/api/v1/account/change-password', [
             'data' => [
-                'type'       => 'change-password',
+                'type' => 'change-password',
                 'attributes' => [
-                    'current_password'      => 'OldPass123',
-                    'password'              => 'NewPass123',
+                    'current_password' => 'OldPass123',
+                    'password' => 'NewPass123',
                     'password_confirmation' => 'NewPass123',
                 ],
             ],
@@ -62,10 +63,10 @@ class ChangePasswordTest extends TestCase
 
         $response = $this->patchJsonApi('/api/v1/account/change-password', [
             'data' => [
-                'type'       => 'change-password',
+                'type' => 'change-password',
                 'attributes' => [
-                    'current_password'      => 'WrongPass123',
-                    'password'              => 'NewPass123',
+                    'current_password' => 'WrongPass123',
+                    'password' => 'NewPass123',
                     'password_confirmation' => 'NewPass123',
                 ],
             ],

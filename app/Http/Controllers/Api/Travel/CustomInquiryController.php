@@ -10,9 +10,7 @@ use App\Services\CustomInquiryService;
 
 class CustomInquiryController extends Controller
 {
-    public function __construct(private readonly CustomInquiryService $customInquiryService)
-    {
-    }
+    public function __construct(private readonly CustomInquiryService $customInquiryService) {}
 
     public function index()
     {

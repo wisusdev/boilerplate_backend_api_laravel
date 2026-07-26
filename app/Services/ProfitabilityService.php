@@ -18,7 +18,7 @@ class ProfitabilityService
      */
     public function summary(): array
     {
-        $incomeByTour   = $this->incomeByTour();          // [tour_id => income]
+        $incomeByTour = $this->incomeByTour();          // [tour_id => income]
         $expensesByTour = $this->expensesByTour();        // [tour_id => expenses]
         $generalExpenses = (float) Expense::whereNull('tour_id')->sum('amount');
 
@@ -42,14 +42,14 @@ class ProfitabilityService
         // Ordenado por margen, de mejor a peor.
         usort($rows, fn ($a, $b) => $b['margin'] <=> $a['margin']);
 
-        $totalIncome   = (float) collect($incomeByTour)->sum();
+        $totalIncome = (float) collect($incomeByTour)->sum();
         $totalExpenses = (float) Expense::sum('amount');
 
         return [
             'totals' => [
-                'income'   => round($totalIncome, 2),
+                'income' => round($totalIncome, 2),
                 'expenses' => round($totalExpenses, 2),
-                'margin'   => round($totalIncome - $totalExpenses, 2),
+                'margin' => round($totalIncome - $totalExpenses, 2),
             ],
             'tours' => $rows,
             'charts' => [
@@ -108,8 +108,8 @@ class ProfitabilityService
             ->orderByDesc('total')
             ->get()
             ->map(fn ($r) => [
-                'name'  => $r->name,
-                'icon'  => $r->icon,
+                'name' => $r->name,
+                'icon' => $r->icon,
                 'total' => round((float) $r->total, 2),
             ]);
     }
@@ -127,14 +127,14 @@ class ProfitabilityService
             : ($expenses > 0 ? 100 : 0);
 
         return [
-            'tour_id'       => $tourId,
-            'name'          => $name,
-            'subtitle'      => $subtitle,
-            'income'        => round($income, 2),
-            'expenses'      => round($expenses, 2),
-            'margin'        => round($margin, 2),
+            'tour_id' => $tourId,
+            'name' => $name,
+            'subtitle' => $subtitle,
+            'income' => round($income, 2),
+            'expenses' => round($expenses, 2),
+            'margin' => round($margin, 2),
             'expense_ratio' => $expenseRatio,
-            'label'         => $income > 0 ? 'rentable' : 'sin_ingresos',
+            'label' => $income > 0 ? 'rentable' : 'sin_ingresos',
         ];
     }
 }

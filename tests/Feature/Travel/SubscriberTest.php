@@ -2,13 +2,14 @@
 
 namespace Tests\Feature\Travel;
 
+use App\Models\Role;
 use App\Models\Setting;
 use App\Models\Subscriber;
 use App\Models\User;
 use App\Notifications\SubscriberWelcomeNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-use App\Models\Role;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -29,10 +30,10 @@ class SubscriberTest extends TestCase
         }
     }
 
-    private function apiJson(string $method, string $uri, array $payload = []): \Illuminate\Testing\TestResponse
+    private function apiJson(string $method, string $uri, array $payload = []): TestResponse
     {
         return $this->call($method, $uri, [], [], [], [
-            'HTTP_ACCEPT'  => 'application/vnd.api+json',
+            'HTTP_ACCEPT' => 'application/vnd.api+json',
             'CONTENT_TYPE' => 'application/vnd.api+json',
         ], json_encode($payload));
     }
@@ -45,11 +46,11 @@ class SubscriberTest extends TestCase
     private function makeUser(string $role): User
     {
         $user = User::create([
-            'username'   => 'u' . uniqid(),
+            'username' => 'u'.uniqid(),
             'first_name' => 'Test',
-            'last_name'  => 'User',
-            'email'      => uniqid() . '@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'User',
+            'email' => uniqid().'@example.com',
+            'password' => bcrypt('password123'),
         ]);
         $user->assignRole($role);
 
@@ -61,14 +62,14 @@ class SubscriberTest extends TestCase
         Notification::fake();
 
         $response = $this->apiJson('POST', '/api/v1/subscribers', $this->subscribePayload([
-            'email'  => 'lead@example.com',
-            'name'   => 'Lead',
+            'email' => 'lead@example.com',
+            'name' => 'Lead',
             'source' => 'footer',
         ]));
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('subscribers', [
-            'email'  => 'lead@example.com',
+            'email' => 'lead@example.com',
             'status' => 'subscribed',
             'source' => 'footer',
         ]);
@@ -139,12 +140,12 @@ class SubscriberTest extends TestCase
             ->assertOk()
             ->assertJsonPath('meta.total', 1);
 
-        $this->apiJson('PATCH', '/api/v1/subscribers/' . $subscriber->id, [
+        $this->apiJson('PATCH', '/api/v1/subscribers/'.$subscriber->id, [
             'data' => ['type' => 'subscribers', 'id' => (string) $subscriber->id, 'attributes' => ['status' => 'unsubscribed']],
         ])->assertOk();
         $this->assertDatabaseHas('subscribers', ['id' => $subscriber->id, 'status' => 'unsubscribed']);
 
-        $this->call('DELETE', '/api/v1/subscribers/' . $subscriber->id, [], [], [], [
+        $this->call('DELETE', '/api/v1/subscribers/'.$subscriber->id, [], [], [], [
             'HTTP_ACCEPT' => 'application/vnd.api+json',
         ])->assertStatus(204);
         $this->assertDatabaseMissing('subscribers', ['id' => $subscriber->id]);

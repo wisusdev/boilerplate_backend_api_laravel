@@ -28,7 +28,7 @@ class LoginRequest extends FormRequest
             'data.attributes' => ['required', 'array'],
             'data.type' => ['required', 'string', 'in:users'],
             'data.attributes.email' => ['required', 'email', Rule::exists('users', 'email')],
-            'data.attributes.password' => ['required']
+            'data.attributes.password' => ['required'],
         ];
     }
 

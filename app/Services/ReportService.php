@@ -22,12 +22,12 @@ class ReportService
             ->whereBetween('created_at', [$start, $end]);
 
         return [
-            'tour_bookings_count'       => (clone $tourBookings)->count(),
-            'transport_bookings_count'  => (clone $transportBookings)->count(),
-            'tour_revenue'              => (float) (clone $tourBookings)->where('status', 'confirmed')->sum('total_price'),
-            'transport_revenue'         => (float) (clone $transportBookings)->where('status', 'confirmed')->sum('total_price'),
-            'payments_total'            => (float) Payment::query()->whereBetween('created_at', [$start, $end])->where('status', 'paid')->sum('amount'),
-            'pending_tour_bookings'     => (clone $tourBookings)->where('status', 'pending')->count(),
+            'tour_bookings_count' => (clone $tourBookings)->count(),
+            'transport_bookings_count' => (clone $transportBookings)->count(),
+            'tour_revenue' => (float) (clone $tourBookings)->where('status', 'confirmed')->sum('total_price'),
+            'transport_revenue' => (float) (clone $transportBookings)->where('status', 'confirmed')->sum('total_price'),
+            'payments_total' => (float) Payment::query()->whereBetween('created_at', [$start, $end])->where('status', 'paid')->sum('amount'),
+            'pending_tour_bookings' => (clone $tourBookings)->where('status', 'pending')->count(),
             'pending_transport_bookings' => (clone $transportBookings)->where('status', 'pending')->count(),
         ];
     }

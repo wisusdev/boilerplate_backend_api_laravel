@@ -16,17 +16,17 @@ class DatePathGenerator implements PathGenerator
 {
     public function getPath(Media $media): string
     {
-        return $this->basePath($media) . '/';
+        return $this->basePath($media).'/';
     }
 
     public function getPathForConversions(Media $media): string
     {
-        return $this->basePath($media) . '/conversions/';
+        return $this->basePath($media).'/conversions/';
     }
 
     public function getPathForResponsiveImages(Media $media): string
     {
-        return $this->basePath($media) . '/responsive-images/';
+        return $this->basePath($media).'/responsive-images/';
     }
 
     protected function basePath(Media $media): string
@@ -38,6 +38,6 @@ class DatePathGenerator implements PathGenerator
 
         $prefix = config('media-library.prefix', '');
 
-        return $prefix !== '' ? $prefix . '/' . $path : $path;
+        return $prefix !== '' ? $prefix.'/'.$path : $path;
     }
 }

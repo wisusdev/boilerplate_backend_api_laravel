@@ -23,8 +23,8 @@ class BookingPolicyTest extends TestCase
     private function user(): User
     {
         return User::create([
-            'username' => 'u' . uniqid(), 'first_name' => 'P', 'last_name' => 'Q',
-            'email' => uniqid() . '@example.com', 'password' => bcrypt('password123'),
+            'username' => 'u'.uniqid(), 'first_name' => 'P', 'last_name' => 'Q',
+            'email' => uniqid().'@example.com', 'password' => bcrypt('password123'),
         ]);
     }
 

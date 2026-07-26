@@ -11,9 +11,7 @@ class SubscriberWelcomeNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(private ?string $name = null)
-    {
-    }
+    public function __construct(private ?string $name = null) {}
 
     public function via(object $notifiable): array
     {
@@ -31,7 +29,7 @@ class SubscriberWelcomeNotification extends Notification implements ShouldQueue
             ->subject("¡Bienvenido a las ofertas de {$appName}! 🌋")
             ->greeting($greeting)
             ->line('Gracias por suscribirte. A partir de ahora recibirás nuestras mejores ofertas, descuentos y nuevas aventuras antes que nadie.')
-            ->action('Explorar tours', $frontendUrl . '/tours')
+            ->action('Explorar tours', $frontendUrl.'/tours')
             ->line('Si en algún momento deseas dejar de recibir estos correos, podrás darte de baja cuando quieras.')
             ->salutation("Nos vemos en la aventura,\n{$appName}");
     }

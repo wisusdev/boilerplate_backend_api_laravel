@@ -20,14 +20,14 @@ class ExpenseCategoryRequest extends FormRequest
         $categoryId = $this->route('expenseCategory')?->id;
 
         return [
-            'data'                        => ['required', 'array'],
-            'data.attributes'             => ['required', 'array'],
-            'data.type'                   => ['required', 'string', 'in:expense-categories'],
-            'data.attributes.name'        => [$required, 'string', 'max:100'],
-            'data.attributes.slug'        => ['sometimes', 'nullable', 'string', 'max:120', Rule::unique('expense_categories', 'slug')->ignore($categoryId)],
-            'data.attributes.icon'        => ['sometimes', 'nullable', 'string', 'max:60'],
-            'data.attributes.is_active'   => ['sometimes', 'boolean'],
-            'data.attributes.sort_order'  => ['sometimes', 'integer', 'min:0'],
+            'data' => ['required', 'array'],
+            'data.attributes' => ['required', 'array'],
+            'data.type' => ['required', 'string', 'in:expense-categories'],
+            'data.attributes.name' => [$required, 'string', 'max:100'],
+            'data.attributes.slug' => ['sometimes', 'nullable', 'string', 'max:120', Rule::unique('expense_categories', 'slug')->ignore($categoryId)],
+            'data.attributes.icon' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'data.attributes.is_active' => ['sometimes', 'boolean'],
+            'data.attributes.sort_order' => ['sometimes', 'integer', 'min:0'],
         ];
     }
 }

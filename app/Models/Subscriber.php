@@ -10,6 +10,7 @@ class Subscriber extends Model
     use HasFactory;
 
     public const STATUS_SUBSCRIBED = 'subscribed';
+
     public const STATUS_UNSUBSCRIBED = 'unsubscribed';
 
     protected $fillable = [

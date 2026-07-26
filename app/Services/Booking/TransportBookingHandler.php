@@ -47,17 +47,17 @@ class TransportBookingHandler implements BookingHandlerInterface
 
         return [
             'bookable_type' => TransportVehicle::class,
-            'bookable_id'   => $vehicle->id,
-            'starts_at'     => $data['pickup_at'],
-            'ends_at'       => $data['dropoff_at'],
-            'party_size'    => $quantity,
-            'total_price'   => $totalPrice,
+            'bookable_id' => $vehicle->id,
+            'starts_at' => $data['pickup_at'],
+            'ends_at' => $data['dropoff_at'],
+            'party_size' => $quantity,
+            'total_price' => $totalPrice,
             'currency_code' => SiteSettings::currency(),
-            'notes'         => $data['notes'] ?? null,
-            'details'       => [
-                'pickup_location'  => $data['pickup_location'],
+            'notes' => $data['notes'] ?? null,
+            'details' => [
+                'pickup_location' => $data['pickup_location'],
                 'dropoff_location' => $data['dropoff_location'],
-                'rental_type'      => $data['rental_type'],
+                'rental_type' => $data['rental_type'],
             ],
         ];
     }

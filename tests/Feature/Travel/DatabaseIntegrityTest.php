@@ -11,6 +11,7 @@ use App\Models\TourCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -34,10 +35,10 @@ class DatabaseIntegrityTest extends TestCase
         }
     }
 
-    private function apiJson(string $method, string $uri, array $payload = []): \Illuminate\Testing\TestResponse
+    private function apiJson(string $method, string $uri, array $payload = []): TestResponse
     {
         return $this->call($method, $uri, [], [], [], [
-            'HTTP_ACCEPT'  => 'application/vnd.api+json',
+            'HTTP_ACCEPT' => 'application/vnd.api+json',
             'CONTENT_TYPE' => 'application/vnd.api+json',
         ], json_encode($payload));
     }
@@ -45,11 +46,11 @@ class DatabaseIntegrityTest extends TestCase
     private function admin(): User
     {
         $user = User::create([
-            'username'   => 'admin_integrity',
+            'username' => 'admin_integrity',
             'first_name' => 'Admin',
-            'last_name'  => 'Integrity',
-            'email'      => 'admin.integrity@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'Integrity',
+            'email' => 'admin.integrity@example.com',
+            'password' => bcrypt('password123'),
         ]);
         $user->assignRole('admin');
 
@@ -75,7 +76,7 @@ class DatabaseIntegrityTest extends TestCase
             'category_id' => $category->id, 'is_active' => true,
         ]);
 
-        $response = $this->apiJson('GET', '/api/v1/tours/' . $tour->id);
+        $response = $this->apiJson('GET', '/api/v1/tours/'.$tour->id);
 
         $response->assertOk()
             ->assertJsonPath('data.attributes.category_id', $category->id)
@@ -154,14 +155,14 @@ class DatabaseIntegrityTest extends TestCase
             'currency_code' => 'USD', 'status' => Booking::STATUS_PENDING,
         ]);
 
-        $this->apiJson('PATCH', '/api/v1/bookings/' . $booking->id, [
+        $this->apiJson('PATCH', '/api/v1/bookings/'.$booking->id, [
             'data' => ['id' => (string) $booking->id, 'type' => 'bookings', 'attributes' => [
                 'status' => Booking::STATUS_CONFIRMED,
             ]],
         ])->assertOk();
 
         $this->assertDatabaseHas('invoices', [
-            'booking_id'    => $booking->id,
+            'booking_id' => $booking->id,
             'currency_code' => 'USD',
         ]);
     }

@@ -14,8 +14,7 @@ class BookingObserver
     public function __construct(
         private readonly BookingService $bookingService,
         private readonly DteService $dteService,
-    ) {
-    }
+    ) {}
 
     public function created(Booking $booking): void
     {
@@ -50,11 +49,11 @@ class BookingObserver
         [$invoice] = [Invoice::firstOrCreate(
             ['booking_id' => $booking->id],
             [
-                'amount'        => $booking->total_price,
+                'amount' => $booking->total_price,
                 'currency_code' => $booking->currency_code,
-                'status'        => 'pending',
-                'dte_status'    => Invoice::DTE_NOT_GENERATED,
-                'issued_at'     => now(),
+                'status' => 'pending',
+                'dte_status' => Invoice::DTE_NOT_GENERATED,
+                'issued_at' => now(),
             ]
         )];
 
@@ -72,9 +71,9 @@ class BookingObserver
             return;
         }
 
-        $dteConfig   = json_decode(optional(Setting::where('key', 'dte')->first())->value ?? '{}', true);
+        $dteConfig = json_decode(optional(Setting::where('key', 'dte')->first())->value ?? '{}', true);
         $autoGenerate = (bool) ($dteConfig['dte_auto_generate'] ?? false);
-        $dteEnabled   = (bool) ($dteConfig['dte_enabled'] ?? false);
+        $dteEnabled = (bool) ($dteConfig['dte_enabled'] ?? false);
 
         if (! $dteEnabled || ! $autoGenerate) {
             return;
@@ -85,7 +84,7 @@ class BookingObserver
         } catch (\Throwable $e) {
             Log::warning('DTE auto-generación fallida', [
                 'invoice_id' => $invoice->id,
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
             // No relanzar — el DTE puede generarse manualmente desde el admin
         }

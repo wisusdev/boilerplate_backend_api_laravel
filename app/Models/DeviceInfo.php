@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Date;
 
 class DeviceInfo extends Model
 {
-    use HasFactory, SoftDeletes, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'user_id',

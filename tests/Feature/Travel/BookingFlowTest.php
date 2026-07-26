@@ -3,10 +3,10 @@
 namespace Tests\Feature\Travel;
 
 use App\Models\Booking;
-use App\Models\Invoice;
 use App\Models\Tour;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -22,7 +22,7 @@ class BookingFlowTest extends TestCase
         ];
     }
 
-    private function apiJson(string $method, string $uri, array $payload): \Illuminate\Testing\TestResponse
+    private function apiJson(string $method, string $uri, array $payload): TestResponse
     {
         return $this->call(
             $method,
@@ -61,14 +61,14 @@ class BookingFlowTest extends TestCase
         ]);
 
         Booking::create([
-            'user_id'       => $user->id,
+            'user_id' => $user->id,
             'bookable_type' => Tour::class,
-            'bookable_id'   => $tour->id,
-            'starts_at'     => '2099-06-01 00:00:00',
-            'party_size'    => 2,
-            'total_price'   => 100,
+            'bookable_id' => $tour->id,
+            'starts_at' => '2099-06-01 00:00:00',
+            'party_size' => 2,
+            'total_price' => 100,
             'currency_code' => 'USD',
-            'status'        => Booking::STATUS_PENDING,
+            'status' => Booking::STATUS_PENDING,
         ]);
 
         $response = $this->apiJson('POST', '/api/v1/bookings', [
@@ -126,10 +126,10 @@ class BookingFlowTest extends TestCase
         $response->assertSuccessful();
         $response->assertJsonPath('data.attributes.pickup_address', 'Hotel Real, Col. Escalón');
         $this->assertDatabaseHas('bookings', [
-            'bookable_id'    => $tour->id,
+            'bookable_id' => $tour->id,
             'pickup_address' => 'Hotel Real, Col. Escalón',
-            'pickup_lat'     => 13.6989000,
-            'pickup_lng'     => -89.1914000,
+            'pickup_lat' => 13.6989000,
+            'pickup_lng' => -89.1914000,
         ]);
     }
 
@@ -188,17 +188,17 @@ class BookingFlowTest extends TestCase
         ]);
 
         $booking = Booking::create([
-            'user_id'       => $user->id,
+            'user_id' => $user->id,
             'bookable_type' => Tour::class,
-            'bookable_id'   => $tour->id,
-            'starts_at'     => '2026-06-05 00:00:00',
-            'party_size'    => 2,
-            'total_price'   => 80,
+            'bookable_id' => $tour->id,
+            'starts_at' => '2026-06-05 00:00:00',
+            'party_size' => 2,
+            'total_price' => 80,
             'currency_code' => 'USD',
-            'status'        => Booking::STATUS_PENDING,
+            'status' => Booking::STATUS_PENDING,
         ]);
 
-        $response = $this->apiJson('PATCH', '/api/v1/bookings/' . $booking->id, [
+        $response = $this->apiJson('PATCH', '/api/v1/bookings/'.$booking->id, [
             'data' => [
                 'id' => (string) $booking->id,
                 'type' => 'bookings',

@@ -19,15 +19,14 @@ class PaymentController extends Controller
 {
     public function __construct(
         private readonly PaymentService $paymentService,
-        private readonly PaypalService  $paypalService,
-        private readonly StripeService  $stripeService,
-        private readonly WompiService   $wompiService,
-    ) {
-    }
+        private readonly PaypalService $paypalService,
+        private readonly StripeService $stripeService,
+        private readonly WompiService $wompiService,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $user    = $request->user();
+        $user = $request->user();
         $isAdmin = $user->hasRole(['admin', 'super-admin']);
 
         $payments = Payment::query()
@@ -100,32 +99,32 @@ class PaymentController extends Controller
      */
     public function checkout(Request $request): JsonResponse
     {
-        $attrs    = $request->input('data.attributes', []);
-        $gateway  = $attrs['gateway'] ?? '';
-        $amount   = (float) ($attrs['amount'] ?? 0);
+        $attrs = $request->input('data.attributes', []);
+        $gateway = $attrs['gateway'] ?? '';
+        $amount = (float) ($attrs['amount'] ?? 0);
         $currency = $attrs['currency_code'] ?? 'USD';
 
         $payableType = $attrs['payable_type'] ?? 'booking';
-        $payableId   = $attrs['payable_id'] ?? null;
+        $payableId = $attrs['payable_id'] ?? null;
 
         $payable = Booking::findOrFail($payableId);
         $this->ensureCanAccessBooking($request, $payable);
 
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
-        $returnUrl   = "{$frontendUrl}/payment/result?gateway={$gateway}&payable_type={$payableType}&payable_id={$payableId}";
-        $cancelUrl   = "{$frontendUrl}/payment/result?gateway={$gateway}&status=cancelled";
+        $returnUrl = "{$frontendUrl}/payment/result?gateway={$gateway}&payable_type={$payableType}&payable_id={$payableId}";
+        $cancelUrl = "{$frontendUrl}/payment/result?gateway={$gateway}&status=cancelled";
 
         $result = match ($gateway) {
             'paypal' => $this->initPaypal($amount, $currency, $returnUrl, $cancelUrl, $payable),
             'stripe' => $this->initStripe($amount, $currency, $payable),
-            'wompi'  => $this->initWompi($amount, $currency, $returnUrl, $payable, $attrs),
-            default  => throw new \InvalidArgumentException("Unsupported gateway: {$gateway}"),
+            'wompi' => $this->initWompi($amount, $currency, $returnUrl, $payable, $attrs),
+            default => throw new \InvalidArgumentException("Unsupported gateway: {$gateway}"),
         };
 
         return response()->json([
             'data' => [
-                'type'       => 'payment-checkout',
-                'id'         => $result['payment_id'] ?? null,
+                'type' => 'payment-checkout',
+                'id' => $result['payment_id'] ?? null,
                 'attributes' => $result,
             ],
         ]);
@@ -143,16 +142,16 @@ class PaymentController extends Controller
      */
     public function verify(Request $request): JsonResponse
     {
-        $attrs     = $request->input('data.attributes', []);
-        $gateway   = $attrs['gateway'] ?? '';
+        $attrs = $request->input('data.attributes', []);
+        $gateway = $attrs['gateway'] ?? '';
         $paymentId = $attrs['payment_id'] ?? null;
-        $token     = $attrs['token'] ?? '';
+        $token = $attrs['token'] ?? '';
 
         $payment = Payment::findOrFail($paymentId);
 
         $transactionRef = $token;
-        $payload        = $attrs;
-        $success        = false;
+        $payload = $attrs;
+        $success = false;
 
         if ($gateway === 'paypal') {
             try {
@@ -177,10 +176,10 @@ class PaymentController extends Controller
 
         return response()->json([
             'data' => [
-                'type'       => 'payment-verify',
-                'id'         => $payment->id,
+                'type' => 'payment-verify',
+                'id' => $payment->id,
                 'attributes' => [
-                    'status'                => $success ? 'paid' : 'failed',
+                    'status' => $success ? 'paid' : 'failed',
                     'transaction_reference' => $transactionRef,
                 ],
             ],
@@ -194,18 +193,18 @@ class PaymentController extends Controller
         $order = $this->paypalService->createOrder($amount, $currency, $returnUrl, $cancelUrl);
 
         $payment = $this->paymentService->create($payable, [
-            'gateway'               => 'paypal',
-            'method'                => 'paypal',
-            'amount'                => $amount,
-            'currency_code'         => $currency,
-            'status'                => 'pending',
+            'gateway' => 'paypal',
+            'method' => 'paypal',
+            'amount' => $amount,
+            'currency_code' => $currency,
+            'status' => 'pending',
             'transaction_reference' => $order['order_id'],
         ]);
 
         return [
-            'payment_id'  => $payment->id,
-            'gateway'     => 'paypal',
-            'order_id'    => $order['order_id'],
+            'payment_id' => $payment->id,
+            'gateway' => 'paypal',
+            'order_id' => $order['order_id'],
             'approve_url' => $order['approve_url'],
         ];
     }
@@ -215,20 +214,20 @@ class PaymentController extends Controller
         $intent = $this->stripeService->createPaymentIntent($amount, $currency);
 
         $payment = $this->paymentService->create($payable, [
-            'gateway'               => 'stripe',
-            'method'                => 'card',
-            'amount'                => $amount,
-            'currency_code'         => $currency,
-            'status'                => 'pending',
+            'gateway' => 'stripe',
+            'method' => 'card',
+            'amount' => $amount,
+            'currency_code' => $currency,
+            'status' => 'pending',
             'transaction_reference' => $intent['payment_intent_id'],
         ]);
 
         return [
-            'payment_id'        => $payment->id,
-            'gateway'           => 'stripe',
-            'client_secret'     => $intent['client_secret'],
+            'payment_id' => $payment->id,
+            'gateway' => 'stripe',
+            'client_secret' => $intent['client_secret'],
             'payment_intent_id' => $intent['payment_intent_id'],
-            'public_key'        => $this->stripeService->getPublicKey(),
+            'public_key' => $this->stripeService->getPublicKey(),
         ];
     }
 
@@ -240,41 +239,41 @@ class PaymentController extends Controller
     private function initWompi(float $amount, string $currency, string $returnUrl, $payable, array $attrs): array
     {
         $cardData = [
-            'card_number'      => $attrs['card_number'] ?? '',
-            'cvv'              => $attrs['cvv'] ?? '',
+            'card_number' => $attrs['card_number'] ?? '',
+            'cvv' => $attrs['cvv'] ?? '',
             'expiration_month' => (int) ($attrs['expiration_month'] ?? 0),
-            'expiration_year'  => (int) ($attrs['expiration_year'] ?? 0),
-            'first_name'       => $attrs['first_name'] ?? '',
-            'last_name'        => $attrs['last_name'] ?? '',
-            'email'            => $attrs['email'] ?? '',
-            'city'             => $attrs['city'] ?? '',
-            'address'          => $attrs['address'] ?? '',
-            'country'          => $attrs['country'] ?? 'SV',
-            'state'            => $attrs['state'] ?? '',
-            'postal_code'      => $attrs['postal_code'] ?? '',
-            'phone'            => $attrs['phone'] ?? '',
-            'urlRedirect'      => $returnUrl,
+            'expiration_year' => (int) ($attrs['expiration_year'] ?? 0),
+            'first_name' => $attrs['first_name'] ?? '',
+            'last_name' => $attrs['last_name'] ?? '',
+            'email' => $attrs['email'] ?? '',
+            'city' => $attrs['city'] ?? '',
+            'address' => $attrs['address'] ?? '',
+            'country' => $attrs['country'] ?? 'SV',
+            'state' => $attrs['state'] ?? '',
+            'postal_code' => $attrs['postal_code'] ?? '',
+            'phone' => $attrs['phone'] ?? '',
+            'urlRedirect' => $returnUrl,
         ];
 
         $response = $this->wompiService->createPaymentWithCard($cardData, $amount);
 
         // Wompi 3DS response: { idTransaccion, urlCompletarPago3Ds, monto, idExterno, esReal }
         $transactionId = $response->idTransaccion ?? null;
-        $redirectUrl   = $response->urlCompletarPago3Ds ?? null;
+        $redirectUrl = $response->urlCompletarPago3Ds ?? null;
 
         $payment = $this->paymentService->create($payable, [
-            'gateway'               => 'wompi',
-            'method'                => 'card',
-            'amount'                => $amount,
-            'currency_code'         => $currency,
-            'status'                => 'pending',
+            'gateway' => 'wompi',
+            'method' => 'card',
+            'amount' => $amount,
+            'currency_code' => $currency,
+            'status' => 'pending',
             'transaction_reference' => (string) $transactionId,
         ]);
 
         return [
-            'payment_id'     => $payment->id,
-            'gateway'        => 'wompi',
-            'redirect_url'   => $redirectUrl,
+            'payment_id' => $payment->id,
+            'gateway' => 'wompi',
+            'redirect_url' => $redirectUrl,
             'transaction_id' => $transactionId,
         ];
     }
@@ -304,7 +303,7 @@ class PaymentController extends Controller
         }
 
         $payable = $payment->payable;
-        $owns    = $payable instanceof Booking && $payable->user_id === $user->id;
+        $owns = $payable instanceof Booking && $payable->user_id === $user->id;
 
         abort_unless($owns, 403);
     }

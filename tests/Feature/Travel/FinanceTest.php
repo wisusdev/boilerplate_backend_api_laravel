@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -18,18 +19,18 @@ class FinanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function apiJson(string $method, string $uri, array $payload = []): \Illuminate\Testing\TestResponse
+    private function apiJson(string $method, string $uri, array $payload = []): TestResponse
     {
         return $this->call($method, $uri, [], [], [], [
-            'HTTP_ACCEPT'  => 'application/vnd.api+json',
+            'HTTP_ACCEPT' => 'application/vnd.api+json',
             'CONTENT_TYPE' => 'application/vnd.api+json',
         ], $payload ? json_encode($payload) : null);
     }
 
-    private function plainJson(string $method, string $uri, array $payload = []): \Illuminate\Testing\TestResponse
+    private function plainJson(string $method, string $uri, array $payload = []): TestResponse
     {
         return $this->call($method, $uri, [], [], [], [
-            'HTTP_ACCEPT'  => 'application/json',
+            'HTTP_ACCEPT' => 'application/json',
             'CONTENT_TYPE' => 'application/json',
         ], $payload ? json_encode($payload) : null);
     }
@@ -37,11 +38,11 @@ class FinanceTest extends TestCase
     private function user(string $prefix = 'u'): User
     {
         return User::create([
-            'username'   => $prefix . uniqid(),
+            'username' => $prefix.uniqid(),
             'first_name' => 'Fin',
-            'last_name'  => 'Ance',
-            'email'      => uniqid() . '@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'Ance',
+            'email' => uniqid().'@example.com',
+            'password' => bcrypt('password123'),
         ]);
     }
 
@@ -144,13 +145,13 @@ class FinanceTest extends TestCase
         Expense::create(['expense_category_id' => $cat2->id, 'amount' => 10, 'spent_at' => now()]);
 
         // Filtro por tour.
-        $this->apiJson('GET', '/api/v1/expenses?tour_id=' . $tour->id)->assertOk()
+        $this->apiJson('GET', '/api/v1/expenses?tour_id='.$tour->id)->assertOk()
             ->assertJsonCount(1, 'data');
         // Filtro por categoría.
-        $this->apiJson('GET', '/api/v1/expenses?expense_category_id=' . $cat2->id)->assertOk()
+        $this->apiJson('GET', '/api/v1/expenses?expense_category_id='.$cat2->id)->assertOk()
             ->assertJsonCount(1, 'data');
         // Filtro por guía.
-        $this->apiJson('GET', '/api/v1/expenses?guide_id=' . $guide->id)->assertOk()
+        $this->apiJson('GET', '/api/v1/expenses?guide_id='.$guide->id)->assertOk()
             ->assertJsonCount(1, 'data');
     }
 

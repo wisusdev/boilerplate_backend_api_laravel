@@ -25,13 +25,13 @@ class RegisterTest extends TestCase
     {
         $base = [
             'data' => [
-                'type'       => 'users',
+                'type' => 'users',
                 'attributes' => [
-                    'username'              => 'johndoe',
-                    'first_name'            => 'John',
-                    'last_name'             => 'Doe',
-                    'email'                 => 'john@example.com',
-                    'password'              => 'secure123',
+                    'username' => 'johndoe',
+                    'first_name' => 'John',
+                    'last_name' => 'Doe',
+                    'email' => 'john@example.com',
+                    'password' => 'secure123',
                     'password_confirmation' => 'secure123',
                 ],
             ],
@@ -54,7 +54,7 @@ class RegisterTest extends TestCase
 
         $response->assertCreated();
         $this->assertDatabaseHas('users', [
-            'email'    => 'john@example.com',
+            'email' => 'john@example.com',
             'username' => 'johndoe',
         ]);
     }
@@ -80,11 +80,11 @@ class RegisterTest extends TestCase
     {
         Notification::fake();
         User::create([
-            'username'   => 'existing',
+            'username' => 'existing',
             'first_name' => 'Existing',
-            'last_name'  => 'User',
-            'email'      => 'john@example.com',
-            'password'   => bcrypt('pass123'),
+            'last_name' => 'User',
+            'email' => 'john@example.com',
+            'password' => bcrypt('pass123'),
         ]);
 
         $response = $this->postJson('/api/v1/auth/register', $this->validPayload());
@@ -97,11 +97,11 @@ class RegisterTest extends TestCase
     {
         Notification::fake();
         User::create([
-            'username'   => 'johndoe',
+            'username' => 'johndoe',
             'first_name' => 'Other',
-            'last_name'  => 'User',
-            'email'      => 'other@example.com',
-            'password'   => bcrypt('pass123'),
+            'last_name' => 'User',
+            'email' => 'other@example.com',
+            'password' => bcrypt('pass123'),
         ]);
 
         $response = $this->postJson('/api/v1/auth/register', $this->validPayload());
@@ -124,7 +124,7 @@ class RegisterTest extends TestCase
     public function test_registro_falla_con_contrasena_demasiado_corta(): void
     {
         $payload = $this->validPayload();
-        $payload['data']['attributes']['password']              = 'short';
+        $payload['data']['attributes']['password'] = 'short';
         $payload['data']['attributes']['password_confirmation'] = 'short';
 
         $response = $this->postJson('/api/v1/auth/register', $payload);
@@ -137,7 +137,7 @@ class RegisterTest extends TestCase
     {
         $response = $this->postJson('/api/v1/auth/register', [
             'data' => [
-                'type'       => 'users',
+                'type' => 'users',
                 'attributes' => [],
             ],
         ]);

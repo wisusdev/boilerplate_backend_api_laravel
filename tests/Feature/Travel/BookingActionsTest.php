@@ -3,7 +3,6 @@
 namespace Tests\Feature\Travel;
 
 use App\Models\Booking;
-use App\Models\BookingMessage;
 use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TransportVehicle;
@@ -11,6 +10,7 @@ use App\Models\User;
 use App\Notifications\AdminAlertNotification;
 use App\Notifications\BookingNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
@@ -30,11 +30,11 @@ class BookingActionsTest extends TestCase
     private function makeUser(string $email): User
     {
         return User::create([
-            'username'   => 'u' . uniqid(),
+            'username' => 'u'.uniqid(),
             'first_name' => 'Test',
-            'last_name'  => 'User',
-            'email'      => $email,
-            'password'   => bcrypt('password123'),
+            'last_name' => 'User',
+            'email' => $email,
+            'password' => bcrypt('password123'),
         ]);
     }
 
@@ -47,13 +47,13 @@ class BookingActionsTest extends TestCase
 
         return Booking::create([
             'bookable_type' => Tour::class,
-            'bookable_id'   => $tour->id,
-            'user_id'       => $user->id,
-            'starts_at'     => now()->addDays(3),
-            'party_size'    => 2,
-            'total_price'   => 100,
+            'bookable_id' => $tour->id,
+            'user_id' => $user->id,
+            'starts_at' => now()->addDays(3),
+            'party_size' => 2,
+            'total_price' => 100,
             'currency_code' => 'USD',
-            'status'        => $status,
+            'status' => $status,
         ]);
     }
 
@@ -157,7 +157,7 @@ class BookingActionsTest extends TestCase
 
         // Intenta reagendar a la ventana ya ocupada (día +5).
         $this->postJson("/api/v1/bookings/{$booking->id}/reschedule", [
-            'pickup_at'  => now()->addDays(5)->setTime(10, 0)->toDateTimeString(),
+            'pickup_at' => now()->addDays(5)->setTime(10, 0)->toDateTimeString(),
             'dropoff_at' => now()->addDays(5)->setTime(16, 0)->toDateTimeString(),
         ])->assertStatus(422);
     }
@@ -176,10 +176,10 @@ class BookingActionsTest extends TestCase
 
         $this->assertDatabaseHas('booking_messages', [
             'booking_id' => $booking->id,
-            'message'    => 'Necesito cambiar la hora',
+            'message' => 'Necesito cambiar la hora',
         ]);
         Notification::assertSentTo(
-            new \Illuminate\Notifications\AnonymousNotifiable,
+            new AnonymousNotifiable,
             AdminAlertNotification::class,
             fn ($n, $ch, $notifiable) => $notifiable->routes['mail'] === 'admin@example.com'
         );

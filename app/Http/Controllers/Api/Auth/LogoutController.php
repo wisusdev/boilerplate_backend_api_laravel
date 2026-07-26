@@ -20,7 +20,7 @@ class LogoutController extends Controller
                     'status' => true,
                     'message' => 'message.loggedOut',
                 ],
-            ]
+            ],
         ]);
     }
 }

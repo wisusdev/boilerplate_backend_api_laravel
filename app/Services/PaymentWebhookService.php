@@ -28,21 +28,20 @@ class PaymentWebhookService
     public function __construct(
         private readonly PaymentService $payments,
         private readonly PaypalService $paypal,
-    ) {
-    }
+    ) {}
 
     // ─── Stripe ────────────────────────────────────────────────────────────────
 
     public function handleStripe(Request $request): array
     {
-        $payload   = $request->getContent();
+        $payload = $request->getContent();
         $signature = $request->header('Stripe-Signature', '');
-        $secret    = $this->gatewaySetting('stripe_webhook_secret', 'services.stripe.webhook_secret');
+        $secret = $this->gatewaySetting('stripe_webhook_secret', 'services.stripe.webhook_secret');
 
         $this->verifyStripeSignature($payload, $signature, $secret);
 
-        $event  = json_decode($payload, true) ?: [];
-        $type   = $event['type'] ?? '';
+        $event = json_decode($payload, true) ?: [];
+        $type = $event['type'] ?? '';
         $object = $event['data']['object'] ?? [];
         $intentId = $object['id'] ?? null;
 
@@ -51,9 +50,9 @@ class PaymentWebhookService
         }
 
         return $this->applyOutcome('stripe', $intentId, match ($type) {
-            'payment_intent.succeeded'      => 'paid',
+            'payment_intent.succeeded' => 'paid',
             'payment_intent.payment_failed' => 'failed',
-            default                         => 'ignored',
+            default => 'ignored',
         }, $event);
     }
 
@@ -97,9 +96,9 @@ class PaymentWebhookService
 
     public function handleWompi(Request $request): array
     {
-        $payload   = $request->getContent();
+        $payload = $request->getContent();
         $signature = $request->header('X-Event-Signature', '');
-        $secret    = $this->gatewaySetting('wompi_webhook_secret', 'services.wompi.webhook_secret');
+        $secret = $this->gatewaySetting('wompi_webhook_secret', 'services.wompi.webhook_secret');
 
         $this->verifyHmacSignature($payload, $signature, $secret, 'Wompi');
 
@@ -139,7 +138,7 @@ class PaymentWebhookService
             throw new InvalidWebhookSignatureException('PayPal webhook verification failed.');
         }
 
-        $type     = $event['event_type'] ?? '';
+        $type = $event['event_type'] ?? '';
         $resource = $event['resource'] ?? [];
         // El order_id (referencia guardada al iniciar el checkout) viaja en supplementary_data.
         $orderId = $resource['supplementary_data']['related_ids']['order_id']
@@ -187,6 +186,7 @@ class PaymentWebhookService
 
         if ($payment === null) {
             Log::warning("Webhook {$gateway}: pago no encontrado para referencia {$reference}.");
+
             return ['status' => 'ignored', 'reason' => 'payment not found'];
         }
 
@@ -207,7 +207,7 @@ class PaymentWebhookService
     private function gatewaySetting(string $key, string $configFallback): string
     {
         $pgRow = Setting::where('key', 'payment_gateway')->first();
-        $pg    = $pgRow ? json_decode($pgRow->value, true) : [];
+        $pg = $pgRow ? json_decode($pgRow->value, true) : [];
 
         return $this->decryptCredential((string) ($pg[$key] ?? config($configFallback) ?? ''));
     }

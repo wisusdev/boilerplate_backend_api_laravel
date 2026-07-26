@@ -14,16 +14,16 @@ class LoginTest extends TestCase
     {
         parent::setUp();
 
-        if (!file_exists(storage_path('oauth-private.key'))) {
+        if (! file_exists(storage_path('oauth-private.key'))) {
             $this->artisan('passport:keys');
         }
 
         // RefreshDatabase vacía oauth_clients en cada test; el login emite tokens
         // mediante un personal access client que debe existir.
         $this->artisan('passport:client', [
-            '--personal'       => true,
-            '--name'           => 'Test Personal Access Client',
-            '--provider'       => 'users',
+            '--personal' => true,
+            '--name' => 'Test Personal Access Client',
+            '--provider' => 'users',
             '--no-interaction' => true,
         ]);
     }
@@ -33,11 +33,11 @@ class LoginTest extends TestCase
     private function createUser(string $email = 'user@example.com', string $password = 'password123'): User
     {
         return User::create([
-            'username'   => 'testuser',
+            'username' => 'testuser',
             'first_name' => 'Test',
-            'last_name'  => 'User',
-            'email'      => $email,
-            'password'   => bcrypt($password),
+            'last_name' => 'User',
+            'email' => $email,
+            'password' => bcrypt($password),
         ]);
     }
 
@@ -45,7 +45,7 @@ class LoginTest extends TestCase
     {
         return [
             'data' => [
-                'type'       => 'users',
+                'type' => 'users',
                 'attributes' => compact('email', 'password'),
             ],
         ];
@@ -85,7 +85,7 @@ class LoginTest extends TestCase
     {
         $response = $this->postJson('/api/v1/auth/login', [
             'data' => [
-                'type'       => 'users',
+                'type' => 'users',
                 'attributes' => ['password' => 'password123'],
             ],
         ]);
@@ -100,7 +100,7 @@ class LoginTest extends TestCase
 
         $response = $this->postJson('/api/v1/auth/login', [
             'data' => [
-                'type'       => 'users',
+                'type' => 'users',
                 'attributes' => ['email' => 'user@example.com'],
             ],
         ]);

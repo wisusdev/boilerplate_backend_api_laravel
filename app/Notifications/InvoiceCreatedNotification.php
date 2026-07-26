@@ -11,9 +11,7 @@ class InvoiceCreatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(private string $invoiceCode, private string $amount)
-    {
-    }
+    public function __construct(private string $invoiceCode, private string $amount) {}
 
     public function via(object $notifiable): array
     {
@@ -26,7 +24,7 @@ class InvoiceCreatedNotification extends Notification implements ShouldQueue
             ->subject('Your invoice is ready')
             ->greeting('Hello!')
             ->line('Your invoice has been generated successfully.')
-            ->line('Invoice code: ' . $this->invoiceCode)
-            ->line('Amount: ' . $this->amount);
+            ->line('Invoice code: '.$this->invoiceCode)
+            ->line('Amount: '.$this->amount);
     }
 }

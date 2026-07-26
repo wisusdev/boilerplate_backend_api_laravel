@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api\Base;
 
-use App\Models\Permission;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
+use App\Models\Permission;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 
 class PermissionsController extends Controller
 {
@@ -17,12 +17,13 @@ class PermissionsController extends Controller
         $this->authorize('index', Permission::class);
 
         $permissions = Permission::select('name')->get();
+
         return response()->json([
-                'data' => [
-                    'type' => 'permissions',
-                    'attributes' => $permissions,
-                ]
-            ]
+            'data' => [
+                'type' => 'permissions',
+                'attributes' => $permissions,
+            ],
+        ]
         );
     }
 }

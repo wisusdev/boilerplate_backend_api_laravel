@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\Tour;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -27,10 +28,10 @@ class ProductReviewTest extends TestCase
         }
     }
 
-    private function apiJson(string $method, string $uri, array $payload = []): \Illuminate\Testing\TestResponse
+    private function apiJson(string $method, string $uri, array $payload = []): TestResponse
     {
         return $this->call($method, $uri, [], [], [], [
-            'HTTP_ACCEPT'  => 'application/vnd.api+json',
+            'HTTP_ACCEPT' => 'application/vnd.api+json',
             'CONTENT_TYPE' => 'application/vnd.api+json',
         ], json_encode($payload));
     }
@@ -38,11 +39,11 @@ class ProductReviewTest extends TestCase
     private function makeUser(string $role = 'user'): User
     {
         $user = User::create([
-            'username'   => 'u' . uniqid(),
+            'username' => 'u'.uniqid(),
             'first_name' => 'Test',
-            'last_name'  => 'User',
-            'email'      => uniqid() . '@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'User',
+            'email' => uniqid().'@example.com',
+            'password' => bcrypt('password123'),
         ]);
         $user->assignRole($role);
 
@@ -120,7 +121,7 @@ class ProductReviewTest extends TestCase
         ProductReview::create(['user_id' => $other->id, 'reviewable_type' => Tour::class, 'reviewable_id' => $tour->id, 'rating' => 1, 'is_approved' => false]);
 
         $this->withHeaders(['Accept' => 'application/vnd.api+json'])
-            ->get('/api/v1/product-reviews?filter[reviewableType]=tour&filter[reviewableId]=' . $tour->id)
+            ->get('/api/v1/product-reviews?filter[reviewableType]=tour&filter[reviewableId]='.$tour->id)
             ->assertOk()
             ->assertJsonPath('meta.total', 1);
     }
@@ -134,7 +135,7 @@ class ProductReviewTest extends TestCase
         }
 
         $this->withHeaders(['Accept' => 'application/vnd.api+json'])
-            ->get('/api/v1/tours/' . $tour->id)
+            ->get('/api/v1/tours/'.$tour->id)
             ->assertOk()
             ->assertJsonPath('data.attributes.average_rating', 4.5)
             ->assertJsonPath('data.attributes.reviews_count', 2);
@@ -155,7 +156,7 @@ class ProductReviewTest extends TestCase
             ->assertJsonPath('meta.total', 1);
 
         // Aprobar + responder.
-        $this->apiJson('PATCH', '/api/v1/product-reviews/' . $review->id, [
+        $this->apiJson('PATCH', '/api/v1/product-reviews/'.$review->id, [
             'data' => ['type' => 'product_reviews', 'id' => (string) $review->id, 'attributes' => ['is_approved' => true, 'admin_reply' => 'Gracias!']],
         ])->assertOk();
 

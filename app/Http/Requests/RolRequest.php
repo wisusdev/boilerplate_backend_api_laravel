@@ -32,7 +32,7 @@ class RolRequest extends FormRequest
 
         if ($this->isMethod('put') || $this->isMethod('patch')) {
             $role = $this->route('role');
-            $rules['data.attributes.name'][] = 'unique:roles,name,' . $role->uuid . ',uuid';
+            $rules['data.attributes.name'][] = 'unique:roles,name,'.$role->uuid.',uuid';
         } else {
             $rules['data.attributes.name'][] = 'unique:roles,name';
         }

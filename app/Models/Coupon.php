@@ -12,6 +12,7 @@ class Coupon extends Model
     use HasFactory;
 
     public const TYPE_PERCENTAGE = 'percentage';
+
     public const TYPE_FIXED = 'fixed';
 
     public const SCOPE_ALL = 'all';
@@ -34,16 +35,16 @@ class Coupon extends Model
     ];
 
     protected $casts = [
-        'value'          => 'decimal:2',
-        'max_discount'   => 'decimal:2',
-        'min_pax'        => 'integer',
-        'min_amount'     => 'decimal:2',
-        'usage_limit'    => 'integer',
-        'used_count'     => 'integer',
+        'value' => 'decimal:2',
+        'max_discount' => 'decimal:2',
+        'min_pax' => 'integer',
+        'min_amount' => 'decimal:2',
+        'usage_limit' => 'integer',
+        'used_count' => 'integer',
         'per_user_limit' => 'integer',
-        'starts_at'      => 'datetime',
-        'expires_at'     => 'datetime',
-        'is_active'      => 'boolean',
+        'starts_at' => 'datetime',
+        'expires_at' => 'datetime',
+        'is_active' => 'boolean',
     ];
 
     public function bookings(): HasMany

@@ -13,7 +13,7 @@ class ValidateJsonApiDocument
     /**
      * Handle an incoming request.
      *
-     * @param Closure(Request): (Response) $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -23,10 +23,10 @@ class ValidateJsonApiDocument
                 'data.type' => ['required', 'string'],
                 'data.attributes' => [
                     Rule::requiredIf(
-                        !Str::of($request->url())->contains('relationships')
+                        ! Str::of($request->url())->contains('relationships')
                     ),
-                    'array'
-                ]
+                    'array',
+                ],
             ]);
         }
 
@@ -34,9 +34,9 @@ class ValidateJsonApiDocument
         // (rutas con parámetro, p. ej. /tours/{tour}). Las acciones sobre un recurso
         // singleton del usuario autenticado (/account/profile, /account/change-password,
         // /settings, /gallery/reorder) no llevan id en la URL ni en el documento.
-        if ($request->isMethod('PATCH') && !empty($request->route()?->parameters())) {
+        if ($request->isMethod('PATCH') && ! empty($request->route()?->parameters())) {
             $request->validate([
-                'data.id' => ['required', 'string']
+                'data.id' => ['required', 'string'],
             ]);
         }
 

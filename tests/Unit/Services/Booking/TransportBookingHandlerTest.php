@@ -21,13 +21,13 @@ class TransportBookingHandlerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->handler = new TransportBookingHandler();
+        $this->handler = new TransportBookingHandler;
         $this->user = User::create([
-            'username'   => 'transport_tester',
+            'username' => 'transport_tester',
             'first_name' => 'Transport',
-            'last_name'  => 'Tester',
-            'email'      => 'transport@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'Tester',
+            'email' => 'transport@example.com',
+            'password' => bcrypt('password123'),
         ]);
     }
 
@@ -36,15 +36,15 @@ class TransportBookingHandlerTest extends TestCase
     private function createVehicle(array $overrides = []): TransportVehicle
     {
         return TransportVehicle::create(array_merge([
-            'title'        => 'Test Van',
+            'title' => 'Test Van',
             'vehicle_type' => 'van',
-            'description'  => 'Air conditioned',
-            'location'     => 'San Salvador',
-            'hourly_rate'  => 20.0,
-            'daily_rate'   => 100.0,
-            'capacity'     => 10,
+            'description' => 'Air conditioned',
+            'location' => 'San Salvador',
+            'hourly_rate' => 20.0,
+            'daily_rate' => 100.0,
+            'capacity' => 10,
             'currency_code' => 'USD',
-            'is_active'    => true,
+            'is_active' => true,
         ], $overrides));
     }
 
@@ -52,13 +52,13 @@ class TransportBookingHandlerTest extends TestCase
     {
         return array_merge([
             'transport_vehicle_id' => $vehicle->id,
-            'pickup_at'            => '2026-08-01 08:00:00',
-            'dropoff_at'           => '2026-08-01 12:00:00',
-            'pickup_location'      => 'Aeropuerto',
-            'dropoff_location'     => 'Hotel',
-            'rental_type'          => 'hourly',
-            'quantity'             => 1,
-            'currency_code'        => 'USD',
+            'pickup_at' => '2026-08-01 08:00:00',
+            'dropoff_at' => '2026-08-01 12:00:00',
+            'pickup_location' => 'Aeropuerto',
+            'dropoff_location' => 'Hotel',
+            'rental_type' => 'hourly',
+            'quantity' => 1,
+            'currency_code' => 'USD',
         ], $overrides);
     }
 
@@ -69,7 +69,7 @@ class TransportBookingHandlerTest extends TestCase
         $vehicle = $this->createVehicle(['hourly_rate' => 25.0]);
 
         $result = $this->handler->prepare($this->baseData($vehicle, [
-            'pickup_at'  => '2026-08-01 08:00:00',
+            'pickup_at' => '2026-08-01 08:00:00',
             'dropoff_at' => '2026-08-01 12:00:00', // 4 hours
             'rental_type' => 'hourly',
         ]));
@@ -84,7 +84,7 @@ class TransportBookingHandlerTest extends TestCase
         $vehicle = $this->createVehicle(['currency_code' => 'EUR', 'daily_rate' => 100.0]);
 
         $result = $this->handler->prepare($this->baseData($vehicle, [
-            'pickup_at'  => '2026-08-01 08:00:00',
+            'pickup_at' => '2026-08-01 08:00:00',
             'dropoff_at' => '2026-08-02 08:00:00',
             'rental_type' => 'daily',
         ]));
@@ -97,7 +97,7 @@ class TransportBookingHandlerTest extends TestCase
         $vehicle = $this->createVehicle(['hourly_rate' => 30.0]);
 
         $result = $this->handler->prepare($this->baseData($vehicle, [
-            'pickup_at'  => '2026-08-01 10:00:00',
+            'pickup_at' => '2026-08-01 10:00:00',
             'dropoff_at' => '2026-08-01 10:30:00', // 30 min → capped to 1h
             'rental_type' => 'hourly',
         ]));
@@ -110,7 +110,7 @@ class TransportBookingHandlerTest extends TestCase
         $vehicle = $this->createVehicle(['daily_rate' => 120.0]);
 
         $result = $this->handler->prepare($this->baseData($vehicle, [
-            'pickup_at'  => '2026-08-01 08:00:00',
+            'pickup_at' => '2026-08-01 08:00:00',
             'dropoff_at' => '2026-08-02 08:00:00', // 1 day
             'rental_type' => 'daily',
         ]));
@@ -123,10 +123,10 @@ class TransportBookingHandlerTest extends TestCase
         $vehicle = $this->createVehicle(['hourly_rate' => 20.0]);
 
         $result = $this->handler->prepare($this->baseData($vehicle, [
-            'pickup_at'  => '2026-08-01 08:00:00',
+            'pickup_at' => '2026-08-01 08:00:00',
             'dropoff_at' => '2026-08-01 10:00:00', // 2 hours
             'rental_type' => 'hourly',
-            'quantity'   => 3,
+            'quantity' => 3,
         ]));
 
         // 2 hours × $20 × 3 vehicles = $120
@@ -136,7 +136,7 @@ class TransportBookingHandlerTest extends TestCase
     public function test_prepare_returns_correct_structure(): void
     {
         $vehicle = $this->createVehicle();
-        $data    = $this->baseData($vehicle);
+        $data = $this->baseData($vehicle);
 
         $result = $this->handler->prepare($data);
 
@@ -158,23 +158,23 @@ class TransportBookingHandlerTest extends TestCase
         $vehicle = $this->createVehicle();
 
         Booking::create([
-            'user_id'       => $this->user->id,
+            'user_id' => $this->user->id,
             'bookable_type' => TransportVehicle::class,
-            'bookable_id'   => $vehicle->id,
-            'starts_at'     => '2026-08-01 08:00:00',
-            'ends_at'       => '2026-08-01 16:00:00',
-            'party_size'    => 1,
-            'total_price'   => 160.0,
+            'bookable_id' => $vehicle->id,
+            'starts_at' => '2026-08-01 08:00:00',
+            'ends_at' => '2026-08-01 16:00:00',
+            'party_size' => 1,
+            'total_price' => 160.0,
             'currency_code' => 'USD',
-            'status'        => Booking::STATUS_CONFIRMED,
+            'status' => Booking::STATUS_CONFIRMED,
         ]);
 
         $this->expectException(ValidationException::class);
 
         $this->handler->validate([
             'transport_vehicle_id' => $vehicle->id,
-            'pickup_at'            => '2026-08-01 10:00:00',
-            'dropoff_at'           => '2026-08-01 14:00:00',
+            'pickup_at' => '2026-08-01 10:00:00',
+            'dropoff_at' => '2026-08-01 14:00:00',
         ]);
     }
 
@@ -183,23 +183,23 @@ class TransportBookingHandlerTest extends TestCase
         $vehicle = $this->createVehicle();
 
         Booking::create([
-            'user_id'       => $this->user->id,
+            'user_id' => $this->user->id,
             'bookable_type' => TransportVehicle::class,
-            'bookable_id'   => $vehicle->id,
-            'starts_at'     => '2026-08-01 08:00:00',
-            'ends_at'       => '2026-08-01 16:00:00',
-            'party_size'    => 1,
-            'total_price'   => 80.0,
+            'bookable_id' => $vehicle->id,
+            'starts_at' => '2026-08-01 08:00:00',
+            'ends_at' => '2026-08-01 16:00:00',
+            'party_size' => 1,
+            'total_price' => 80.0,
             'currency_code' => 'USD',
-            'status'        => Booking::STATUS_PENDING,
+            'status' => Booking::STATUS_PENDING,
         ]);
 
         $this->expectException(ValidationException::class);
 
         $this->handler->validate([
             'transport_vehicle_id' => $vehicle->id,
-            'pickup_at'            => '2026-08-01 12:00:00',
-            'dropoff_at'           => '2026-08-01 18:00:00',
+            'pickup_at' => '2026-08-01 12:00:00',
+            'dropoff_at' => '2026-08-01 18:00:00',
         ]);
     }
 
@@ -208,22 +208,22 @@ class TransportBookingHandlerTest extends TestCase
         $vehicle = $this->createVehicle();
 
         Booking::create([
-            'user_id'       => $this->user->id,
+            'user_id' => $this->user->id,
             'bookable_type' => TransportVehicle::class,
-            'bookable_id'   => $vehicle->id,
-            'starts_at'     => '2026-08-01 08:00:00',
-            'ends_at'       => '2026-08-01 12:00:00',
-            'party_size'    => 1,
-            'total_price'   => 80.0,
+            'bookable_id' => $vehicle->id,
+            'starts_at' => '2026-08-01 08:00:00',
+            'ends_at' => '2026-08-01 12:00:00',
+            'party_size' => 1,
+            'total_price' => 80.0,
             'currency_code' => 'USD',
-            'status'        => Booking::STATUS_CONFIRMED,
+            'status' => Booking::STATUS_CONFIRMED,
         ]);
 
         // No debe lanzar excepción
         $this->handler->validate([
             'transport_vehicle_id' => $vehicle->id,
-            'pickup_at'            => '2026-08-01 13:00:00',
-            'dropoff_at'           => '2026-08-01 17:00:00',
+            'pickup_at' => '2026-08-01 13:00:00',
+            'dropoff_at' => '2026-08-01 17:00:00',
         ]);
 
         $this->assertTrue(true);
@@ -234,22 +234,22 @@ class TransportBookingHandlerTest extends TestCase
         $vehicle = $this->createVehicle();
 
         Booking::create([
-            'user_id'       => $this->user->id,
+            'user_id' => $this->user->id,
             'bookable_type' => TransportVehicle::class,
-            'bookable_id'   => $vehicle->id,
-            'starts_at'     => '2026-08-01 08:00:00',
-            'ends_at'       => '2026-08-01 16:00:00',
-            'party_size'    => 1,
-            'total_price'   => 80.0,
+            'bookable_id' => $vehicle->id,
+            'starts_at' => '2026-08-01 08:00:00',
+            'ends_at' => '2026-08-01 16:00:00',
+            'party_size' => 1,
+            'total_price' => 80.0,
             'currency_code' => 'USD',
-            'status'        => Booking::STATUS_CANCELLED,
+            'status' => Booking::STATUS_CANCELLED,
         ]);
 
         // No debe lanzar excepción porque el booking existente está cancelado
         $this->handler->validate([
             'transport_vehicle_id' => $vehicle->id,
-            'pickup_at'            => '2026-08-01 10:00:00',
-            'dropoff_at'           => '2026-08-01 14:00:00',
+            'pickup_at' => '2026-08-01 10:00:00',
+            'dropoff_at' => '2026-08-01 14:00:00',
         ]);
 
         $this->assertTrue(true);

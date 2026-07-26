@@ -54,20 +54,20 @@ class StockImageSeeder extends Seeder
         // galería solo para los primeros (evita cientos de descargas a escala).
         $galleryLimitTours = 6;
         foreach (Tour::all()->values() as $index => $tour) {
-            $base = $tour->slug ?: ('tour-' . $tour->id);
-            $this->addFeatured($tour, $base . '-cover');
+            $base = $tour->slug ?: ('tour-'.$tour->id);
+            $this->addFeatured($tour, $base.'-cover');
             if ($index < $galleryLimitTours) {
-                $this->addGallery($tour, [$base . '-1', $base . '-2', $base . '-3']);
+                $this->addGallery($tour, [$base.'-1', $base.'-2', $base.'-3']);
             }
         }
 
         // Vehículos: destacada para todos; galería solo para los primeros.
         $galleryLimitVehicles = 3;
         foreach (TransportVehicle::all()->values() as $index => $vehicle) {
-            $base = 'vehiculo-' . $vehicle->id;
-            $this->addFeatured($vehicle, $base . '-cover');
+            $base = 'vehiculo-'.$vehicle->id;
+            $this->addFeatured($vehicle, $base.'-cover');
             if ($index < $galleryLimitVehicles) {
-                $this->addGallery($vehicle, [$base . '-1', $base . '-2']);
+                $this->addGallery($vehicle, [$base.'-1', $base.'-2']);
             }
         }
 
@@ -86,7 +86,7 @@ class StockImageSeeder extends Seeder
             foreach ($captions as $i => $caption) {
                 $item = GalleryItem::create(['caption' => $caption, 'sort_order' => $i + 1]);
                 try {
-                    $item->addMediaFromUrl($this->url('galeria-' . ($i + 1), 1200, 900))
+                    $item->addMediaFromUrl($this->url('galeria-'.($i + 1), 1200, 900))
                         ->toMediaCollection('image');
                 } catch (\Throwable $e) {
                     Log::warning('StockImageSeeder galería sitio falló', ['i' => $i, 'error' => $e->getMessage()]);

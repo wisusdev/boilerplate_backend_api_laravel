@@ -19,15 +19,15 @@ class InstallRequest extends FormRequest
         return [
             // Administrador fundador
             'first_name' => ['required', 'string', 'max:255'],
-            'last_name'  => ['required', 'string', 'max:255'],
-            'email'      => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password'   => ['required', 'string', 'min:8', 'confirmed'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
 
             // Datos del sitio (opcionales; usan los valores por defecto si se omiten)
-            'site_name'     => ['nullable', 'string', 'max:255'],
+            'site_name' => ['nullable', 'string', 'max:255'],
             'contact_email' => ['nullable', 'email', 'max:255'],
-            'currency'      => ['nullable', 'string', 'max:8'],
-            'timezone'      => ['nullable', 'timezone'],
+            'currency' => ['nullable', 'string', 'max:8'],
+            'timezone' => ['nullable', 'timezone'],
         ];
     }
 }

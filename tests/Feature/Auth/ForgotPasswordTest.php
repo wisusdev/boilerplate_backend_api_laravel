@@ -20,11 +20,11 @@ class ForgotPasswordTest extends TestCase
     private function createUser(string $email = 'user@example.com'): User
     {
         return User::create([
-            'username'   => 'testuser',
+            'username' => 'testuser',
             'first_name' => 'Test',
-            'last_name'  => 'User',
-            'email'      => $email,
-            'password'   => bcrypt('password123'),
+            'last_name' => 'User',
+            'email' => $email,
+            'password' => bcrypt('password123'),
         ]);
     }
 
@@ -32,7 +32,7 @@ class ForgotPasswordTest extends TestCase
     {
         return [
             'data' => [
-                'type'       => 'users',
+                'type' => 'users',
                 'attributes' => compact('email'),
             ],
         ];
@@ -42,10 +42,10 @@ class ForgotPasswordTest extends TestCase
     {
         return [
             'data' => [
-                'type'       => 'reset-password',
+                'type' => 'reset-password',
                 'attributes' => [
-                    'token'                 => $token,
-                    'password'              => $password,
+                    'token' => $token,
+                    'password' => $password,
                     'password_confirmation' => $password,
                 ],
             ],
@@ -101,8 +101,8 @@ class ForgotPasswordTest extends TestCase
         $user = $this->createUser('reset-ok@example.com');
 
         DB::table('password_reset_tokens')->insert([
-            'email'      => 'reset-ok@example.com',
-            'token'      => 'valid_reset_token',
+            'email' => 'reset-ok@example.com',
+            'token' => 'valid_reset_token',
             'created_at' => now()->addHours(6),
         ]);
 
@@ -129,8 +129,8 @@ class ForgotPasswordTest extends TestCase
         $this->createUser('reset@example.com');
 
         DB::table('password_reset_tokens')->insert([
-            'email'      => 'reset@example.com',
-            'token'      => 'expired_token_abc',
+            'email' => 'reset@example.com',
+            'token' => 'expired_token_abc',
             'created_at' => now()->subHours(12), // ya expiró
         ]);
 
@@ -144,17 +144,17 @@ class ForgotPasswordTest extends TestCase
         $this->createUser('reset2@example.com');
 
         DB::table('password_reset_tokens')->insert([
-            'email'      => 'reset2@example.com',
-            'token'      => 'valid_token_123',
+            'email' => 'reset2@example.com',
+            'token' => 'valid_token_123',
             'created_at' => now()->addHours(6),
         ]);
 
         $payload = [
             'data' => [
-                'type'       => 'reset-password',
+                'type' => 'reset-password',
                 'attributes' => [
-                    'token'                 => 'valid_token_123',
-                    'password'              => 'newpassword123',
+                    'token' => 'valid_token_123',
+                    'password' => 'newpassword123',
                     'password_confirmation' => 'different_password',
                 ],
             ],
@@ -169,9 +169,9 @@ class ForgotPasswordTest extends TestCase
     {
         $response = $this->postJson('/api/v1/auth/reset-password', [
             'data' => [
-                'type'       => 'reset-password',
+                'type' => 'reset-password',
                 'attributes' => [
-                    'password'              => 'newpassword123',
+                    'password' => 'newpassword123',
                     'password_confirmation' => 'newpassword123',
                 ],
             ],

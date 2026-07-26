@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -35,10 +34,10 @@ class PasswordChangeNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-                    ->greeting('Hello!')
-                    ->line('You are receiving this email because your account password has recently been changed.')
-					->line('If you did not change your password, please contact us immediately.')
-					->line('If you did change your password, no further action is required.');
+            ->greeting('Hello!')
+            ->line('You are receiving this email because your account password has recently been changed.')
+            ->line('If you did not change your password, please contact us immediately.')
+            ->line('If you did change your password, no further action is required.');
     }
 
     /**

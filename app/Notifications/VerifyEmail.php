@@ -2,10 +2,10 @@
 
 namespace App\Notifications;
 
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Notifications\Notification;
-use Illuminate\Notifications\Messages\MailMessage;
 
 class VerifyEmail extends Notification
 {
@@ -24,12 +24,12 @@ class VerifyEmail extends Notification
 
         $name = $notifiable->first_name;
 
-        $url = config('app.frontend_url') . str_replace('/api/v1', '', $this->verificationUrl($notifiable));
+        $url = config('app.frontend_url').str_replace('/api/v1', '', $this->verificationUrl($notifiable));
 
         return (new MailMessage)
             ->subject('Verify Email Address')
             ->greeting('Hello!')
-            ->line('Hello ' . $name . ',')
+            ->line('Hello '.$name.',')
             ->line('Please click the button below to verify your email address.')
             ->action('Verify Email Address', $url)
             ->line('If you did not create an account, no further action is required.');
@@ -42,7 +42,7 @@ class VerifyEmail extends Notification
             Carbon::now()->addMinutes(60),
             [
                 'id' => $notifiable->getKey(),
-                'hash' => sha1($notifiable->getEmailForVerification())
+                'hash' => sha1($notifiable->getEmailForVerification()),
             ],
             false
         );

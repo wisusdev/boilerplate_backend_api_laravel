@@ -18,9 +18,9 @@ class AuthenticationException extends Exception
                 [
                     'title' => 'Unauthenticated',
                     'detail' => 'This action requires authentication.',
-                    'status' => '401'
-                ]
-            ]
+                    'status' => '401',
+                ],
+            ],
         ], 401);
     }
 }

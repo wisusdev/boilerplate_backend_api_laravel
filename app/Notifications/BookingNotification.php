@@ -19,8 +19,7 @@ class BookingNotification extends Notification implements ShouldQueue
         private string $subject,
         private string $body,
         private array $details = []
-    ) {
-    }
+    ) {}
 
     public function via(object $notifiable): array
     {
@@ -37,7 +36,7 @@ class BookingNotification extends Notification implements ShouldQueue
             if ($value === null || $value === '') {
                 continue;
             }
-            $mail->line(ucfirst(str_replace('_', ' ', (string) $label)) . ': ' . (is_array($value) ? json_encode($value) : $value));
+            $mail->line(ucfirst(str_replace('_', ' ', (string) $label)).': '.(is_array($value) ? json_encode($value) : $value));
         }
 
         return $mail;

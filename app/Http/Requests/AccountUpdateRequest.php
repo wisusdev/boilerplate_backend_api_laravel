@@ -27,7 +27,7 @@ class AccountUpdateRequest extends FormRequest
             'data.type' => ['required', 'string', 'in:profile'],
             'data.attributes.first_name' => ['required', 'string'],
             'data.attributes.last_name' => ['required', 'string'],
-            'data.attributes.email' => ['required', 'email', 'unique:users,email,' . $this->user()->id],
+            'data.attributes.email' => ['required', 'email', 'unique:users,email,'.$this->user()->id],
             'data.attributes.avatar' => ['nullable', 'string', new Base64FileValidationRule(['image/jpeg', 'image/png', 'image/gif', 'image/webp'], 2048)],
             'data.attributes.language' => ['required', 'string', 'in:en,es'],
             'data.attributes.phone' => ['nullable', 'string', 'max:30'],
@@ -48,7 +48,7 @@ class AccountUpdateRequest extends FormRequest
             'data.attributes.email.unique' => 'validation.emailUnique',
             'data.attributes.avatar.string' => 'validation.avatarString',
             'data.attributes.language.required' => 'validation.languageRequired',
-            'data.attributes.language.in' => 'validation.languageIn'
+            'data.attributes.language.in' => 'validation.languageIn',
         ];
     }
 }

@@ -40,25 +40,25 @@ class InstallCommand extends Command
         }
 
         $data = [
-            'first_name'    => $this->option('first-name') ?: $this->ask('Nombre del administrador'),
-            'last_name'     => $this->option('last-name') ?: $this->ask('Apellido del administrador'),
-            'email'         => $this->option('email') ?: $this->ask('Correo del administrador'),
-            'password'      => $this->option('password') ?: $this->secret('Contraseña (mín. 8 caracteres)'),
-            'site_name'     => $this->option('site-name') ?: $this->ask('Nombre del sitio', config('app.name')),
+            'first_name' => $this->option('first-name') ?: $this->ask('Nombre del administrador'),
+            'last_name' => $this->option('last-name') ?: $this->ask('Apellido del administrador'),
+            'email' => $this->option('email') ?: $this->ask('Correo del administrador'),
+            'password' => $this->option('password') ?: $this->secret('Contraseña (mín. 8 caracteres)'),
+            'site_name' => $this->option('site-name') ?: $this->ask('Nombre del sitio', config('app.name')),
             'contact_email' => $this->option('contact-email') ?: $this->ask('Correo de contacto', null),
-            'currency'      => $this->option('currency'),
-            'timezone'      => $this->option('timezone'),
+            'currency' => $this->option('currency'),
+            'timezone' => $this->option('timezone'),
         ];
 
         $validator = Validator::make($data, [
-            'first_name'    => ['required', 'string', 'max:255'],
-            'last_name'     => ['required', 'string', 'max:255'],
-            'email'         => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password'      => ['required', 'string', 'min:8'],
-            'site_name'     => ['nullable', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8'],
+            'site_name' => ['nullable', 'string', 'max:255'],
             'contact_email' => ['nullable', 'email', 'max:255'],
-            'currency'      => ['nullable', 'string', 'max:8'],
-            'timezone'      => ['nullable', 'timezone'],
+            'currency' => ['nullable', 'string', 'max:8'],
+            'timezone' => ['nullable', 'timezone'],
         ]);
 
         if ($validator->fails()) {
@@ -88,9 +88,9 @@ class InstallCommand extends Command
         $report = $requirements->check();
 
         $icon = fn (string $status) => match ($status) {
-            'ok'      => '<info>✔</info>',
+            'ok' => '<info>✔</info>',
             'warning' => '<comment>!</comment>',
-            default   => '<error>✖</error>',
+            default => '<error>✖</error>',
         };
 
         $this->info('Verificando requisitos del entorno…');
@@ -108,7 +108,7 @@ class InstallCommand extends Command
             $this->error('El entorno no cumple los requisitos obligatorios:');
             foreach ($report['checks'] as $c) {
                 if ($c['required'] && $c['status'] === 'error') {
-                    $this->line("  <error>•</error> {$c['label']}" . ($c['hint'] ? " — {$c['hint']}" : ''));
+                    $this->line("  <error>•</error> {$c['label']}".($c['hint'] ? " — {$c['hint']}" : ''));
                 }
             }
             $this->newLine();

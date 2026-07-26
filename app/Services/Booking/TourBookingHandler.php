@@ -12,9 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class TourBookingHandler implements BookingHandlerInterface
 {
-    public function __construct(private readonly TourAvailabilityService $tourAvailabilityService)
-    {
-    }
+    public function __construct(private readonly TourAvailabilityService $tourAvailabilityService) {}
 
     public function validate(array $data): void
     {
@@ -96,21 +94,21 @@ class TourBookingHandler implements BookingHandlerInterface
         }
 
         return [
-            'bookable_type'      => Tour::class,
-            'bookable_id'        => $tour->id,
+            'bookable_type' => Tour::class,
+            'bookable_id' => $tour->id,
             'upgrade_vehicle_id' => $upgradeVehicleId,
-            'upgrade_label'      => $upgradeLabel,
-            'starts_at'          => Carbon::parse($data['booking_date'])->startOfDay(),
-            'ends_at'            => null,
-            'party_size'         => $requestedPax,
-            'total_price'        => round($subtotal + $feesTotal + (float) $upgradeSurcharge, 2),
-            'service_fees'       => $feesSnapshot ?: null,
-            'upgrade_surcharge'  => $upgradeSurcharge,
-            'currency_code'      => SiteSettings::currency(),
-            'notes'              => $data['notes'] ?? null,
-            'pickup_address'     => $data['pickup_address'] ?? null,
-            'pickup_lat'         => $data['pickup_lat'] ?? null,
-            'pickup_lng'         => $data['pickup_lng'] ?? null,
+            'upgrade_label' => $upgradeLabel,
+            'starts_at' => Carbon::parse($data['booking_date'])->startOfDay(),
+            'ends_at' => null,
+            'party_size' => $requestedPax,
+            'total_price' => round($subtotal + $feesTotal + (float) $upgradeSurcharge, 2),
+            'service_fees' => $feesSnapshot ?: null,
+            'upgrade_surcharge' => $upgradeSurcharge,
+            'currency_code' => SiteSettings::currency(),
+            'notes' => $data['notes'] ?? null,
+            'pickup_address' => $data['pickup_address'] ?? null,
+            'pickup_lat' => $data['pickup_lat'] ?? null,
+            'pickup_lng' => $data['pickup_lng'] ?? null,
         ];
     }
 
@@ -160,10 +158,10 @@ class TourBookingHandler implements BookingHandlerInterface
 
             $total += $lineTotal;
             $snapshot[] = [
-                'name'   => (string) ($fee['name'] ?? 'Servicio'),
+                'name' => (string) ($fee['name'] ?? 'Servicio'),
                 'amount' => $amount,
-                'calc'   => $calc,
-                'total'  => $lineTotal,
+                'calc' => $calc,
+                'total' => $lineTotal,
             ];
         }
 

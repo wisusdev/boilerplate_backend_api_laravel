@@ -56,7 +56,7 @@ class ProductReviewController extends Controller
     {
         $validated = $request->validate([
             'reviewable_type' => ['required', 'in:tour,transport'],
-            'reviewable_id'   => ['required', 'integer'],
+            'reviewable_id' => ['required', 'integer'],
         ]);
 
         $class = Booking::bookableClassFor($validated['reviewable_type']);
@@ -77,10 +77,10 @@ class ProductReviewController extends Controller
 
         return response()->json([
             'data' => [
-                'type'       => 'review_eligibility',
+                'type' => 'review_eligibility',
                 'attributes' => [
-                    'can_review'   => $hasBooking && ! $hasReviewed,
-                    'has_booking'  => $hasBooking,
+                    'can_review' => $hasBooking && ! $hasReviewed,
+                    'has_booking' => $hasBooking,
                     'has_reviewed' => $hasReviewed,
                 ],
             ],
@@ -124,12 +124,12 @@ class ProductReviewController extends Controller
         }
 
         $review = ProductReview::create([
-            'user_id'         => $user->id,
+            'user_id' => $user->id,
             'reviewable_type' => $class,
-            'reviewable_id'   => $product->id,
-            'rating'          => $attrs['rating'],
-            'comment'         => $attrs['comment'] ?? null,
-            'is_approved'     => true,
+            'reviewable_id' => $product->id,
+            'rating' => $attrs['rating'],
+            'comment' => $attrs['comment'] ?? null,
+            'is_approved' => true,
         ]);
 
         return ProductReviewResource::make($review->load('user'))

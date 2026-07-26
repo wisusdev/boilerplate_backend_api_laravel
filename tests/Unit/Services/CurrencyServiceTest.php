@@ -4,6 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Models\Currency;
 use App\Services\CurrencyService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +17,7 @@ class CurrencyServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CurrencyService();
+        $this->service = new CurrencyService;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -24,12 +25,12 @@ class CurrencyServiceTest extends TestCase
     private function createCurrency(string $code, float $rateToUsd, bool $isDefault = false): Currency
     {
         return Currency::create([
-            'code'        => $code,
-            'name'        => $code . ' Currency',
-            'symbol'      => $code[0],
+            'code' => $code,
+            'name' => $code.' Currency',
+            'symbol' => $code[0],
             'rate_to_usd' => $rateToUsd,
-            'is_default'  => $isDefault,
-            'is_active'   => true,
+            'is_default' => $isDefault,
+            'is_active' => true,
         ]);
     }
 
@@ -110,7 +111,7 @@ class CurrencyServiceTest extends TestCase
     {
         $this->createCurrency('USD', 1.0, false);
 
-        $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        $this->expectException(ModelNotFoundException::class);
 
         $this->service->defaultCurrency();
     }

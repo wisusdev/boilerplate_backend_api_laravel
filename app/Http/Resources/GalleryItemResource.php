@@ -14,9 +14,9 @@ class GalleryItemResource extends JsonResource
         $image = $this->resource->getFirstMedia('image');
 
         return [
-            'url'        => $image?->getUrl(),
-            'thumb_url'  => $image?->getUrl('thumb'),
-            'caption'    => $this->resource->caption,
+            'url' => $image?->getUrl(),
+            'thumb_url' => $image?->getUrl('thumb'),
+            'caption' => $this->resource->caption,
             'sort_order' => $this->resource->sort_order,
             'created_at' => $this->resource->created_at,
             'updated_at' => $this->resource->updated_at,

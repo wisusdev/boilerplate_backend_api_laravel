@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Base;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Auth\Access\AuthorizationException;
 use App\Http\Requests\RolRequest;
 use App\Http\Resources\RoleResource;
 use App\Models\Role;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
@@ -35,7 +35,7 @@ class RolesController extends Controller
         $this->authorize('store', Role::class);
 
         $role = Role::create([
-            'name' => $request->input('data.attributes.name')
+            'name' => $request->input('data.attributes.name'),
         ]);
         $role->givePermissionTo($request->input('data.attributes.permissions'));
 
@@ -48,9 +48,9 @@ class RolesController extends Controller
     public function show(Role $role): JsonResource
     {
         $this->authorize('show', $role);
+
         return RoleResource::make($role);
     }
-
 
     /**
      * @throws AuthorizationException
@@ -59,7 +59,7 @@ class RolesController extends Controller
     {
         $this->authorize('update', $role);
         $role->update([
-            'name' => $request->input('data.attributes.name')
+            'name' => $request->input('data.attributes.name'),
         ]);
         $role->syncPermissions($request->input('data.attributes.permissions'));
 
@@ -69,12 +69,12 @@ class RolesController extends Controller
     /**
      * @throws AuthorizationException
      */
-    public function destroy(Role $role): JsonResponse | Response
+    public function destroy(Role $role): JsonResponse|Response
     {
         $this->authorize('delete', $role);
 
         if ($role->name === 'super-admin' || $role->name === 'admin') {
-            return response()->json(['message' => 'Cannot delete the ' . $role->name . ' role'], 403);
+            return response()->json(['message' => 'Cannot delete the '.$role->name.' role'], 403);
         }
 
         if ($role->users()->count() > 0) {
@@ -82,6 +82,7 @@ class RolesController extends Controller
         }
 
         $role->delete();
+
         return response()->noContent();
     }
 }

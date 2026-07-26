@@ -45,7 +45,7 @@ class SettingsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $isAdmin = (bool) optional($request->user())->hasRole(['admin', 'super-admin']);
-        $keys    = $isAdmin ? self::ALL_KEYS : self::PUBLIC_KEYS;
+        $keys = $isAdmin ? self::ALL_KEYS : self::PUBLIC_KEYS;
 
         $settings = Setting::whereIn('key', $keys)->get()
             ->keyBy('key')
@@ -55,8 +55,8 @@ class SettingsController extends Controller
 
         return response()->json([
             'data' => [
-                'type'       => 'settings',
-                'id'         => 'current',
+                'type' => 'settings',
+                'id' => 'current',
                 'attributes' => $flat,
             ],
         ]);
@@ -74,8 +74,8 @@ class SettingsController extends Controller
         $rows = Setting::whereIn('key', self::ALL_KEYS)->get()->keyBy('key');
 
         $paymentGateway = json_decode(optional($rows->get('payment_gateway'))->value ?? '{}', true) ?? [];
-        $app            = json_decode(optional($rows->get('app'))->value ?? '{}', true)            ?? [];
-        $socialAuth     = json_decode(optional($rows->get('social_auth_services'))->value ?? '{}', true) ?? [];
+        $app = json_decode(optional($rows->get('app'))->value ?? '{}', true) ?? [];
+        $socialAuth = json_decode(optional($rows->get('social_auth_services'))->value ?? '{}', true) ?? [];
 
         // ── payment_gateway fields ─────────────────────────────────────────
         $pmFields = [
@@ -151,8 +151,8 @@ class SettingsController extends Controller
         }
 
         // Persist
-        Setting::updateOrCreate(['key' => 'payment_gateway'],   ['value' => json_encode($paymentGateway)]);
-        Setting::updateOrCreate(['key' => 'app'],               ['value' => json_encode($app)]);
+        Setting::updateOrCreate(['key' => 'payment_gateway'], ['value' => json_encode($paymentGateway)]);
+        Setting::updateOrCreate(['key' => 'app'], ['value' => json_encode($app)]);
         Setting::updateOrCreate(['key' => 'social_auth_services'], ['value' => json_encode($socialAuth)]);
 
         return $this->index($request);
@@ -169,9 +169,9 @@ class SettingsController extends Controller
             'image' => ['required', 'image', 'max:4096', 'mimes:jpeg,png,webp,svg'],
         ]);
 
-        $file      = $request->file('image');
+        $file = $request->file('image');
         $extension = $file->getClientOriginalExtension();
-        $path      = 'settings/logo.' . $extension;
+        $path = 'settings/logo.'.$extension;
 
         // Delete any existing logo file with any extension
         foreach (['png', 'jpg', 'jpeg', 'webp', 'svg'] as $ext) {
@@ -189,7 +189,7 @@ class SettingsController extends Controller
 
         return response()->json([
             'data' => [
-                'type'       => 'logo',
+                'type' => 'logo',
                 'attributes' => ['app_logo_url' => $logoUrl],
             ],
         ]);
@@ -206,7 +206,7 @@ class SettingsController extends Controller
         $flat = [];
 
         foreach ($rows as $key => $value) {
-            if (!is_array($value)) {
+            if (! is_array($value)) {
                 continue;
             }
             foreach ($value as $k => $v) {
@@ -224,33 +224,33 @@ class SettingsController extends Controller
             unset($flat['payment_methods']);
 
             if (isset($pm['paypal'])) {
-                $flat['payment_paypal_enabled']  = $pm['paypal']['enabled'] ?? false;
-                $flat['paypal_mode']             = $pm['paypal']['mode'] ?? 'sandbox';
+                $flat['payment_paypal_enabled'] = $pm['paypal']['enabled'] ?? false;
+                $flat['paypal_mode'] = $pm['paypal']['mode'] ?? 'sandbox';
                 if ($isAdmin) {
-                    $flat['paypal_client_id']     = $pm['paypal']['client_id'] ?? '';
+                    $flat['paypal_client_id'] = $pm['paypal']['client_id'] ?? '';
                     $flat['paypal_client_secret'] = $pm['paypal']['client_secret'] ?? '';
                 }
             }
             if (isset($pm['stripe'])) {
-                $flat['payment_stripe_enabled']  = $pm['stripe']['enabled'] ?? false;
-                $flat['stripe_mode']             = $pm['stripe']['mode'] ?? 'sandbox';
+                $flat['payment_stripe_enabled'] = $pm['stripe']['enabled'] ?? false;
+                $flat['stripe_mode'] = $pm['stripe']['mode'] ?? 'sandbox';
                 if ($isAdmin) {
-                    $flat['stripe_public_key']   = $pm['stripe']['key'] ?? '';
-                    $flat['stripe_secret_key']   = $pm['stripe']['secret'] ?? '';
+                    $flat['stripe_public_key'] = $pm['stripe']['key'] ?? '';
+                    $flat['stripe_secret_key'] = $pm['stripe']['secret'] ?? '';
                 }
             }
             if (isset($pm['wompi'])) {
-                $flat['payment_wompi_enabled']   = $pm['wompi']['enabled'] ?? false;
-                $flat['wompi_mode']              = $pm['wompi']['mode'] ?? 'sandbox';
+                $flat['payment_wompi_enabled'] = $pm['wompi']['enabled'] ?? false;
+                $flat['wompi_mode'] = $pm['wompi']['mode'] ?? 'sandbox';
                 if ($isAdmin) {
-                    $flat['wompi_public_key']    = $pm['wompi']['key'] ?? '';
-                    $flat['wompi_private_key']   = $pm['wompi']['secret'] ?? '';
+                    $flat['wompi_public_key'] = $pm['wompi']['key'] ?? '';
+                    $flat['wompi_private_key'] = $pm['wompi']['secret'] ?? '';
                 }
             }
         }
 
         // Strip credentials from non-admins
-        if (!$isAdmin) {
+        if (! $isAdmin) {
             $sensitiveKeys = [
                 'paypal_client_secret', 'stripe_secret_key', 'wompi_private_key',
                 'mail', 'password',

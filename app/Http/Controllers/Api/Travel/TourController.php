@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\TourRequest;
 use App\Http\Resources\TourResource;
 use App\Models\Tour;
+use App\Support\SiteSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -51,7 +52,7 @@ class TourController extends Controller
             'location' => $data['location'],
             'category_id' => $data['category_id'] ?? null,
             // Moneda GLOBAL del sitio (ya no se configura por tour).
-            'currency_code' => \App\Support\SiteSettings::currency(),
+            'currency_code' => SiteSettings::currency(),
             'itinerary' => $data['itinerary'] ?? [],
             'highlights' => $data['highlights'] ?? [],
             'includes' => $data['includes'] ?? [],

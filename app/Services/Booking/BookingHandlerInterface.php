@@ -2,13 +2,15 @@
 
 namespace App\Services\Booking;
 
+use Illuminate\Validation\ValidationException;
+
 interface BookingHandlerInterface
 {
     /**
      * Validate business rules for this booking type.
      * Must be called inside a DB transaction with appropriate locks held.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function validate(array $data): void;
 

@@ -20,7 +20,7 @@ class UniqueFileNamer extends FileNamer
         $name = pathinfo($fileName, PATHINFO_FILENAME);
         $slug = Str::slug($name) ?: 'archivo';
 
-        return $slug . '-' . Str::lower(Str::random(6));
+        return $slug.'-'.Str::lower(Str::random(6));
     }
 
     public function conversionFileName(string $fileName, Conversion $conversion): string

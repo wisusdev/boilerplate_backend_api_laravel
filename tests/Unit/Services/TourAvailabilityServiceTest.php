@@ -23,13 +23,13 @@ class TourAvailabilityServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new TourAvailabilityService();
+        $this->service = new TourAvailabilityService;
         $this->user = User::create([
-            'username'   => 'availability_tester',
+            'username' => 'availability_tester',
             'first_name' => 'Availability',
-            'last_name'  => 'Tester',
-            'email'      => 'availability@example.com',
-            'password'   => bcrypt('password123'),
+            'last_name' => 'Tester',
+            'email' => 'availability@example.com',
+            'password' => bcrypt('password123'),
         ]);
     }
 
@@ -38,27 +38,27 @@ class TourAvailabilityServiceTest extends TestCase
     private function createTour(int $capacity = 10): Tour
     {
         return Tour::create([
-            'title'        => 'Test Tour',
-            'description'  => 'Description',
-            'price'        => 50,
+            'title' => 'Test Tour',
+            'description' => 'Description',
+            'price' => 50,
             'max_capacity' => $capacity,
-            'location'     => 'San Salvador',
+            'location' => 'San Salvador',
             'currency_code' => 'USD',
-            'is_active'    => true,
+            'is_active' => true,
         ]);
     }
 
     private function createBooking(Tour $tour, int $partySize, string $status, string $date = self::TEST_DATE): Booking
     {
         return Booking::create([
-            'user_id'       => $this->user->id,
+            'user_id' => $this->user->id,
             'bookable_type' => Tour::class,
-            'bookable_id'   => $tour->id,
-            'starts_at'     => $date . ' 00:00:00',
-            'party_size'    => $partySize,
-            'total_price'   => 50 * $partySize,
+            'bookable_id' => $tour->id,
+            'starts_at' => $date.' 00:00:00',
+            'party_size' => $partySize,
+            'total_price' => 50 * $partySize,
             'currency_code' => 'USD',
-            'status'        => $status,
+            'status' => $status,
         ]);
     }
 
@@ -138,9 +138,9 @@ class TourAvailabilityServiceTest extends TestCase
     {
         $tour = $this->createTour(10);
         TourAvailability::create([
-            'tour_id'        => $tour->id,
+            'tour_id' => $tour->id,
             'available_date' => self::TEST_DATE,
-            'is_closed'      => true,
+            'is_closed' => true,
         ]);
 
         $available = $this->service->availableCapacity($tour, self::TEST_DATE);
@@ -152,10 +152,10 @@ class TourAvailabilityServiceTest extends TestCase
     {
         $tour = $this->createTour(20);
         TourAvailability::create([
-            'tour_id'           => $tour->id,
-            'available_date'    => self::TEST_DATE,
+            'tour_id' => $tour->id,
+            'available_date' => self::TEST_DATE,
             'capacity_override' => 5,
-            'is_closed'         => false,
+            'is_closed' => false,
         ]);
 
         $available = $this->service->availableCapacity($tour, self::TEST_DATE);
@@ -167,10 +167,10 @@ class TourAvailabilityServiceTest extends TestCase
     {
         $tour = $this->createTour(20);
         TourAvailability::create([
-            'tour_id'           => $tour->id,
-            'available_date'    => self::TEST_DATE,
+            'tour_id' => $tour->id,
+            'available_date' => self::TEST_DATE,
             'capacity_override' => 5,
-            'is_closed'         => false,
+            'is_closed' => false,
         ]);
         $this->createBooking($tour, 2, Booking::STATUS_CONFIRMED);
 

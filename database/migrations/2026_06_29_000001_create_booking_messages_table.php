@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('booking_messages', function (Blueprint $table) {
             $table->id();
-            $table->foreignId("booking_id")->constrained("bookings")->cascadeOnDelete();
+            $table->foreignId('booking_id')->constrained('bookings')->cascadeOnDelete();
             $table->uuid('user_id')->nullable()->index();
             $table->text('message');
             $table->timestamps();

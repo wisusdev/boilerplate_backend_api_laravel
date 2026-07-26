@@ -11,29 +11,29 @@ use App\Http\Controllers\Api\Base\AccountController;
 use App\Http\Controllers\Api\Base\InstallController;
 use App\Http\Controllers\Api\Base\PermissionsController;
 use App\Http\Controllers\Api\Base\RolesController;
-use App\Http\Controllers\Api\Base\UserController;
 use App\Http\Controllers\Api\Base\SettingsController;
+use App\Http\Controllers\Api\Base\UserController;
+use App\Http\Controllers\Api\Travel\BookingController;
 use App\Http\Controllers\Api\Travel\CouponController;
 use App\Http\Controllers\Api\Travel\CurrencyController;
+use App\Http\Controllers\Api\Travel\CustomInquiryController;
 use App\Http\Controllers\Api\Travel\ExpenseCategoryController;
 use App\Http\Controllers\Api\Travel\ExpenseController;
 use App\Http\Controllers\Api\Travel\FinanceController;
-use App\Http\Controllers\Api\Travel\GuideController;
 use App\Http\Controllers\Api\Travel\GalleryController;
-use App\Http\Controllers\Api\Travel\CustomInquiryController;
-use App\Http\Controllers\Api\Travel\SubscriberController;
-use App\Http\Controllers\Api\Travel\BookingController;
+use App\Http\Controllers\Api\Travel\GuideController;
 use App\Http\Controllers\Api\Travel\InvoiceController;
 use App\Http\Controllers\Api\Travel\PaymentController;
-use App\Http\Controllers\Api\Travel\ReviewController;
 use App\Http\Controllers\Api\Travel\ProductReviewController;
 use App\Http\Controllers\Api\Travel\ReportController;
+use App\Http\Controllers\Api\Travel\ReviewController;
+use App\Http\Controllers\Api\Travel\SubscriberController;
+use App\Http\Controllers\Api\Travel\TourCategoryController;
+use App\Http\Controllers\Api\Travel\TourController;
 use App\Http\Controllers\Api\Travel\TransportVehicleController;
 use App\Http\Controllers\Api\Travel\WebhookController;
-use App\Http\Controllers\Api\Travel\TourController;
-use App\Http\Controllers\Api\Travel\TourCategoryController;
-use App\Http\Middleware\ValidateJsonApiHeaders;
 use App\Http\Middleware\ValidateJsonApiDocument;
+use App\Http\Middleware\ValidateJsonApiHeaders;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -49,14 +49,14 @@ use Illuminate\Support\Facades\Route;
 
 // Instalador (estilo WordPress). Público mientras no exista un administrador;
 // el POST se autobloquea (409) una vez instalado.
-Route::prefix('install')->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class,])->group(function () {
+Route::prefix('install')->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->group(function () {
     Route::get('/status', [InstallController::class, 'status'])->name('install.status');
     Route::get('/requirements', [InstallController::class, 'requirements'])->name('install.requirements');
     Route::post('/', [InstallController::class, 'install'])->name('install.run')->middleware('throttle:auth');
 });
 
 // Auth
-Route::prefix('auth')->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class,])->group(function () {
+Route::prefix('auth')->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->group(function () {
     Route::post('/login', [LoginController::class, 'login'])->name('auth.login')->middleware('throttle:auth');
     Route::post('/register', [RegisterController::class, 'register'])->name('auth.register')->middleware('throttle:auth-register');
     Route::post('/logout', [LogoutController::class, 'logout'])->name('auth.logout')->middleware('auth:api');

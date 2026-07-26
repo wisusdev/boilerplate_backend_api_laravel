@@ -58,7 +58,7 @@ class RegisterRequest extends FormRequest
             'data.attributes.password.required' => 'validation.passwordRequired',
             'data.attributes.password.confirmed' => 'validation.passwordConfirmed',
             'data.attributes.password.min' => 'validation.passwordMin',
-            'data.attributes.password.max' => 'validation.passwordMax'
+            'data.attributes.password.max' => 'validation.passwordMax',
         ];
     }
 }

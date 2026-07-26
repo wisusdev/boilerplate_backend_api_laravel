@@ -10,13 +10,10 @@ use App\Services\DteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Facades\Storage;
 
 class InvoiceController extends Controller
 {
-    public function __construct(private readonly DteService $dteService)
-    {
-    }
+    public function __construct(private readonly DteService $dteService) {}
 
     /**
      * GET /api/invoices
@@ -28,8 +25,7 @@ class InvoiceController extends Controller
             ->with(['booking.bookable'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('dte_status'), fn ($q) => $q->where('dte_status', $request->string('dte_status')))
-            ->when($request->filled('booking_type'), fn ($q) =>
-                $q->whereHas('booking', fn ($bq) => $bq->where('bookable_type', Booking::bookableClassFor($request->string('booking_type'))))
+            ->when($request->filled('booking_type'), fn ($q) => $q->whereHas('booking', fn ($bq) => $bq->where('bookable_type', Booking::bookableClassFor($request->string('booking_type'))))
             )
             ->latest()
             ->sparseFieldset()
@@ -44,6 +40,7 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): InvoiceResource
     {
         $invoice->loadMissing(['booking.bookable']);
+
         return InvoiceResource::make($invoice);
     }
 
@@ -54,10 +51,10 @@ class InvoiceController extends Controller
     public function update(Request $request, Invoice $invoice): InvoiceResource
     {
         $data = $request->validate([
-            'data.attributes.receptor_name'     => ['sometimes', 'nullable', 'string', 'max:250'],
+            'data.attributes.receptor_name' => ['sometimes', 'nullable', 'string', 'max:250'],
             'data.attributes.receptor_document' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'data.attributes.receptor_email'    => ['sometimes', 'nullable', 'email', 'max:150'],
-            'data.attributes.status'            => ['sometimes', 'string', 'in:pending,issued,cancelled'],
+            'data.attributes.receptor_email' => ['sometimes', 'nullable', 'email', 'max:150'],
+            'data.attributes.status' => ['sometimes', 'string', 'in:pending,issued,cancelled'],
         ]);
 
         $attrs = $data['data']['attributes'] ?? [];
@@ -77,22 +74,22 @@ class InvoiceController extends Controller
 
             return response()->json([
                 'data' => [
-                    'type'       => 'dte-result',
-                    'id'         => (string) $invoice->id,
+                    'type' => 'dte-result',
+                    'id' => (string) $invoice->id,
                     'attributes' => [
-                        'dte_status'          => $invoice->dte_status,
-                        'dte_number'          => $invoice->dte_number,
+                        'dte_status' => $invoice->dte_status,
+                        'dte_number' => $invoice->dte_number,
                         'dte_generation_code' => $invoice->dte_generation_code,
-                        'dte_seal'            => $invoice->dte_seal,
-                        'dte_accepted_at'     => $invoice->dte_accepted_at,
-                        'mh_response'         => $invoice->mh_response,
+                        'dte_seal' => $invoice->dte_seal,
+                        'dte_accepted_at' => $invoice->dte_accepted_at,
+                        'mh_response' => $invoice->mh_response,
                     ],
                 ],
             ]);
         } catch (\Throwable $e) {
             return response()->json([
                 'errors' => [[
-                    'title'  => 'Error DTE',
+                    'title' => 'Error DTE',
                     'detail' => $e->getMessage(),
                 ]],
             ], 422);
@@ -110,8 +107,8 @@ class InvoiceController extends Controller
 
             return response()->json([
                 'data' => [
-                    'type'       => 'dte-preview',
-                    'id'         => (string) $invoice->id,
+                    'type' => 'dte-preview',
+                    'id' => (string) $invoice->id,
                     'attributes' => $dteJson,
                 ],
             ]);
@@ -130,7 +127,7 @@ class InvoiceController extends Controller
     {
         $request->validate([
             'certificate' => ['required', 'file', 'mimes:p12,pfx', 'max:2048'],
-            'password'    => ['required', 'string'],
+            'password' => ['required', 'string'],
         ]);
 
         try {
@@ -139,9 +136,9 @@ class InvoiceController extends Controller
 
             return response()->json([
                 'data' => [
-                    'type'       => 'dte-certificate',
+                    'type' => 'dte-certificate',
                     'attributes' => [
-                        'path'    => $storagePath,
+                        'path' => $storagePath,
                         'message' => 'Certificado cargado y validado correctamente.',
                     ],
                 ],
