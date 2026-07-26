@@ -25,7 +25,7 @@ stages:
     - apt-get update -yqq
     - apt-get install -yqq git unzip libzip-dev libpng-dev libjpeg-dev libfreetype6-dev
     - docker-php-ext-configure gd --with-freetype --with-jpeg > /dev/null
-    - docker-php-ext-install -j"$(nproc)" zip gd > /dev/null
+    - docker-php-ext-install -j"$(nproc)" zip gd exif > /dev/null
     - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
     - composer install --prefer-dist --no-progress --no-interaction
   cache:
