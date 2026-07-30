@@ -22,6 +22,13 @@ Documentación técnica del API REST del proyecto VamosPues. Construido con Lara
 | Finanzas | [finance.md](finance.md) | Rentabilidad por tour: gastos, categorías, guías e ingresos derivados de reservas |
 | **Despliegue** | [deployment/README.md](deployment/README.md) | Guías de instalación por proveedor (AWS, GCP, DigitalOcean, Railway, VPS) |
 
+## Documentos internos
+
+| Documento | Archivo | Descripción |
+|-----------|---------|-------------|
+| Módulos de negocio | [modules.md](modules.md) | Visión general consolidada de los módulos (tours, transporte, reservas, reseñas, suscriptores) |
+| Requerimientos — mejoras a reservas | [requerimientos-mejoras-reservas.md](requerimientos-mejoras-reservas.md) | Levantamiento para validar con el cliente (borrador de planificación) |
+
 ---
 
 ## Stack técnico
