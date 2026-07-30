@@ -88,88 +88,96 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('/delete-account-verify', [AccountController::class, 'deleteAccountVerify'])->name('account.delete-account-verify');
     });
 
-    // Tours (admin write)
-    Route::prefix('tours')->name('api.v1.tours.')->middleware('role:admin|super-admin')->group(function () {
-        Route::post('/', [TourController::class, 'store'])->name('store');
-        Route::patch('/{tour}', [TourController::class, 'update'])->name('update');
+    // Tours (escritura admin — gateada por permiso)
+    Route::prefix('tours')->name('api.v1.tours.')->group(function () {
+        Route::post('/', [TourController::class, 'store'])->middleware('permission:tours:store')->name('store');
+        Route::patch('/{tour}', [TourController::class, 'update'])->middleware('permission:tours:update')->name('update');
         // Media – estos endpoints usan multipart/form-data, sin middleware JSON:API
         Route::post('/{tour}/featured-image', [TourController::class, 'uploadFeaturedImage'])
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:tours:media')
             ->name('featured-image.upload');
         Route::post('/{tour}/gallery', [TourController::class, 'uploadGalleryImages'])
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:tours:media')
             ->name('gallery.upload');
         Route::delete('/{tour}/gallery/{media}', [TourController::class, 'destroyGalleryImage'])
+            ->middleware('permission:tours:media')
             ->name('gallery.destroy');
     });
 
-    // Transport Vehicles (admin write)
-    Route::prefix('transport-vehicles')->name('api.v1.transport_vehicles.')->middleware('role:admin|super-admin')->group(function () {
-        Route::post('/', [TransportVehicleController::class, 'store'])->name('store');
-        Route::patch('/{transportVehicle}', [TransportVehicleController::class, 'update'])->name('update');
+    // Transport Vehicles (escritura admin — gateada por permiso)
+    Route::prefix('transport-vehicles')->name('api.v1.transport_vehicles.')->group(function () {
+        Route::post('/', [TransportVehicleController::class, 'store'])->middleware('permission:transport-vehicles:store')->name('store');
+        Route::patch('/{transportVehicle}', [TransportVehicleController::class, 'update'])->middleware('permission:transport-vehicles:update')->name('update');
         // Media
         Route::post('/{transportVehicle}/featured-image', [TransportVehicleController::class, 'uploadFeaturedImage'])
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:transport-vehicles:media')
             ->name('featured-image.upload');
         Route::post('/{transportVehicle}/gallery', [TransportVehicleController::class, 'uploadGalleryImages'])
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:transport-vehicles:media')
             ->name('gallery.upload');
         Route::delete('/{transportVehicle}/gallery/{media}', [TransportVehicleController::class, 'destroyGalleryImage'])
+            ->middleware('permission:transport-vehicles:media')
             ->name('gallery.destroy');
     });
 
-    // Admin write: currencies, tour categories, reviews
-    Route::middleware('role:admin|super-admin')->group(function () {
-        Route::post('/currencies', [CurrencyController::class, 'store'])->name('api.v1.currencies.store');
+    // Escritura admin — cada ruta gateada por su permiso.
+    Route::post('/currencies', [CurrencyController::class, 'store'])->middleware('permission:currencies:store')->name('api.v1.currencies.store');
 
-        // Tour Categories (admin write)
-        Route::post('/tour-categories', [TourCategoryController::class, 'store'])->name('api.v1.tour_categories.store');
-        Route::patch('/tour-categories/{tourCategory}', [TourCategoryController::class, 'update'])->name('api.v1.tour_categories.update');
-        Route::delete('/tour-categories/{tourCategory}', [TourCategoryController::class, 'destroy'])->name('api.v1.tour_categories.destroy');
+    // Tour Categories (admin write)
+    Route::post('/tour-categories', [TourCategoryController::class, 'store'])->middleware('permission:tour-categories:store')->name('api.v1.tour_categories.store');
+    Route::patch('/tour-categories/{tourCategory}', [TourCategoryController::class, 'update'])->middleware('permission:tour-categories:update')->name('api.v1.tour_categories.update');
+    Route::delete('/tour-categories/{tourCategory}', [TourCategoryController::class, 'destroy'])->middleware('permission:tour-categories:delete')->name('api.v1.tour_categories.destroy');
 
-        // Reviews (admin write)
-        Route::post('/reviews', [ReviewController::class, 'store'])->name('api.v1.reviews.store');
-        Route::patch('/reviews/{review}', [ReviewController::class, 'update'])->name('api.v1.reviews.update');
-        Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('api.v1.reviews.destroy');
+    // Reviews (admin write)
+    Route::post('/reviews', [ReviewController::class, 'store'])->middleware('permission:reviews:store')->name('api.v1.reviews.store');
+    Route::patch('/reviews/{review}', [ReviewController::class, 'update'])->middleware('permission:reviews:update')->name('api.v1.reviews.update');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->middleware('permission:reviews:delete')->name('api.v1.reviews.destroy');
 
-        // Cupones (CRUD admin)
-        Route::prefix('coupons')->name('api.v1.coupons.')->group(function () {
-            Route::get('/', [CouponController::class, 'index'])->name('index');
-            Route::post('/', [CouponController::class, 'store'])->name('store');
-            Route::patch('/{coupon}', [CouponController::class, 'update'])->name('update');
-            Route::delete('/{coupon}', [CouponController::class, 'destroy'])->name('destroy');
-        });
-
-        // ── Finanzas: rentabilidad por tour (gastos + ingresos derivados de reservas) ──
-        // Dashboard de rentabilidad.
-        Route::get('/finance/summary', [FinanceController::class, 'summary'])->name('api.v1.finance.summary');
-
-        // Categorías de gasto (CRUD).
-        Route::prefix('expense-categories')->name('api.v1.expense-categories.')->group(function () {
-            Route::get('/', [ExpenseCategoryController::class, 'index'])->name('index');
-            Route::post('/', [ExpenseCategoryController::class, 'store'])->name('store');
-            Route::patch('/{expenseCategory}', [ExpenseCategoryController::class, 'update'])->name('update');
-            Route::delete('/{expenseCategory}', [ExpenseCategoryController::class, 'destroy'])->name('destroy');
-        });
-
-        // Gastos (CRUD + recibo).
-        Route::prefix('expenses')->name('api.v1.expenses.')->group(function () {
-            Route::get('/', [ExpenseController::class, 'index'])->name('index');
-            Route::post('/', [ExpenseController::class, 'store'])->name('store');
-            Route::patch('/{expense}', [ExpenseController::class, 'update'])->name('update');
-            Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
-            Route::post('/{expense}/receipt', [ExpenseController::class, 'uploadReceipt'])
-                ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('receipt.upload');
-        });
-
-        // Guías (usuarios con rol 'guia'): listar, otorgar y revocar el rol.
-        Route::prefix('guides')->name('api.v1.guides.')
-            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->group(function () {
-                Route::get('/', [GuideController::class, 'index'])->name('index');
-                Route::post('/', [GuideController::class, 'store'])->name('store');
-                Route::delete('/{user}', [GuideController::class, 'destroy'])->name('destroy');
-            });
+    // Cupones (CRUD admin)
+    Route::prefix('coupons')->name('api.v1.coupons.')->group(function () {
+        Route::get('/', [CouponController::class, 'index'])->middleware('permission:coupons:index')->name('index');
+        Route::post('/', [CouponController::class, 'store'])->middleware('permission:coupons:store')->name('store');
+        Route::patch('/{coupon}', [CouponController::class, 'update'])->middleware('permission:coupons:update')->name('update');
+        Route::delete('/{coupon}', [CouponController::class, 'destroy'])->middleware('permission:coupons:delete')->name('destroy');
     });
+
+    // ── Finanzas: rentabilidad por tour (gastos + ingresos derivados de reservas) ──
+    // Dashboard de rentabilidad.
+    Route::get('/finance/summary', [FinanceController::class, 'summary'])->middleware('permission:finance:view')->name('api.v1.finance.summary');
+
+    // Categorías de gasto (CRUD).
+    Route::prefix('expense-categories')->name('api.v1.expense-categories.')->group(function () {
+        Route::get('/', [ExpenseCategoryController::class, 'index'])->middleware('permission:expense-categories:index')->name('index');
+        Route::post('/', [ExpenseCategoryController::class, 'store'])->middleware('permission:expense-categories:store')->name('store');
+        Route::patch('/{expenseCategory}', [ExpenseCategoryController::class, 'update'])->middleware('permission:expense-categories:update')->name('update');
+        Route::delete('/{expenseCategory}', [ExpenseCategoryController::class, 'destroy'])->middleware('permission:expense-categories:delete')->name('destroy');
+    });
+
+    // Gastos (CRUD + recibo). El rol 'guia' tiene index/store; el ownership por
+    // guide_id lo aplica ExpenseController (un guía solo ve/crea los suyos).
+    Route::prefix('expenses')->name('api.v1.expenses.')->group(function () {
+        Route::get('/', [ExpenseController::class, 'index'])->middleware('permission:expenses:index')->name('index');
+        Route::post('/', [ExpenseController::class, 'store'])->middleware('permission:expenses:store')->name('store');
+        Route::patch('/{expense}', [ExpenseController::class, 'update'])->middleware('permission:expenses:update')->name('update');
+        Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->middleware('permission:expenses:delete')->name('destroy');
+        // El recibo se adjunta al crear el gasto; un 'guia' (con expenses:store pero
+        // sin expenses:update) puede subirlo SOLO a su propio gasto (guard en el controlador).
+        Route::post('/{expense}/receipt', [ExpenseController::class, 'uploadReceipt'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:expenses:store')->name('receipt.upload');
+    });
+
+    // Guías (usuarios con rol 'guia'): listar, otorgar y revocar el rol.
+    Route::prefix('guides')->name('api.v1.guides.')
+        ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->group(function () {
+            Route::get('/', [GuideController::class, 'index'])->middleware('permission:guides:index')->name('index');
+            Route::post('/', [GuideController::class, 'store'])->middleware('permission:guides:store')->name('store');
+            Route::delete('/{user}', [GuideController::class, 'destroy'])->middleware('permission:guides:delete')->name('destroy');
+        });
 
     // Validación de cupón (cualquier usuario autenticado; previsualiza el descuento).
     Route::post('/coupons/validate', [CouponController::class, 'validateCoupon'])
@@ -198,24 +206,24 @@ Route::middleware(['auth:api'])->group(function () {
     Route::prefix('product-reviews')->name('api.v1.product_reviews.')->group(function () {
         Route::get('/eligibility', [ProductReviewController::class, 'eligibility'])
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('eligibility');
-        // Listado de moderación (todas las reseñas) — solo admin.
+        // Listado de moderación (todas las reseñas) — requiere permiso.
         Route::get('/admin', [ProductReviewController::class, 'adminIndex'])
-            ->middleware('role:admin|super-admin')->name('admin-index');
+            ->middleware('permission:product-reviews:moderate')->name('admin-index');
         Route::post('/', [ProductReviewController::class, 'store'])->name('store');
         Route::patch('/{productReview}', [ProductReviewController::class, 'update'])->name('update');
         Route::delete('/{productReview}', [ProductReviewController::class, 'destroy'])->name('destroy');
     });
 
-    Route::prefix('custom-inquiries')->name('api.v1.custom_inquiries.')->middleware('role:admin|super-admin')->group(function () {
-        Route::get('/', [CustomInquiryController::class, 'index'])->name('index');
-        Route::get('/{customInquiry}', [CustomInquiryController::class, 'show'])->name('show');
+    Route::prefix('custom-inquiries')->name('api.v1.custom_inquiries.')->group(function () {
+        Route::get('/', [CustomInquiryController::class, 'index'])->middleware('permission:custom-inquiries:index')->name('index');
+        Route::get('/{customInquiry}', [CustomInquiryController::class, 'show'])->middleware('permission:custom-inquiries:show')->name('show');
     });
 
     // Suscriptores a ofertas (leads) — gestión admin
-    Route::prefix('subscribers')->name('api.v1.subscribers.')->middleware('role:admin|super-admin')->group(function () {
-        Route::get('/', [SubscriberController::class, 'index'])->name('index');
-        Route::patch('/{subscriber}', [SubscriberController::class, 'update'])->name('update');
-        Route::delete('/{subscriber}', [SubscriberController::class, 'destroy'])->name('destroy');
+    Route::prefix('subscribers')->name('api.v1.subscribers.')->group(function () {
+        Route::get('/', [SubscriberController::class, 'index'])->middleware('permission:subscribers:index')->name('index');
+        Route::patch('/{subscriber}', [SubscriberController::class, 'update'])->middleware('permission:subscribers:update')->name('update');
+        Route::delete('/{subscriber}', [SubscriberController::class, 'destroy'])->middleware('permission:subscribers:delete')->name('destroy');
     });
 
     Route::prefix('payments')->name('api.v1.payments.')->group(function () {
@@ -226,34 +234,39 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/{payment}', [PaymentController::class, 'show'])->name('show');
     });
 
-    // Invoices + DTE, Settings, Reports, Gallery (admin only)
-    Route::middleware('role:admin|super-admin')->group(function () {
-        Route::prefix('invoices')->name('api.v1.invoices.')->group(function () {
-            Route::get('/', [InvoiceController::class, 'index'])->name('index');
-            Route::get('/{invoice}', [InvoiceController::class, 'show'])->name('show');
-            Route::patch('/{invoice}', [InvoiceController::class, 'update'])->name('update');
-            Route::post('/{invoice}/generate-dte', [InvoiceController::class, 'generateDte'])->name('generate-dte');
-            Route::get('/{invoice}/preview-dte', [InvoiceController::class, 'previewDte'])->name('preview-dte');
-        });
-        Route::post('/settings/dte-certificate', [InvoiceController::class, 'uploadCertificate'])
-            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
-            ->name('api.v1.settings.dte-certificate');
-
-        // Settings (admin write)
-        Route::patch('/settings', [SettingsController::class, 'update'])->name('api.v1.settings.update');
-        Route::post('/settings/logo', [SettingsController::class, 'uploadLogo'])
-            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
-            ->name('api.v1.settings.logo');
-
-        Route::get('/reports/overview', [ReportController::class, 'overview'])->name('api.v1.reports.overview');
-
-        // Gallery (admin-only write, public read is below)
-        Route::post('/gallery', [GalleryController::class, 'store'])
-            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
-            ->name('api.v1.gallery.store');
-        Route::delete('/gallery/{galleryItem}', [GalleryController::class, 'destroy'])->name('api.v1.gallery.destroy');
-        Route::patch('/gallery/reorder', [GalleryController::class, 'reorder'])->name('api.v1.gallery.reorder');
+    // Invoices + DTE, Settings, Reports, Gallery — cada ruta gateada por permiso.
+    Route::prefix('invoices')->name('api.v1.invoices.')->group(function () {
+        Route::get('/', [InvoiceController::class, 'index'])->middleware('permission:invoices:index')->name('index');
+        Route::get('/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:invoices:show')->name('show');
+        Route::patch('/{invoice}', [InvoiceController::class, 'update'])->middleware('permission:invoices:update')->name('update');
+        Route::post('/{invoice}/generate-dte', [InvoiceController::class, 'generateDte'])->middleware('permission:invoices:generate-dte')->name('generate-dte');
+        Route::get('/{invoice}/preview-dte', [InvoiceController::class, 'previewDte'])->middleware('permission:invoices:generate-dte')->name('preview-dte');
     });
+    Route::post('/settings/dte-certificate', [InvoiceController::class, 'uploadCertificate'])
+        ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+        ->middleware('permission:invoices:generate-dte')
+        ->name('api.v1.settings.dte-certificate');
+
+    // Settings (admin write)
+    Route::patch('/settings', [SettingsController::class, 'update'])->middleware('permission:settings:update')->name('api.v1.settings.update');
+    Route::post('/settings/logo', [SettingsController::class, 'uploadLogo'])
+        ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+        ->middleware('permission:settings:update')
+        ->name('api.v1.settings.logo');
+    Route::post('/settings/about-image', [SettingsController::class, 'uploadAboutImage'])
+        ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+        ->middleware('permission:settings:update')
+        ->name('api.v1.settings.about-image');
+
+    Route::get('/reports/overview', [ReportController::class, 'overview'])->middleware('permission:reports:view')->name('api.v1.reports.overview');
+
+    // Gallery (escritura admin; lectura pública más abajo)
+    Route::post('/gallery', [GalleryController::class, 'store'])
+        ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+        ->middleware('permission:gallery:store')
+        ->name('api.v1.gallery.store');
+    Route::delete('/gallery/{galleryItem}', [GalleryController::class, 'destroy'])->middleware('permission:gallery:delete')->name('api.v1.gallery.destroy');
+    Route::patch('/gallery/reorder', [GalleryController::class, 'reorder'])->middleware('permission:gallery:reorder')->name('api.v1.gallery.reorder');
 });
 
 // Payment webhooks (server-to-server). Públicos y sin JSON:API: cada gateway

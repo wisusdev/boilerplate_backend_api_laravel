@@ -44,7 +44,7 @@ class SettingsController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $isAdmin = (bool) optional($request->user())->hasRole(['admin', 'super-admin']);
+        $isAdmin = (bool) optional($request->user())->can('settings:update');
         $keys = $isAdmin ? self::ALL_KEYS : self::PUBLIC_KEYS;
 
         $settings = Setting::whereIn('key', $keys)->get()

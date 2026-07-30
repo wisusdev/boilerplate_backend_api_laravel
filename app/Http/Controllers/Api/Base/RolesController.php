@@ -73,7 +73,7 @@ class RolesController extends Controller
     {
         $this->authorize('delete', $role);
 
-        if ($role->name === 'super-admin' || $role->name === 'admin') {
+        if ($role->name === 'superadmin' || $role->name === 'admin') {
             return response()->json(['message' => 'Cannot delete the '.$role->name.' role'], 403);
         }
 

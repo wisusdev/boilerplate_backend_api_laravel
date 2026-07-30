@@ -140,7 +140,7 @@ class ProductReviewController extends Controller
     public function update(ProductReviewRequest $request, ProductReview $productReview): ProductReviewResource
     {
         $user = $request->user();
-        $isAdmin = $user->hasRole(['admin', 'super-admin']);
+        $isAdmin = $user->can('product-reviews:moderate');
 
         abort_unless($isAdmin || $productReview->user_id === $user->id, 403);
 
@@ -175,7 +175,7 @@ class ProductReviewController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user->hasRole(['admin', 'super-admin']) || $productReview->user_id === $user->id, 403);
+        abort_unless($user->can('product-reviews:moderate') || $productReview->user_id === $user->id, 403);
 
         $productReview->delete();
 

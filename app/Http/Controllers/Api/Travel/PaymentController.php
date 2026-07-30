@@ -27,7 +27,7 @@ class PaymentController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
-        $isAdmin = $user->hasRole(['admin', 'super-admin']);
+        $isAdmin = $user->can('payments:view-all');
 
         $payments = Payment::query()
             ->when(! $isAdmin, fn ($q) => $q->whereHasMorph('payable', [Booking::class], function ($query) use ($user) {
@@ -286,7 +286,7 @@ class PaymentController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $user->hasRole(['admin', 'super-admin']) || $booking->user_id === $user->id,
+            $user->can('payments:view-all') || $booking->user_id === $user->id,
             403
         );
     }
@@ -298,7 +298,7 @@ class PaymentController extends Controller
     {
         $user = $request->user();
 
-        if ($user->hasRole(['admin', 'super-admin'])) {
+        if ($user->can('payments:view-all')) {
             return;
         }
 

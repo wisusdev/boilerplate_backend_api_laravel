@@ -36,7 +36,7 @@ class BookingController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $user = auth()->user();
-        $isAdmin = $user->hasRole(['admin', 'super-admin']);
+        $isAdmin = $user->can('bookings:view-all');
 
         $bookings = Booking::query()
             ->with(['user', 'transportDetail', 'upgradeVehicle', 'coupon', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])])
@@ -85,7 +85,7 @@ class BookingController extends Controller
 
     private function isAdmin(Request $request): bool
     {
-        return $request->user()->hasRole(['admin', 'super-admin']);
+        return $request->user()->can('bookings:view-all');
     }
 
     /**
@@ -188,7 +188,7 @@ class BookingController extends Controller
         // Ventana de cancelación GLOBAL: el cliente no puede cancelar dentro de las
         // últimas N horas antes del inicio (el admin sí puede).
         $cancellationHours = SiteSettings::cancellationHours();
-        $isAdmin = $request->user()?->hasRole(['admin', 'super-admin']) ?? false;
+        $isAdmin = $request->user()?->can('bookings:view-all') ?? false;
         if (! $isAdmin && $cancellationHours > 0 && $booking->starts_at) {
             $deadline = $booking->starts_at->copy()->subHours($cancellationHours);
             if (now()->greaterThan($deadline)) {
@@ -338,7 +338,7 @@ class BookingController extends Controller
         // Solo roles que existen: el scope role() de Spatie lanza excepción con un rol inexistente.
         $roleNames = Role::query()
             ->where('guard_name', 'api')
-            ->whereIn('name', ['admin', 'super-admin'])
+            ->whereIn('name', ['admin', 'superadmin'])
             ->pluck('name')
             ->all();
 
@@ -360,7 +360,7 @@ class BookingController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $user->hasRole(['admin', 'super-admin']) || $booking->user_id === $user->id,
+            $user->can('bookings:view-all') || $booking->user_id === $user->id,
             403
         );
     }

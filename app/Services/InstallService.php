@@ -37,7 +37,7 @@ class InstallService
     public function isInstalled(): bool
     {
         return User::query()
-            ->whereHas('roles', fn ($q) => $q->whereIn('name', ['admin', 'super-admin']))
+            ->whereHas('roles', fn ($q) => $q->whereIn('name', ['admin', 'superadmin']))
             ->exists();
     }
 
