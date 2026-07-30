@@ -17,9 +17,8 @@ class AdminBookingCreateTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (['admin', 'super-admin', 'user'] as $r) {
-            Role::findOrCreate($r, 'api');
-        }
+        // Siembra el catálogo real de permisos y roles (admin recibe todos).
+        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
         Currency::create(['code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$', 'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true]);
     }
 

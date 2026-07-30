@@ -22,9 +22,8 @@ class BookingActionsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (['admin', 'super-admin', 'user'] as $r) {
-            Role::findOrCreate($r, 'api');
-        }
+        // Siembra el catálogo real de permisos y roles (admin recibe todos).
+        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
     }
 
     private function makeUser(string $email): User
@@ -187,8 +186,8 @@ class BookingActionsTest extends TestCase
 
     public function test_enviar_mensaje_no_falla_si_no_existe_rol_super_admin(): void
     {
-        // En algunos entornos solo existe el rol 'admin' (no 'super-admin').
-        Role::query()->where('name', 'super-admin')->delete();
+        // En algunos entornos solo existe el rol 'admin' (no 'superadmin').
+        Role::query()->where('name', 'superadmin')->delete();
 
         $user = $this->makeUser('owner7@example.com');
         $booking = $this->makeTourBooking($user);

@@ -25,9 +25,8 @@ class SubscriberTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (['admin', 'super-admin', 'user'] as $role) {
-            Role::findOrCreate($role, 'api');
-        }
+        // Siembra el catálogo real de permisos y roles (admin recibe todos).
+        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
     }
 
     private function apiJson(string $method, string $uri, array $payload = []): TestResponse

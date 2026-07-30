@@ -48,7 +48,7 @@ class FinanceTest extends TestCase
 
     private function admin(): User
     {
-        Role::findOrCreate('admin', 'api');
+        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
         $admin = $this->user('admin');
         $admin->assignRole('admin');
 

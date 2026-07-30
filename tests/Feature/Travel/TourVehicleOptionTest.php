@@ -133,7 +133,7 @@ class TourVehicleOptionTest extends TestCase
 
     public function test_admin_can_configure_vehicle_options_and_sections(): void
     {
-        Role::findOrCreate('admin', 'api');
+        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
         Currency::create(['code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$', 'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true]);
         $admin = $this->user();
         $admin->assignRole('admin');

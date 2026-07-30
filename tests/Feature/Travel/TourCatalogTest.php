@@ -168,7 +168,7 @@ class TourCatalogTest extends TestCase
             'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true,
         ]);
 
-        Role::findOrCreate('admin', 'api');
+        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
 
         $user = User::create([
             'username' => 'admin',

@@ -30,7 +30,7 @@ class BookingPolicyTest extends TestCase
 
     private function admin(): User
     {
-        Role::findOrCreate('admin', 'api');
+        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
         $a = $this->user();
         $a->assignRole('admin');
 

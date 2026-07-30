@@ -30,9 +30,7 @@ class DatabaseIntegrityTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['admin', 'user'] as $role) {
-            Role::findOrCreate($role, 'api');
-        }
+        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
     }
 
     private function apiJson(string $method, string $uri, array $payload = []): TestResponse
