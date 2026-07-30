@@ -25,12 +25,12 @@ class UserSeeder extends Seeder
         Role::findOrCreate('admin', 'api');
 
         $admin = User::firstOrCreate(
-            ['email' => 'admin@cusgo.com'],
+            ['email' => 'user00@wisus.dev'],
             [
-                'username' => 'admin',
-                'first_name' => 'Admin',
-                'last_name' => 'Cusgo',
-                'password' => bcrypt('password123'),
+                'username' => 'user00',
+                'first_name' => 'Jesus',
+                'last_name' => 'Avelar',
+                'password' => bcrypt('12345678aA_'),
                 'email_verified_at' => now(),
             ]
         );
