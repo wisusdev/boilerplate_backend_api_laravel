@@ -98,13 +98,18 @@ class SettingsController extends Controller
         }
 
         // ── app fields ─────────────────────────────────────────────────────
-        $appFields = ['app_name', 'app_tagline', 'app_logo_url',
+        $appFields = ['app_name', 'app_tagline', 'app_logo_url', 'app_logo_dark_url',
             'contact_email', 'inquiry_notification_emails', 'contact_phone', 'contact_whatsapp', 'contact_address',
             'contact_city', 'contact_country',
             'social_facebook', 'social_instagram', 'social_twitter', 'social_youtube', 'social_tiktok',
             'timezone',
             'max_daily_bookings',
             'offers_subscription_enabled',
+            // Sección "Nosotros" (imagen, textos, guías y estadísticas). Si se
+            // dejan vacíos, el frontend usa los valores por defecto (i18n).
+            'about_team_image_url', 'about_eyebrow', 'about_title', 'about_p1', 'about_p2', 'about_cta',
+            'about_guides_count', 'about_guides_label', 'about_guides_national',
+            'about_stats',
             // Política de reserva GLOBAL (aplica a todos los tours y vehículos).
             'booking_min_advance_days',
             'booking_cancellation_hours',
@@ -160,10 +165,56 @@ class SettingsController extends Controller
 
     /**
      * POST /api/v1/settings/logo
-     * Upload or replace the application logo image.
+     * Upload or replace an application logo image.
+     *
+     * `variant` selects which logo:
+     *   - 'light' (default) → logo claro/blanco para fondos oscuros → app_logo_url
+     *   - 'dark'            → logo oscuro para fondos claros        → app_logo_dark_url
+     *
      * Stores the file on the public disk and saves the URL in app settings.
      */
     public function uploadLogo(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'max:4096', 'mimes:jpeg,png,webp,svg'],
+            'variant' => ['sometimes', 'in:light,dark'],
+        ]);
+
+        $variant = $request->input('variant', 'light');
+        $basename = $variant === 'dark' ? 'logo-dark' : 'logo';
+        $attribute = $variant === 'dark' ? 'app_logo_dark_url' : 'app_logo_url';
+
+        $file = $request->file('image');
+        $extension = $file->getClientOriginalExtension();
+        $path = "settings/{$basename}.{$extension}";
+
+        // Delete any existing file of this variant with any extension
+        foreach (['png', 'jpg', 'jpeg', 'webp', 'svg'] as $ext) {
+            Storage::disk('public')->delete("settings/{$basename}.{$ext}");
+        }
+
+        Storage::disk('public')->putFileAs('settings', $file, "{$basename}.{$extension}");
+        $logoUrl = Storage::disk('public')->url($path);
+
+        // Persist in the 'app' settings row
+        $row = Setting::where('key', 'app')->first();
+        $app = json_decode($row?->value ?? '{}', true) ?? [];
+        $app[$attribute] = $logoUrl;
+        Setting::updateOrCreate(['key' => 'app'], ['value' => json_encode($app)]);
+
+        return response()->json([
+            'data' => [
+                'type' => 'logo',
+                'attributes' => [$attribute => $logoUrl],
+            ],
+        ]);
+    }
+
+    /**
+     * POST /api/v1/settings/about-image
+     * Upload or replace the "Nosotros" (team) section image.
+     */
+    public function uploadAboutImage(Request $request): JsonResponse
     {
         $request->validate([
             'image' => ['required', 'image', 'max:4096', 'mimes:jpeg,png,webp,svg'],
@@ -171,26 +222,24 @@ class SettingsController extends Controller
 
         $file = $request->file('image');
         $extension = $file->getClientOriginalExtension();
-        $path = 'settings/logo.'.$extension;
+        $path = "settings/about-team.{$extension}";
 
-        // Delete any existing logo file with any extension
         foreach (['png', 'jpg', 'jpeg', 'webp', 'svg'] as $ext) {
-            Storage::disk('public')->delete("settings/logo.{$ext}");
+            Storage::disk('public')->delete("settings/about-team.{$ext}");
         }
 
-        Storage::disk('public')->putFileAs('settings', $file, "logo.{$extension}");
-        $logoUrl = Storage::disk('public')->url($path);
+        Storage::disk('public')->putFileAs('settings', $file, "about-team.{$extension}");
+        $imageUrl = Storage::disk('public')->url($path);
 
-        // Persist in the 'app' settings row
         $row = Setting::where('key', 'app')->first();
         $app = json_decode($row?->value ?? '{}', true) ?? [];
-        $app['app_logo_url'] = $logoUrl;
+        $app['about_team_image_url'] = $imageUrl;
         Setting::updateOrCreate(['key' => 'app'], ['value' => json_encode($app)]);
 
         return response()->json([
             'data' => [
-                'type' => 'logo',
-                'attributes' => ['app_logo_url' => $logoUrl],
+                'type' => 'about-image',
+                'attributes' => ['about_team_image_url' => $imageUrl],
             ],
         ]);
     }
