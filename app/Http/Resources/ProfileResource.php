@@ -21,6 +21,7 @@ class ProfileResource extends JsonResource
                 'language' => $this->resource->language,
                 'phone' => $this->resource->phone,
                 'phone_secondary' => $this->resource->phone_secondary,
+                'email_verified_at' => $this->resource->email_verified_at,
             ],
         ];
     }
