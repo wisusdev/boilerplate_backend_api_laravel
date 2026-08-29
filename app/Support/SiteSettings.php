@@ -45,6 +45,27 @@ class SiteSettings
         return (int) (self::app()['booking_cancellation_hours'] ?? 0);
     }
 
+    /** ¿Está activo el pago asistido por WhatsApp? */
+    public static function whatsappPaymentEnabled(): bool
+    {
+        return filter_var(self::paymentGateway()['payment_whatsapp_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Número de WhatsApp para el pago asistido, solo dígitos. Usa el específico
+     * de pagos y, si no está configurado, el de contacto del sitio.
+     */
+    public static function whatsappNumber(): string
+    {
+        $number = (string) (self::paymentGateway()['payment_whatsapp_number'] ?? '');
+
+        if (trim($number) === '') {
+            $number = (string) (self::app()['contact_whatsapp'] ?? '');
+        }
+
+        return preg_replace('/\D/', '', $number) ?? '';
+    }
+
     /** Limpia la caché (útil en tests o tras actualizar settings). */
     public static function flush(): void
     {

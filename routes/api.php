@@ -204,6 +204,9 @@ Route::middleware(['auth:api'])->group(function () {
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('messages');
         Route::get('/{booking}/receipt', [BookingController::class, 'receipt'])
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('receipt');
+        // Pago asistido: enlace de WhatsApp con el detalle de la reserva ya compuesto.
+        Route::post('/{booking}/whatsapp-link', [BookingController::class, 'whatsappLink'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('whatsapp-link');
     });
 
     // Product reviews (reseñas de usuario con compra verificada)

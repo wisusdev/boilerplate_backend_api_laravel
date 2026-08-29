@@ -329,6 +329,92 @@ class BookingController extends Controller
         return $pdf->download('comprobante-reserva-'.$booking->id.'.pdf');
     }
 
+    /**
+     * Enlace de WhatsApp para que un agente acompañe el pago de la reserva.
+     *
+     * El mensaje se compone en el servidor a partir de la reserva ya guardada:
+     * así el importe y el detalle que lee el agente son los que calculó el
+     * backend, no los que diga el navegador.
+     */
+    public function whatsappLink(Request $request, Booking $booking): JsonResponse
+    {
+        $this->ensureOwnerOrAdmin($request, $booking);
+
+        if (! SiteSettings::whatsappPaymentEnabled()) {
+            throw ValidationException::withMessages([
+                'payment' => ['message.whatsappPaymentDisabled'],
+            ]);
+        }
+
+        $number = SiteSettings::whatsappNumber();
+
+        if ($number === '') {
+            throw ValidationException::withMessages([
+                'payment' => ['message.whatsappNumberMissing'],
+            ]);
+        }
+
+        $booking->loadMissing(['bookable', 'transportDetail', 'coupon', 'user']);
+
+        // El agente debe enterarse aunque el cliente no llegue a enviar el mensaje.
+        $this->notifyAdmins('Solicitud de pago por WhatsApp', 'Un cliente pidió ayuda para completar el pago de su reserva.', [
+            'reserva' => '#'.$booking->id,
+            'detalle' => $this->bookableTitle($booking),
+            'total' => number_format((float) $booking->total_price, 2).' '.($booking->currency_code ?: SiteSettings::currency()),
+            'cliente' => trim($booking->user?->name ?? '').' · '.($booking->user?->email ?? ''),
+        ]);
+
+        return response()->json([
+            'data' => [
+                'type' => 'booking-whatsapp',
+                'id' => (string) $booking->id,
+                'attributes' => [
+                    'url' => 'https://wa.me/'.$number.'?text='.rawurlencode($this->whatsappMessage($booking)),
+                    'phone' => $number,
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Texto de la solicitud de pago. Incluye la referencia de la reserva para que
+     * el agente la localice en el panel.
+     */
+    private function whatsappMessage(Booking $booking): string
+    {
+        $currency = $booking->currency_code ?: SiteSettings::currency();
+        $total = number_format((float) $booking->total_price, 2, '.', ',');
+
+        $lines = [
+            '¡Hola! Quiero completar el pago de mi reserva.',
+            '',
+            'Reserva: #'.$booking->id,
+            ($booking->booking_type === Booking::TYPE_TRANSPORT ? 'Vehículo: ' : 'Tour: ').$this->bookableTitle($booking),
+        ];
+
+        if ($booking->starts_at) {
+            $lines[] = $booking->booking_type === Booking::TYPE_TRANSPORT
+                ? 'Recogida: '.$booking->starts_at->format('d/m/Y H:i')
+                : 'Fecha: '.$booking->starts_at->format('d/m/Y');
+        }
+
+        if ($booking->booking_type === Booking::TYPE_TRANSPORT && $booking->ends_at) {
+            $lines[] = 'Devolución: '.$booking->ends_at->format('d/m/Y H:i');
+        } else {
+            $lines[] = 'Personas: '.$booking->party_size;
+        }
+
+        if ((float) $booking->discount_amount > 0) {
+            $lines[] = 'Descuento aplicado: -'.number_format((float) $booking->discount_amount, 2, '.', ',').' '.$currency;
+        }
+
+        $lines[] = 'Total: '.$total.' '.$currency;
+        $lines[] = '';
+        $lines[] = 'A nombre de: '.trim($booking->user?->name ?? '');
+
+        return implode("\n", array_filter($lines, fn ($line) => $line !== null));
+    }
+
     private function loadRelations(Booking $booking): Booking
     {
         return $booking->load(['user', 'transportDetail', 'upgradeVehicle', 'coupon', 'latestPayment', 'bookable' => fn (MorphTo $m) => $m->morphWith([Tour::class => ['category']])]);

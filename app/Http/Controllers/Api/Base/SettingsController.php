@@ -46,6 +46,33 @@ class SettingsController extends Controller
     private const PUBLIC_KEYS = [
         'app',
         'social_auth_services',
+        // El checkout necesita saber qué métodos de pago se ofrecen. Sin esta
+        // fila, un cliente no recibía ninguna clave payment_* y el paso de pago
+        // quedaba vacío para todo el mundo salvo los administradores.
+        'payment_gateway',
+    ];
+
+    /**
+     * Únicas claves de `payment_gateway` visibles sin permisos de administración:
+     * qué métodos están activos y los datos que el cliente necesita para pagar.
+     * Las credenciales de las pasarelas nunca entran aquí.
+     */
+    private const PUBLIC_PAYMENT_KEYS = [
+        'payment_cash_enabled',
+        'payment_bank_transfer_enabled',
+        'payment_paypal_enabled',
+        'payment_stripe_enabled',
+        'payment_wompi_enabled',
+        'payment_whatsapp_enabled',
+        'payment_bank_name',
+        'payment_bank_account',
+        'payment_bank_routing',
+        'payment_bank_swift',
+        'payment_whatsapp_number',
+        'default_currency',
+        // Estructura heredada del seeder: más abajo se aplana exponiendo solo
+        // los flags y el modo; las credenciales siguen siendo de admin.
+        'payment_methods',
     ];
 
     // All keys the settings API manages
@@ -104,6 +131,9 @@ class SettingsController extends Controller
             'payment_bank_name', 'payment_bank_account', 'payment_bank_routing', 'payment_bank_swift',
             // enabled flags per gateway
             'payment_paypal_enabled', 'payment_stripe_enabled', 'payment_wompi_enabled',
+            // Pago asistido por WhatsApp: un agente acompaña al cliente. El número
+            // es opcional; si se deja vacío se usa el de contacto del sitio.
+            'payment_whatsapp_enabled', 'payment_whatsapp_number',
             // credentials
             'paypal_mode', 'paypal_client_id', 'paypal_client_secret',
             'stripe_mode', 'stripe_public_key', 'stripe_secret_key',
@@ -319,6 +349,11 @@ class SettingsController extends Controller
             if (! is_array($value)) {
                 continue;
             }
+
+            if ($key === 'payment_gateway' && ! $isAdmin) {
+                $value = array_intersect_key($value, array_flip(self::PUBLIC_PAYMENT_KEYS));
+            }
+
             foreach ($value as $k => $v) {
                 // Descifrar credenciales; fallback transparente para valores legacy sin cifrar
                 if (is_string($v) && in_array($k, self::CREDENTIAL_KEYS, true)) {

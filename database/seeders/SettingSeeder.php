@@ -39,6 +39,10 @@ class SettingSeeder extends Seeder
             ['key' => 'payment_gateway', 'value' => json_encode([
                 // Moneda GLOBAL del sitio (aplica a todos los tours y vehículos).
                 'default_currency' => 'USD',
+                // Pago asistido por WhatsApp: activo por defecto para que un sitio
+                // recién instalado, sin pasarela configurada, pueda vender igual.
+                'payment_whatsapp_enabled' => true,
+                'payment_whatsapp_number' => '',
                 'currency' => 'USD',
                 'currency_symbol' => '$',
                 'decimal_separator' => '.',
