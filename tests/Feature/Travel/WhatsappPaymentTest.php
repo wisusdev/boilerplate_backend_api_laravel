@@ -6,11 +6,14 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Tour;
+use App\Models\TransportVehicle;
 use App\Models\User;
+use App\Notifications\BookingReceiptNotification;
 use App\Support\SiteSettings;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
@@ -161,11 +164,123 @@ class WhatsappPaymentTest extends TestCase
         $this->assertStringStartsWith('https://wa.me/50370001234?text=', $attrs['url']);
 
         $mensaje = urldecode(explode('?text=', $attrs['url'])[1]);
-        $this->assertStringContainsString('Reserva: #'.$booking->id, $mensaje);
+        $this->assertStringContainsString('*RESERVA #'.$booking->id.'*', $mensaje);
         $this->assertStringContainsString('Volcán Santa Ana', $mensaje);
         // El total lo pone el servidor, no el navegador.
-        $this->assertStringContainsString('Total: 80.00 USD', $mensaje);
+        $this->assertStringContainsString('*TOTAL: 80.00 USD*', $mensaje);
         $this->assertStringContainsString('Personas: 2', $mensaje);
+    }
+
+    public function test_el_mensaje_incluye_extras_enlaces_y_datos_del_cliente(): void
+    {
+        config(['app.frontend_url' => 'https://cuscaadventure.com']);
+        $this->paymentSettings();
+        $user = $this->user();
+        $user->update(['phone' => '+503 7777 8888']);
+
+        $booking = $this->booking($user);
+        $booking->update([
+            'service_fees' => [
+                ['name' => 'Desayuno', 'amount' => 5, 'calc' => 'per_person', 'total' => 10],
+                ['name' => 'Entrada al parque', 'amount' => 7, 'calc' => 'fixed', 'total' => 7],
+            ],
+            'upgrade_label' => 'Sedán privado',
+            'upgrade_surcharge' => 20,
+            'pickup_address' => 'Col. Escalón, San Salvador',
+            'notes' => 'Somos vegetarianos',
+        ]);
+
+        Passport::actingAs($user);
+
+        $url = $this->apiJson('POST', '/api/v1/bookings/'.$booking->id.'/whatsapp-link')
+            ->assertOk()->json('data.attributes.url');
+        $mensaje = urldecode(explode('?text=', $url)[1]);
+
+        // Enlace a la ficha pública: el agente abre el producto y ve el detalle.
+        $this->assertStringContainsString('https://cuscaadventure.com/tours/'.$booking->bookable_id, $mensaje);
+        // Atajo al panel para gestionar la reserva ya creada.
+        $this->assertStringContainsString('/admin/tours?tab=agendados', $mensaje);
+        // Qué contrató exactamente.
+        $this->assertStringContainsString('Desayuno (x2): 10.00 USD', $mensaje);
+        $this->assertStringContainsString('Entrada al parque: 7.00 USD', $mensaje);
+        $this->assertStringContainsString('Sedán privado (+20.00 USD)', $mensaje);
+        $this->assertStringContainsString('Col. Escalón, San Salvador', $mensaje);
+        $this->assertStringContainsString('Somos vegetarianos', $mensaje);
+        $this->assertStringContainsString('Estado: pendiente de pago', $mensaje);
+        // Con quién hablar.
+        $this->assertStringContainsString($user->email, $mensaje);
+        $this->assertStringContainsString('+503 7777 8888', $mensaje);
+    }
+
+    public function test_el_mensaje_de_transporte_lleva_su_propio_detalle(): void
+    {
+        config(['app.frontend_url' => 'https://cuscaadventure.com']);
+        $this->paymentSettings();
+        $user = $this->user();
+
+        $vehiculo = TransportVehicle::create([
+            'title' => 'Toyota Hilux', 'description' => 'd', 'vehicle_type' => 'pickup',
+            'daily_rate' => 60, 'hourly_rate' => 10, 'capacity' => 5, 'location' => 'San Salvador',
+            'currency_code' => 'USD', 'is_active' => true,
+        ]);
+        $booking = Booking::create([
+            'user_id' => $user->id,
+            'bookable_type' => TransportVehicle::class, 'bookable_id' => $vehiculo->id,
+            'starts_at' => '2026-12-05 09:00:00', 'ends_at' => '2026-12-07 09:00:00',
+            'party_size' => 1, 'total_price' => 120, 'currency_code' => 'USD',
+            'status' => Booking::STATUS_PENDING,
+        ]);
+        $booking->transportDetail()->create([
+            'pickup_location' => 'Aeropuerto', 'dropoff_location' => 'Hotel Real', 'rental_type' => 'daily',
+        ]);
+
+        Passport::actingAs($user);
+
+        $url = $this->apiJson('POST', '/api/v1/bookings/'.$booking->id.'/whatsapp-link')
+            ->assertOk()->json('data.attributes.url');
+        $mensaje = urldecode(explode('?text=', $url)[1]);
+
+        $this->assertStringContainsString('Vehículo: Toyota Hilux', $mensaje);
+        $this->assertStringContainsString('https://cuscaadventure.com/transport/'.$vehiculo->id, $mensaje);
+        $this->assertStringContainsString('Recogida: 05/12/2026 09:00', $mensaje);
+        $this->assertStringContainsString('Devolución: 07/12/2026 09:00', $mensaje);
+        $this->assertStringContainsString('Desde: Aeropuerto', $mensaje);
+        $this->assertStringContainsString('Modalidad: por día', $mensaje);
+        $this->assertStringContainsString('/admin/vehicles?tab=reservas', $mensaje);
+    }
+
+    public function test_se_envia_el_comprobante_en_pdf_al_cliente(): void
+    {
+        Notification::fake();
+        $this->paymentSettings();
+        $user = $this->user();
+        $booking = $this->booking($user);
+        Passport::actingAs($user);
+
+        $this->apiJson('POST', '/api/v1/bookings/'.$booking->id.'/whatsapp-link')
+            ->assertOk()
+            ->assertJsonPath('data.attributes.receipt_sent', true);
+
+        Notification::assertSentTo($user, BookingReceiptNotification::class);
+    }
+
+    public function test_el_comprobante_es_un_pdf_con_la_referencia(): void
+    {
+        $this->paymentSettings();
+        $user = $this->user();
+        $booking = $this->booking($user);
+
+        $mail = (new BookingReceiptNotification($booking, 'https://wa.me/50370001234'))->toMail($user);
+        $array = $mail->toArray();
+
+        $this->assertSame('Tu reserva #'.$booking->id.' está apartada', $array['subject']);
+        $this->assertStringContainsString('#'.$booking->id, json_encode($array['introLines']));
+
+        $adjunto = $mail->rawAttachments[0] ?? null;
+        $this->assertNotNull($adjunto, 'El correo debe llevar el comprobante adjunto.');
+        $this->assertSame('comprobante-reserva-'.$booking->id.'.pdf', $adjunto['name']);
+        // Firma de un PDF real, no una plantilla vacía.
+        $this->assertStringStartsWith('%PDF', $adjunto['data']);
     }
 
     public function test_usa_el_whatsapp_de_contacto_si_no_hay_numero_de_pagos(): void

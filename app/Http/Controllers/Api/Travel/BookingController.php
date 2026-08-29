@@ -13,6 +13,7 @@ use App\Models\TransportVehicle;
 use App\Models\User;
 use App\Notifications\AdminAlertNotification;
 use App\Notifications\BookingNotification;
+use App\Notifications\BookingReceiptNotification;
 use App\Services\BookingService;
 use App\Services\TourAvailabilityService;
 use App\Support\SiteSettings;
@@ -354,7 +355,13 @@ class BookingController extends Controller
             ]);
         }
 
-        $booking->loadMissing(['bookable', 'transportDetail', 'coupon', 'user']);
+        $booking->loadMissing(['bookable', 'transportDetail', 'coupon', 'user', 'upgradeVehicle']);
+
+        $url = 'https://wa.me/'.$number.'?text='.rawurlencode($this->whatsappMessage($booking));
+
+        // El cliente se queda con un comprobante en PDF: la reserva está apartada
+        // aunque el pago siga pendiente.
+        $booking->user?->notify(new BookingReceiptNotification($booking, $url));
 
         // El agente debe enterarse aunque el cliente no llegue a enviar el mensaje.
         $this->notifyAdmins('Solicitud de pago por WhatsApp', 'Un cliente pidió ayuda para completar el pago de su reserva.', [
@@ -369,50 +376,110 @@ class BookingController extends Controller
                 'type' => 'booking-whatsapp',
                 'id' => (string) $booking->id,
                 'attributes' => [
-                    'url' => 'https://wa.me/'.$number.'?text='.rawurlencode($this->whatsappMessage($booking)),
+                    'url' => $url,
                     'phone' => $number,
+                    'receipt_sent' => (bool) $booking->user?->email,
                 ],
             ],
         ]);
     }
 
     /**
-     * Texto de la solicitud de pago. Incluye la referencia de la reserva para que
-     * el agente la localice en el panel.
+     * Texto de la solicitud de pago.
+     *
+     * Lleva todo lo que el agente necesita sin salir del chat: qué se contrata,
+     * cuándo, para cuántos, el desglose del precio, los datos del cliente y los
+     * enlaces al producto y a la reserva ya creada en el panel.
      */
     private function whatsappMessage(Booking $booking): string
     {
-        $currency = $booking->currency_code ?: SiteSettings::currency();
-        $total = number_format((float) $booking->total_price, 2, '.', ',');
+        $esTransporte = $booking->booking_type === Booking::TYPE_TRANSPORT;
+        $moneda = $booking->currency_code ?: SiteSettings::currency();
+        $front = rtrim((string) config('app.frontend_url'), '/');
 
-        $lines = [
-            '¡Hola! Quiero completar el pago de mi reserva.',
-            '',
-            'Reserva: #'.$booking->id,
-            ($booking->booking_type === Booking::TYPE_TRANSPORT ? 'Vehículo: ' : 'Tour: ').$this->bookableTitle($booking),
-        ];
+        $l = ['¡Hola! Quiero completar el pago de mi reserva.', ''];
 
-        if ($booking->starts_at) {
-            $lines[] = $booking->booking_type === Booking::TYPE_TRANSPORT
-                ? 'Recogida: '.$booking->starts_at->format('d/m/Y H:i')
-                : 'Fecha: '.$booking->starts_at->format('d/m/Y');
+        // ── Qué se contrata ──
+        $l[] = '*RESERVA #'.$booking->id.'*';
+        $l[] = ($esTransporte ? 'Vehículo: ' : 'Tour: ').$this->bookableTitle($booking);
+
+        if ($booking->bookable) {
+            $l[] = 'Ficha: '.$front.($esTransporte ? '/transport/' : '/tours/').$booking->bookable->getKey();
         }
 
-        if ($booking->booking_type === Booking::TYPE_TRANSPORT && $booking->ends_at) {
-            $lines[] = 'Devolución: '.$booking->ends_at->format('d/m/Y H:i');
+        // ── Cuándo y para cuántos ──
+        if ($esTransporte) {
+            $l[] = 'Recogida: '.$booking->starts_at?->format('d/m/Y H:i');
+            $l[] = 'Devolución: '.$booking->ends_at?->format('d/m/Y H:i');
+            $l[] = 'Unidades: '.$booking->party_size;
+
+            if ($booking->transportDetail) {
+                $l[] = 'Desde: '.$booking->transportDetail->pickup_location;
+                $l[] = 'Hasta: '.$booking->transportDetail->dropoff_location;
+                $l[] = 'Modalidad: '.($booking->transportDetail->rental_type === 'daily' ? 'por día' : 'por hora');
+            }
         } else {
-            $lines[] = 'Personas: '.$booking->party_size;
+            $l[] = 'Fecha: '.$booking->starts_at?->format('d/m/Y');
+            $l[] = 'Personas: '.$booking->party_size;
         }
 
+        // ── Extras contratados ──
+        $extras = is_array($booking->service_fees) ? $booking->service_fees : [];
+
+        if ($extras !== []) {
+            $l[] = '';
+            $l[] = '*Servicios incluidos*';
+            foreach ($extras as $extra) {
+                $etiqueta = ($extra['calc'] ?? 'fixed') === 'per_person'
+                    ? ' (x'.$booking->party_size.')'
+                    : '';
+                $l[] = '• '.($extra['name'] ?? 'Servicio').$etiqueta.': '.$this->money($extra['total'] ?? 0, $moneda);
+            }
+        }
+
+        if ($booking->upgrade_label) {
+            $l[] = 'Vehículo elegido: '.$booking->upgrade_label.' (+'.$this->money($booking->upgrade_surcharge, $moneda).')';
+        }
+
+        if ($booking->pickup_address) {
+            $l[] = 'Punto de recogida: '.$booking->pickup_address;
+        }
+
+        if ($booking->notes) {
+            $l[] = 'Notas: '.$booking->notes;
+        }
+
+        // ── Precio ──
+        $l[] = '';
         if ((float) $booking->discount_amount > 0) {
-            $lines[] = 'Descuento aplicado: -'.number_format((float) $booking->discount_amount, 2, '.', ',').' '.$currency;
+            $cupon = $booking->coupon?->code ? ' ('.$booking->coupon->code.')' : '';
+            $l[] = 'Descuento'.$cupon.': -'.$this->money($booking->discount_amount, $moneda);
+        }
+        $l[] = '*TOTAL: '.$this->money($booking->total_price, $moneda).'*';
+        $l[] = 'Estado: pendiente de pago';
+
+        // ── Cliente ──
+        $cliente = $booking->user;
+        if ($cliente) {
+            $l[] = '';
+            $l[] = '*Cliente*';
+            $l[] = trim($cliente->name);
+            $l[] = $cliente->email;
+            if ($cliente->phone) {
+                $l[] = $cliente->phone;
+            }
         }
 
-        $lines[] = 'Total: '.$total.' '.$currency;
-        $lines[] = '';
-        $lines[] = 'A nombre de: '.trim($booking->user?->name ?? '');
+        // ── Atajo al panel para el agente ──
+        $l[] = '';
+        $l[] = 'Gestionar la reserva: '.$front.($esTransporte ? '/admin/vehicles?tab=reservas' : '/admin/tours?tab=agendados');
 
-        return implode("\n", array_filter($lines, fn ($line) => $line !== null));
+        return implode("\n", $l);
+    }
+
+    private function money(mixed $amount, string $currency): string
+    {
+        return number_format((float) $amount, 2, '.', ',').' '.$currency;
     }
 
     private function loadRelations(Booking $booking): Booking
