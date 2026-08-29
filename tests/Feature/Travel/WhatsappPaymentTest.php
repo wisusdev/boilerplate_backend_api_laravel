@@ -175,7 +175,7 @@ class WhatsappPaymentTest extends TestCase
 
     public function test_el_mensaje_incluye_extras_enlaces_y_datos_del_cliente(): void
     {
-        config(['app.frontend_url' => 'https://cuscaadventure.com']);
+        config(['app.frontend_url' => 'https://cusgoadventures.com']);
         $this->paymentSettings();
         $user = $this->user();
         $user->update(['phone' => '+503 7777 8888']);
@@ -199,7 +199,7 @@ class WhatsappPaymentTest extends TestCase
         $mensaje = urldecode(explode('?text=', $url)[1]);
 
         // Enlace a la ficha pública: el agente abre el producto y ve el detalle.
-        $this->assertStringContainsString('https://cuscaadventure.com/tours/'.$booking->bookable_id, $mensaje);
+        $this->assertStringContainsString('https://cusgoadventures.com/tours/'.$booking->bookable_id, $mensaje);
         // Atajo al panel para gestionar la reserva ya creada.
         $this->assertStringContainsString('/admin/tours?tab=agendados', $mensaje);
         // Qué contrató exactamente.
@@ -216,7 +216,7 @@ class WhatsappPaymentTest extends TestCase
 
     public function test_el_mensaje_de_transporte_lleva_su_propio_detalle(): void
     {
-        config(['app.frontend_url' => 'https://cuscaadventure.com']);
+        config(['app.frontend_url' => 'https://cusgoadventures.com']);
         $this->paymentSettings();
         $user = $this->user();
 
@@ -243,7 +243,7 @@ class WhatsappPaymentTest extends TestCase
         $mensaje = urldecode(explode('?text=', $url)[1]);
 
         $this->assertStringContainsString('Vehículo: Toyota Hilux', $mensaje);
-        $this->assertStringContainsString('https://cuscaadventure.com/transport/'.$vehiculo->id, $mensaje);
+        $this->assertStringContainsString('https://cusgoadventures.com/transport/'.$vehiculo->id, $mensaje);
         $this->assertStringContainsString('Recogida: 05/12/2026 09:00', $mensaje);
         $this->assertStringContainsString('Devolución: 07/12/2026 09:00', $mensaje);
         $this->assertStringContainsString('Desde: Aeropuerto', $mensaje);
