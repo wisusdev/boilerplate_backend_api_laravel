@@ -29,6 +29,7 @@ class PaymentWebhookService
     public function __construct(
         private readonly PaymentService $payments,
         private readonly PaypalService $paypal,
+        private readonly WompiService $wompi,
     ) {}
 
     // ─── Stripe ────────────────────────────────────────────────────────────────
@@ -141,6 +142,31 @@ class PaymentWebhookService
             ]);
 
             return ['status' => 'ignored', 'reason' => 'payment not found'];
+        }
+
+        // El webhook está firmado, pero el importe del evento no es autoritativo:
+        // antes de dar por cobrado se confirma contra la API, que es la que sabe
+        // cuánto se cobró de verdad y si la transacción fue real.
+        if ($outcome === 'paid' && $transactionId) {
+            try {
+                $result = $this->wompi->getTransaction((string) $transactionId);
+            } catch (\Throwable $e) {
+                Log::warning('Webhook wompi: no se pudo confirmar la transacción contra la API.', [
+                    'idTransaccion' => $transactionId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return ['status' => 'ignored', 'reason' => 'confirmation failed'];
+            }
+
+            if (! $result['paid'] || round($result['amount'], 2) + 0.009 < round((float) $payment->amount, 2)) {
+                Log::warning('Webhook wompi: el evento no coincide con la transacción.', [
+                    'idTransaccion' => $transactionId,
+                    'pago' => $payment->id,
+                ]);
+
+                return ['status' => 'ignored', 'reason' => 'amount mismatch'];
+            }
         }
 
         return $this->applyOutcomeTo($payment, 'wompi', (string) ($transactionId ?: $payment->transaction_reference), $outcome, $event);

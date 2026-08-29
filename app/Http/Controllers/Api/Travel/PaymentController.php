@@ -412,13 +412,33 @@ class PaymentController extends Controller
      */
     private function initWompi(float $amount, string $currency, string $returnUrl, $payable): array
     {
-        $payment = $this->paymentService->create($payable, [
-            'gateway' => 'wompi',
-            'method' => 'card',
-            'amount' => $amount,
-            'currency_code' => $currency,
-            'status' => 'pending',
-        ]);
+        // El enlace de Wompi no lleva moneda: Wompi El Salvador liquida en USD.
+        // Enviar el importe de otra divisa lo cobraría como si fueran dólares.
+        if (strtoupper($currency) !== 'USD') {
+            throw ValidationException::withMessages([
+                'data.attributes.gateway' => ['Wompi solo admite cobros en USD; esta reserva está en '.$currency.'.'],
+            ]);
+        }
+
+        // Un reintento no debe dejar pagos pendientes acumulados: si ya hay uno
+        // sin resolver para esta reserva, se reutiliza.
+        $payment = Payment::query()
+            ->where('payable_type', $payable::class)
+            ->where('payable_id', $payable->getKey())
+            ->where('gateway', 'wompi')
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
+
+        $payment
+            ? $payment->update(['amount' => $amount, 'currency_code' => $currency])
+            : $payment = $this->paymentService->create($payable, [
+                'gateway' => 'wompi',
+                'method' => 'card',
+                'amount' => $amount,
+                'currency_code' => $currency,
+                'status' => 'pending',
+            ]);
 
         try {
             $link = $this->wompiService->createPaymentLink([

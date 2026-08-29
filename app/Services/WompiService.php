@@ -22,9 +22,12 @@ class WompiService
     use EncryptsCredentials;
     use ExternalConsumerServices;
 
-    protected string $base_url = 'https://api.wompi.sv';
+    protected string $base_url;
 
-    protected string $base_auth_url = 'https://id.wompi.sv';
+    protected string $base_auth_url;
+
+    /** 'live' exige transacciones reales; 'sandbox' acepta las de prueba. */
+    protected string $mode;
 
     protected string $public_key;
 
@@ -37,10 +40,43 @@ class WompiService
         $pgRow = Setting::where('key', 'payment_gateway')->first();
         $pg = $pgRow ? json_decode($pgRow->value, true) : [];
 
-        // Support both new flat keys and legacy nested structure
-        $this->public_key = $this->decryptCredential($pg['wompi_public_key'] ?? $pg['payment_methods']['wompi']['key'] ?? config('services.wompi.public_key', ''));
-        $this->private_key = $this->decryptCredential($pg['wompi_private_key'] ?? $pg['payment_methods']['wompi']['secret'] ?? config('services.wompi.private_key', ''));
-        $this->audience = $this->decryptCredential($pg['wompi_audience'] ?? config('services.wompi.audience', 'wompi_api'));
+        // Se admiten las claves planas y la estructura heredada, y se cae al .env.
+        // Ojo: `??` solo cae por null, y el seeder deja cadenas vacías, así que
+        // hay que descartar explícitamente los valores en blanco.
+        $this->public_key = $this->firstFilled([
+            $pg['wompi_public_key'] ?? null,
+            $pg['payment_methods']['wompi']['key'] ?? null,
+            config('services.wompi.public_key'),
+        ]);
+        $this->private_key = $this->firstFilled([
+            $pg['wompi_private_key'] ?? null,
+            $pg['payment_methods']['wompi']['secret'] ?? null,
+            config('services.wompi.private_key'),
+        ]);
+        $this->audience = $this->firstFilled([
+            $pg['wompi_audience'] ?? null,
+            config('services.wompi.audience'),
+            'wompi_api',
+        ]);
+        $this->mode = (string) ($pg['wompi_mode'] ?? $pg['payment_methods']['wompi']['mode'] ?? 'sandbox');
+        $this->base_url = rtrim((string) config('services.wompi.base_uri') ?: 'https://api.wompi.sv', '/');
+        $this->base_auth_url = rtrim((string) config('services.wompi.base_auth_uri') ?: 'https://id.wompi.sv', '/');
+    }
+
+    /**
+     * Primer valor no vacío de la lista, ya descifrado.
+     *
+     * @param  array<int, mixed>  $candidates
+     */
+    private function firstFilled(array $candidates): string
+    {
+        foreach ($candidates as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                return $this->decryptCredential($value);
+            }
+        }
+
+        return '';
     }
 
     public function isConfigured(): bool
@@ -105,7 +141,7 @@ class WompiService
     /**
      * Crea un enlace de pago alojado por Wompi.
      *
-     * @param  array{reference:string, amount:float, product:string, description?:string, redirect_url:string, webhook_url?:string, return_url?:string, extra?:array<string,mixed>}  $data
+     * @param  array{reference:string, amount:float, product:string, description?:string, redirect_url:string, webhook_url?:string, notify_emails?:string, return_url?:string, extra?:array<string,mixed>}  $data
      * @return array{link_id: string, url: string, qr_url: string}
      */
     public function createPaymentLink(array $data): array
@@ -144,8 +180,18 @@ class WompiService
             'datosAdicionales' => $data['extra'] ?? [],
         ];
 
+        // La API exige al menos una vía de notificación cuando se envía
+        // `configuracion`; sin ella responde 400.
         if (! empty($data['webhook_url'])) {
             $body['configuracion']['urlWebhook'] = $data['webhook_url'];
+        }
+
+        if (! empty($data['notify_emails'])) {
+            $body['configuracion']['emailsNotificacion'] = $data['notify_emails'];
+        }
+
+        if (empty($body['configuracion']['urlWebhook']) && empty($body['configuracion']['emailsNotificacion'])) {
+            $body['configuracion']['urlWebhook'] = route('api.v1.payments.webhook', ['gateway' => 'wompi']);
         }
 
         if (! empty($data['return_url'])) {
@@ -158,7 +204,7 @@ class WompiService
         $url = $response['urlEnlace'] ?? $response['urlEnlaceLargo'] ?? null;
 
         if (! $linkId || ! $url) {
-            throw new \RuntimeException('Wompi: no se pudo crear el enlace de pago.');
+            throw new \RuntimeException('Wompi: '.$this->errorMessage($response));
         }
 
         return [
@@ -169,9 +215,27 @@ class WompiService
     }
 
     /**
+     * Extrae el motivo del error que devuelve la API. Wompi responde con
+     * `mensajes[]`, que explica exactamente qué falta; devolver un error genérico
+     * obligaba a depurar a ciegas.
+     *
+     * @param  array<string,mixed>  $response
+     */
+    private function errorMessage(array $response): string
+    {
+        $mensajes = $response['mensajes'] ?? null;
+
+        if (is_array($mensajes) && $mensajes !== []) {
+            return implode(' ', array_map('strval', $mensajes));
+        }
+
+        return (string) ($response['mensaje'] ?? $response['title'] ?? 'no se pudo crear el enlace de pago.');
+    }
+
+    /**
      * Consulta un enlace de pago y el resultado de su transacción, si ya la hubo.
      *
-     * @return array{paid: bool, amount: float, transaction_id: ?string, external_id: ?string, message: ?string}
+     * @return array{paid: bool, real: bool, amount: float, transaction_id: ?string, external_id: ?string, message: ?string}
      */
     public function getPaymentLinkResult(string $linkId): array
     {
@@ -181,7 +245,7 @@ class WompiService
     /**
      * Consulta una transacción por su identificador.
      *
-     * @return array{paid: bool, amount: float, transaction_id: ?string, external_id: ?string, message: ?string}
+     * @return array{paid: bool, real: bool, amount: float, transaction_id: ?string, external_id: ?string, message: ?string}
      */
     public function getTransaction(string $transactionId): array
     {
@@ -192,12 +256,22 @@ class WompiService
      * Normaliza la respuesta de una transacción de compra de Wompi.
      *
      * @param  array<string,mixed>  $t
-     * @return array{paid: bool, amount: float, transaction_id: ?string, external_id: ?string, message: ?string}
+     * @return array{paid: bool, real: bool, amount: float, transaction_id: ?string, external_id: ?string, message: ?string}
      */
     private function readTransaction(array $t): array
     {
+        $aprobada = filter_var($t['esAprobada'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $real = filter_var($t['esReal'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        // En producción, una transacción de prueba NO cuenta como cobro: Wompi usa
+        // el mismo host para ambos modos y las distingue con `esReal`.
+        if ($aprobada && $this->mode === 'live' && ! $real) {
+            throw new \RuntimeException('Wompi: la transacción no es real (modo de prueba) y la pasarela está en producción.');
+        }
+
         return [
-            'paid' => filter_var($t['esAprobada'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'paid' => $aprobada,
+            'real' => $real,
             'amount' => (float) ($t['monto'] ?? 0),
             'transaction_id' => isset($t['idTransaccion']) ? (string) $t['idTransaccion'] : null,
             'external_id' => isset($t['idExterno']) ? (string) $t['idExterno'] : null,
@@ -205,8 +279,14 @@ class WompiService
         ];
     }
 
-    public function getRegion(): object
+    /**
+     * Datos del aplicativo autenticado. Sirve para validar credenciales sin
+     * provocar ningún efecto: no crea nada en la cuenta de Wompi.
+     *
+     * @return array<string,mixed>
+     */
+    public function getApplication(): array
     {
-        return (object) $this->call('GET', '/api/Regiones');
+        return $this->call('GET', '/Aplicativo');
     }
 }

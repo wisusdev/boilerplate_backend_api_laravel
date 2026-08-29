@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\Tour;
 use App\Models\User;
 use App\Services\PaypalService;
+use App\Services\WompiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -166,9 +167,25 @@ class PaymentWebhookTest extends TestCase
 
     // ─── Wompi ───────────────────────────────────────────────────────────────
 
+    /**
+     * El webhook confirma la transacción contra la API antes de dar por cobrado.
+     */
+    private function mockWompiTransaction(string $id, bool $paid, float $amount): void
+    {
+        $this->mock(WompiService::class, function ($mock) use ($id, $paid, $amount) {
+            $mock->shouldReceive('getTransaction')
+                ->with($id)
+                ->andReturn([
+                    'paid' => $paid, 'real' => true, 'amount' => $amount,
+                    'transaction_id' => $id, 'external_id' => null, 'message' => null,
+                ]);
+        });
+    }
+
     public function test_wompi_webhook_marks_payment_paid_with_valid_signature(): void
     {
         $payment = $this->makePayment('wompi', 'WTX_111');
+        $this->mockWompiTransaction('WTX_111', true, (float) $payment->amount);
 
         $payload = json_encode(['idTransaccion' => 'WTX_111', 'estado' => 'APROBADA']);
         $signature = hash_hmac('sha256', $payload, self::WOMPI_SECRET);
@@ -186,6 +203,7 @@ class PaymentWebhookTest extends TestCase
         // El enlace de pago guarda su idEnlace; el evento trae el id de la
         // transacción (distinto) y nuestra referencia en idExterno.
         $payment = $this->makePayment('wompi', '55123');
+        $this->mockWompiTransaction('WOMPI-TXN-999', true, (float) $payment->amount);
 
         $payload = json_encode([
             'idEnlace' => 55123,
@@ -204,6 +222,28 @@ class PaymentWebhookTest extends TestCase
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id, 'status' => 'paid', 'transaction_reference' => 'WOMPI-TXN-999',
         ]);
+    }
+
+    public function test_wompi_webhook_ignora_un_evento_cuyo_importe_no_cuadra(): void
+    {
+        $payment = $this->makePayment('wompi', '55199');
+        // El evento dice aprobada, pero en la pasarela solo se cobró 1.00.
+        $this->mockWompiTransaction('WOMPI-TXN-BARATA', true, 1.00);
+
+        $payload = json_encode([
+            'idExterno' => 'pago-'.$payment->id,
+            'idTransaccion' => 'WOMPI-TXN-BARATA',
+            'esAprobada' => true,
+            'monto' => 9999,
+        ]);
+        $signature = hash_hmac('sha256', $payload, self::WOMPI_SECRET);
+
+        $this->call('POST', '/api/v1/payments/webhook/wompi', [], [], [], [
+            'HTTP_X_EVENT_SIGNATURE' => $signature,
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)->assertOk()->assertJson(['status' => 'ignored']);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
     }
 
     public function test_wompi_webhook_marca_fallido_cuando_no_fue_aprobada(): void
