@@ -28,7 +28,10 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('tour_id')->references('id')->on('tours')->nullOnDelete();
-            $table->foreign('expense_category_id')->references('id')->on('expense_categories')->cascadeOnDelete();
+            // RESTRICT, no CASCADE: una cascada aquí borraba los gastos por SQL sin
+            // eventos de Eloquent y dejaba las filas de `media` y los ficheros de
+            // los recibos huérfanos en disco.
+            $table->foreign('expense_category_id')->references('id')->on('expense_categories')->restrictOnDelete();
             $table->foreign('guide_id')->references('id')->on('users')->nullOnDelete();
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
 

@@ -11,7 +11,9 @@ return new class extends Migration
         Schema::create('booking_messages', function (Blueprint $table) {
             $table->id();
             $table->foreignId('booking_id')->constrained('bookings')->cascadeOnDelete();
-            $table->uuid('user_id')->nullable()->index();
+            // Con FK: sin ella, borrar definitivamente un usuario dejaba mensajes
+            // apuntando a un autor inexistente.
+            $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->text('message');
             $table->timestamps();
         });

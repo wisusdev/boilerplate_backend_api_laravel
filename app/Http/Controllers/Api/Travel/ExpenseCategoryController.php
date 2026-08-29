@@ -41,6 +41,20 @@ class ExpenseCategoryController extends Controller
 
     public function destroy(ExpenseCategory $expenseCategory): JsonResponse
     {
+        // La FK es RESTRICT: antes era CASCADE y borrar la categoría se llevaba
+        // por delante los gastos (y dejaba sus recibos huérfanos en disco).
+        $used = $expenseCategory->expenses()->count();
+
+        if ($used > 0) {
+            return response()->json([
+                'errors' => [[
+                    'status' => '409',
+                    'title' => 'expenseCategory.inUse',
+                    'detail' => "No se puede eliminar: tiene {$used} gasto(s) asociado(s). Desactívala en su lugar.",
+                ]],
+            ], 409);
+        }
+
         $expenseCategory->delete();
 
         return response()->json(null, 204);

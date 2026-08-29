@@ -43,7 +43,10 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            // RESTRICT, no CASCADE: el historial de reservas es contable y no debe
+            // desaparecer al borrar un usuario. Además, `payments` es polimórfico
+            // (sin FK) y quedaban pagos apuntando a reservas inexistentes.
+            $table->foreign('user_id')->references('id')->on('users')->restrictOnDelete();
             $table->foreign('upgrade_vehicle_id')->references('id')->on('transport_vehicles')->nullOnDelete();
             $table->foreign('coupon_id')->references('id')->on('coupons')->nullOnDelete();
 

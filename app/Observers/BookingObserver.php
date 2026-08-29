@@ -26,6 +26,16 @@ class BookingObserver
         }
     }
 
+    /**
+     * `payments` es polimórfico y no puede tener clave foránea: si la reserva se
+     * borra sin limpiarlos, quedan pagos apuntando a una reserva inexistente.
+     * `booking_messages` y `transport_booking_details` sí cascadean por FK.
+     */
+    public function deleting(Booking $booking): void
+    {
+        $booking->payments()->delete();
+    }
+
     public function updated(Booking $booking): void
     {
         if (! $booking->wasChanged('status')) {

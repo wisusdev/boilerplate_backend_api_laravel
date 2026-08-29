@@ -8,6 +8,7 @@ use App\Models\GalleryItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class GalleryController extends Controller
 {
@@ -31,17 +32,24 @@ class GalleryController extends Controller
             ]);
 
             $nextOrder = (int) (GalleryItem::max('sort_order') ?? 0) + 1;
-            $created = collect();
 
-            foreach ($request->file('images') as $file) {
-                $item = GalleryItem::create([
-                    'caption' => $request->input('caption') ?? null,
-                    'sort_order' => $nextOrder++,
-                ]);
+            // En una transacción: si falla la subida de una imagen, no queda una
+            // fila de galería sin fichero (una tarjeta rota en el frontend).
+            $created = DB::transaction(function () use ($request, $nextOrder) {
+                $created = collect();
 
-                $item->addMedia($file)->toMediaCollection('image');
-                $created->push($item->fresh());
-            }
+                foreach ($request->file('images') as $file) {
+                    $item = GalleryItem::create([
+                        'caption' => $request->input('caption') ?? null,
+                        'sort_order' => $nextOrder++,
+                    ]);
+
+                    $item->addMedia($file)->toMediaCollection('image');
+                    $created->push($item->fresh());
+                }
+
+                return $created;
+            });
 
             return GalleryItemResource::collection($created);
         }
@@ -52,12 +60,16 @@ class GalleryController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $item = GalleryItem::create([
-            'caption' => $validated['caption'] ?? null,
-            'sort_order' => $validated['sort_order'] ?? (int) (GalleryItem::max('sort_order') ?? 0) + 1,
-        ]);
+        $item = DB::transaction(function () use ($validated) {
+            $item = GalleryItem::create([
+                'caption' => $validated['caption'] ?? null,
+                'sort_order' => $validated['sort_order'] ?? (int) (GalleryItem::max('sort_order') ?? 0) + 1,
+            ]);
 
-        $item->addMediaFromRequest('image')->toMediaCollection('image');
+            $item->addMediaFromRequest('image')->toMediaCollection('image');
+
+            return $item;
+        });
 
         return GalleryItemResource::make($item->fresh());
     }

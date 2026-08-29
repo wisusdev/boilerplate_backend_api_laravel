@@ -84,9 +84,13 @@ class Booking extends Model
         return self::BOOKABLE_MAP[$type] ?? null;
     }
 
+    /**
+     * `withTrashed`: un usuario dado de baja no debe dejar reservas sin cliente
+     * visible; el historial es contable y tiene que poder leerse completo.
+     */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     public function bookable(): MorphTo

@@ -48,7 +48,8 @@ class Expense extends Model implements HasMedia
     /** Guía (usuario con rol 'guia') al que se atribuye el gasto. */
     public function guide(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'guide_id');
+        // Igual que en Booking: un guía dado de baja no debe ocultar sus gastos.
+        return $this->belongsTo(User::class, 'guide_id')->withTrashed();
     }
 
     /** Usuario que registró el gasto. */
