@@ -19,7 +19,7 @@ class SettingsPublicTest extends TestCase
         parent::setUp();
 
         Setting::create(['key' => 'app', 'value' => json_encode([
-            'app_name' => 'Cusgo Adventure',
+            'app_name' => 'Cusgo Adventures',
             'offers_subscription_enabled' => true,
         ])]);
 

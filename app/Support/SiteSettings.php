@@ -17,6 +17,17 @@ class SiteSettings
 
     private static ?array $pg = null;
 
+    /**
+     * Nombre público del sitio. Sale de los ajustes para que renombrar el
+     * proyecto sea un cambio de configuración y no de código.
+     */
+    public static function name(): string
+    {
+        $nombre = trim((string) (self::app()['app_name'] ?? ''));
+
+        return $nombre !== '' ? $nombre : (string) config('app.name', 'Cusgo Adventures');
+    }
+
     /** Moneda global (código ISO, p. ej. "USD"). */
     public static function currency(): string
     {

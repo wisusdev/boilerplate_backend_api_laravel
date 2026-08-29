@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Http\Controllers\Api\Travel\SubscriberController;
+use App\Support\SiteSettings;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -21,12 +22,15 @@ class SubscriberWelcomeNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $appName = 'Cusgo Adventures';
+        // El nombre sale de los ajustes: estaba fijado en el código y quedaba
+        // desincronizado en cuanto el sitio cambiaba de nombre.
+        $appName = SiteSettings::name();
         $frontendUrl = rtrim((string) config('app.frontend_url', env('FRONTEND_URL', config('app.url'))), '/');
         $greeting = $this->name ? "¡Hola, {$this->name}!" : '¡Hola!';
 
         $message = (new MailMessage)
-            ->from('ofertas@cusgo.sv', $appName)
+            // Sin `from` fijo: el remitente sale de MAIL_FROM_ADDRESS, que es el
+            // dominio verificado para enviar. Forzar otro rompe SPF/DKIM.
             ->subject("¡Bienvenido a las ofertas de {$appName}! 🌋")
             ->greeting($greeting)
             ->line('Gracias por suscribirte. A partir de ahora recibirás nuestras mejores ofertas, descuentos y nuevas aventuras antes que nadie.')

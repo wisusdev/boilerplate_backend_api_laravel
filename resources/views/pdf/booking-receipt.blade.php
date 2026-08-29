@@ -93,7 +93,7 @@
         $fiscal = \App\Models\Setting::where('key', 'dte')->value('value');
         $fiscal = $fiscal ? (json_decode($fiscal, true) ?: []) : [];
 
-        $emisor = trim($fiscal['dte_nombre'] ?? '') ?: (trim($ajustes['app_name'] ?? '') ?: config('app.name', 'Cusgo Adventures'));
+        $emisor = trim($fiscal['dte_nombre'] ?? '') ?: \App\Support\SiteSettings::name();
         $emisorLineas = array_values(array_filter([
             trim($fiscal['dte_direccion'] ?? '') ?: trim($ajustes['contact_address'] ?? ''),
             trim(implode(', ', array_filter([$ajustes['contact_city'] ?? null, $ajustes['contact_country'] ?? null]))),

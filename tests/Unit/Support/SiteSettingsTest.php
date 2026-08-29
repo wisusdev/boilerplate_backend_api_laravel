@@ -47,4 +47,22 @@ class SiteSettingsTest extends TestCase
         $this->assertSame(3, SiteSettings::minAdvanceDays());
         $this->assertSame(48, SiteSettings::cancellationHours());
     }
+
+    public function test_el_nombre_del_sitio_sale_de_los_ajustes(): void
+    {
+        Setting::updateOrCreate(['key' => 'app'], ['value' => json_encode(['app_name' => 'Otro Nombre'])]);
+        SiteSettings::flush();
+
+        // Renombrar el proyecto debe ser un cambio de ajustes, no de código.
+        $this->assertSame('Otro Nombre', SiteSettings::name());
+    }
+
+    public function test_el_nombre_cae_a_la_configuracion_si_no_esta_en_ajustes(): void
+    {
+        Setting::updateOrCreate(['key' => 'app'], ['value' => json_encode([])]);
+        SiteSettings::flush();
+        config(['app.name' => 'Cusgo Adventures']);
+
+        $this->assertSame('Cusgo Adventures', SiteSettings::name());
+    }
 }
