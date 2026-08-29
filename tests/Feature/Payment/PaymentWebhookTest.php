@@ -181,6 +181,50 @@ class PaymentWebhookTest extends TestCase
         $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'paid']);
     }
 
+    public function test_wompi_webhook_localiza_el_pago_por_la_referencia_del_comercio(): void
+    {
+        // El enlace de pago guarda su idEnlace; el evento trae el id de la
+        // transacción (distinto) y nuestra referencia en idExterno.
+        $payment = $this->makePayment('wompi', '55123');
+
+        $payload = json_encode([
+            'idEnlace' => 55123,
+            'idExterno' => 'pago-'.$payment->id,
+            'idTransaccion' => 'WOMPI-TXN-999',
+            'esAprobada' => true,
+            'monto' => 100,
+        ]);
+        $signature = hash_hmac('sha256', $payload, self::WOMPI_SECRET);
+
+        $this->call('POST', '/api/v1/payments/webhook/wompi', [], [], [], [
+            'HTTP_X_EVENT_SIGNATURE' => $signature,
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)->assertOk()->assertJson(['status' => 'paid']);
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id, 'status' => 'paid', 'transaction_reference' => 'WOMPI-TXN-999',
+        ]);
+    }
+
+    public function test_wompi_webhook_marca_fallido_cuando_no_fue_aprobada(): void
+    {
+        $payment = $this->makePayment('wompi', '55124');
+
+        $payload = json_encode([
+            'idExterno' => 'pago-'.$payment->id,
+            'idTransaccion' => 'WOMPI-TXN-NO',
+            'esAprobada' => false,
+        ]);
+        $signature = hash_hmac('sha256', $payload, self::WOMPI_SECRET);
+
+        $this->call('POST', '/api/v1/payments/webhook/wompi', [], [], [], [
+            'HTTP_X_EVENT_SIGNATURE' => $signature,
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)->assertOk();
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'failed']);
+    }
+
     public function test_wompi_webhook_rejects_invalid_signature(): void
     {
         $payment = $this->makePayment('wompi', 'WTX_222');

@@ -8,6 +8,7 @@ use App\Models\Tour;
 use App\Models\User;
 use App\Services\PaypalService;
 use App\Services\StripeService;
+use App\Services\WompiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
@@ -279,22 +280,89 @@ class PaymentVerifyTest extends TestCase
 
     // ─── Wompi ────────────────────────────────────────────────────────────────
 
-    public function test_verify_wompi_no_marca_paid_por_si_solo(): void
+    public function test_verify_wompi_consulta_el_enlace_y_marca_paid(): void
     {
         $user = $this->createAuthenticatedUser();
-        $payment = $this->createPendingPayment($user, 'wompi', 'WOMPI_TXN_444');
+        // La referencia guardada es el id del enlace de pago.
+        $payment = $this->createPendingPayment($user, 'wompi', '55123');
 
-        // Tras el 3DS el cliente vuelve a la app, pero la confirmación real llega
-        // por el webhook firmado; /verify solo refleja el estado persistido.
-        $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'WOMPI_TXN_444'));
+        $this->mock(WompiService::class, function ($mock) {
+            $mock->shouldReceive('getPaymentLinkResult')
+                ->once()
+                ->with('55123')
+                ->andReturn([
+                    'paid' => true, 'amount' => 60.0,
+                    'transaction_id' => 'WOMPI-TXN-777', 'external_id' => 'pago-1', 'message' => null,
+                ]);
+        });
+
+        $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'ignorado'));
+
+        $response->assertOk();
+        $this->assertEquals('paid', $response->json('data.attributes.status'));
+        // Pasa a referenciar la transacción real, que es la que llega por webhook.
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id, 'status' => 'paid', 'transaction_reference' => 'WOMPI-TXN-777',
+        ]);
+    }
+
+    public function test_verify_wompi_no_marca_paid_si_la_transaccion_no_fue_aprobada(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $payment = $this->createPendingPayment($user, 'wompi', '55124');
+
+        $this->mock(WompiService::class, function ($mock) {
+            $mock->shouldReceive('getPaymentLinkResult')
+                ->once()
+                ->andReturn([
+                    'paid' => false, 'amount' => 0.0,
+                    'transaction_id' => 'WOMPI-TXN-RECHAZADA', 'external_id' => null, 'message' => 'Tarjeta rechazada',
+                ]);
+        });
+
+        $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'x'));
+
+        $response->assertOk();
+        $this->assertEquals('failed', $response->json('data.attributes.status'));
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+    }
+
+    public function test_verify_wompi_sigue_pendiente_si_el_cliente_aun_no_ha_pagado(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $payment = $this->createPendingPayment($user, 'wompi', '55126');
+
+        // Enlace creado pero sin transacción todavía: no es un fallo.
+        $this->mock(WompiService::class, function ($mock) {
+            $mock->shouldReceive('getPaymentLinkResult')
+                ->once()
+                ->andReturn(['paid' => false, 'amount' => 0.0, 'transaction_id' => null, 'external_id' => null, 'message' => null]);
+        });
+
+        $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'x'));
 
         $response->assertOk();
         $this->assertEquals('pending', $response->json('data.attributes.status'));
+    }
 
-        $this->assertDatabaseHas('payments', [
-            'id' => $payment->id,
-            'status' => 'pending',
-        ]);
+    public function test_verify_wompi_rechaza_un_cobro_por_menos_importe(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $payment = $this->createPendingPayment($user, 'wompi', '55125'); // pago de 60.00
+
+        $this->mock(WompiService::class, function ($mock) {
+            $mock->shouldReceive('getPaymentLinkResult')
+                ->once()
+                ->andReturn([
+                    'paid' => true, 'amount' => 1.0,
+                    'transaction_id' => 'WOMPI-TXN-BARATO', 'external_id' => null, 'message' => null,
+                ]);
+        });
+
+        $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'x'))
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
     }
 
     // ─── Casos generales ──────────────────────────────────────────────────────

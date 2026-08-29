@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\InvalidWebhookSignatureException;
+use App\Models\Payment;
 use App\Models\Setting;
 use App\Traits\EncryptsCredentials;
 use Illuminate\Http\Request;
@@ -103,23 +104,46 @@ class PaymentWebhookService
         $this->verifyHmacSignature($payload, $signature, $secret, 'Wompi');
 
         $event = json_decode($payload, true) ?: [];
-        // Wompi El Salvador entrega el id de transacción y el estado del evento.
+
+        // El enlace de pago devuelve la transacción y nuestra propia referencia
+        // (`idExterno` / `identificadorEnlaceComercio`, con la forma "pago-{id}").
         $transactionId = $event['idTransaccion']
+            ?? $event['transaccionCompra']['idTransaccion']
             ?? $event['data']['transaction']['id']
             ?? null;
+
+        $externalId = $event['idExterno']
+            ?? $event['transaccionCompra']['idExterno']
+            ?? $event['identificadorEnlaceComercio']
+            ?? null;
+
+        $linkId = $event['idEnlace'] ?? null;
+
+        // `esAprobada` es el campo de la API; se aceptan también los estados en
+        // texto por si el evento llega en el formato antiguo.
+        $approved = $event['esAprobada'] ?? $event['transaccionCompra']['esAprobada'] ?? null;
         $status = strtolower((string) ($event['estado'] ?? $event['data']['transaction']['status'] ?? ''));
 
-        if ($transactionId === null) {
-            return ['status' => 'ignored', 'reason' => 'missing transaction id'];
-        }
-
         $outcome = match (true) {
+            $approved === true => 'paid',
+            $approved === false => 'failed',
             in_array($status, ['aprobada', 'approved', 'completed'], true) => 'paid',
             in_array($status, ['rechazada', 'declined', 'error', 'failed'], true) => 'failed',
             default => 'ignored',
         };
 
-        return $this->applyOutcome('wompi', (string) $transactionId, $outcome, $event);
+        $payment = $this->resolveWompiPayment($externalId, $linkId, $transactionId);
+
+        if ($payment === null) {
+            Log::warning('Webhook wompi: no se localizó el pago del evento.', [
+                'idExterno' => $externalId,
+                'idEnlace' => $linkId,
+            ]);
+
+            return ['status' => 'ignored', 'reason' => 'payment not found'];
+        }
+
+        return $this->applyOutcomeTo($payment, 'wompi', (string) ($transactionId ?: $payment->transaction_reference), $outcome, $event);
     }
 
     // ─── PayPal ──────────────────────────────────────────────────────────────
@@ -174,6 +198,34 @@ class PaymentWebhookService
     }
 
     /**
+     * Localiza el pago de un evento de Wompi. Se prueba primero la referencia
+     * propia del comercio ("pago-{id}"), que es estable desde que se crea el
+     * enlace, y después el id del enlace o el de la transacción.
+     */
+    private function resolveWompiPayment(?string $externalId, mixed $linkId, ?string $transactionId): ?Payment
+    {
+        if ($externalId && preg_match('/^pago-(\d+)$/', $externalId, $m)) {
+            $payment = Payment::find((int) $m[1]);
+
+            if ($payment && $payment->gateway === 'wompi') {
+                return $payment;
+            }
+        }
+
+        foreach ([$linkId, $transactionId] as $reference) {
+            if ($reference !== null && $reference !== '') {
+                $payment = $this->payments->findByGatewayReference('wompi', (string) $reference);
+
+                if ($payment !== null) {
+                    return $payment;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Aplica el resultado al pago localizado por referencia, de forma idempotente.
      */
     private function applyOutcome(string $gateway, string $reference, string $outcome, array $event): array
@@ -188,6 +240,18 @@ class PaymentWebhookService
             Log::warning("Webhook {$gateway}: pago no encontrado para referencia {$reference}.");
 
             return ['status' => 'ignored', 'reason' => 'payment not found'];
+        }
+
+        return $this->applyOutcomeTo($payment, $gateway, $reference, $outcome, $event);
+    }
+
+    /**
+     * Aplica el resultado a un pago ya localizado, de forma idempotente.
+     */
+    private function applyOutcomeTo(Payment $payment, string $gateway, string $reference, string $outcome, array $event): array
+    {
+        if ($outcome === 'ignored') {
+            return ['status' => 'ignored'];
         }
 
         // Idempotencia: no reprocesar un pago ya resuelto.

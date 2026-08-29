@@ -3,6 +3,7 @@
 namespace Tests\Feature\Payment;
 
 use App\Models\Booking;
+use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\User;
 use App\Services\PaypalService;
@@ -157,55 +158,80 @@ class PaymentCheckoutTest extends TestCase
 
     // ─── Wompi ────────────────────────────────────────────────────────────────
 
-    public function test_checkout_wompi_crea_pago_pendiente_y_retorna_redirect_url_3ds(): void
+    public function test_checkout_wompi_crea_un_enlace_de_pago_alojado(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $booking = $this->createBooking($user); // total_price = 200
+
+        $this->mock(WompiService::class, function ($mock) {
+            $mock->shouldReceive('createPaymentLink')
+                ->once()
+                ->withArgs(function (array $data) {
+                    // El importe sale del saldo de la reserva, no del cliente,
+                    // y la referencia permite localizar el pago en el webhook.
+                    return $data['amount'] === 200.0
+                        && str_starts_with($data['reference'], 'pago-')
+                        && ! isset($data['card_number']);
+                })
+                ->andReturn([
+                    'link_id' => '55123',
+                    'url' => 'https://link.wompi.sv/abc123',
+                    'qr_url' => 'https://api.wompi.sv/qr/abc123',
+                ]);
+        });
+
+        $response = $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'wompi'));
+
+        $response->assertOk();
+        $attrs = $response->json('data.attributes');
+        $this->assertSame('https://link.wompi.sv/abc123', $attrs['redirect_url']);
+
+        // La referencia guardada es el id del enlace, con el que luego se consulta.
+        $this->assertDatabaseHas('payments', [
+            'gateway' => 'wompi',
+            'status' => 'pending',
+            'amount' => 200.00,
+            'transaction_reference' => '55123',
+        ]);
+    }
+
+    public function test_checkout_wompi_no_acepta_datos_de_tarjeta(): void
     {
         $user = $this->createAuthenticatedUser();
         $booking = $this->createBooking($user);
 
-        $wompiResponse = (object) [
-            'idTransaccion' => 'WOMPI_TXN_999',
-            'urlCompletarPago3Ds' => 'https://3ds.wompi.sv/verify/WOMPI_TXN_999',
-            'monto' => 200.00,
-            'esReal' => false,
-        ];
-
-        $this->mock(WompiService::class, function ($mock) use ($wompiResponse) {
-            $mock->shouldReceive('createPaymentWithCard')
+        $this->mock(WompiService::class, function ($mock) {
+            $mock->shouldReceive('createPaymentLink')
                 ->once()
-                ->andReturn($wompiResponse);
+                ->andReturn(['link_id' => '1', 'url' => 'https://link.wompi.sv/x', 'qr_url' => '']);
         });
 
-        $cardData = [
+        // Aunque el cliente los envíe, no se usan: el formulario es de Wompi.
+        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'wompi', [
             'card_number' => '4111111111111111',
             'cvv' => '123',
-            'expiration_month' => 12,
-            'expiration_year' => 27,
-            'first_name' => 'Juan',
-            'last_name' => 'Pérez',
-            'email' => 'juan@example.com',
-            'city' => 'San Salvador',
-            'address' => 'Calle 1',
-            'state' => 'SS',
-            'postal_code' => '01101',
-            'phone' => '75551234',
-        ];
+        ]))->assertOk();
 
-        $response = $this->postJsonApi(
-            '/api/v1/payments/checkout',
-            $this->checkoutPayload($booking, 'wompi', $cardData),
-        );
+        $pago = Payment::first();
+        $this->assertStringNotContainsString('4111', json_encode($pago->payload ?? []));
+    }
 
-        $response->assertOk();
-        $attrs = $response->json('data.attributes');
-        $this->assertEquals('wompi', $attrs['gateway']);
-        $this->assertEquals('WOMPI_TXN_999', $attrs['transaction_id']);
-        $this->assertStringContainsString('wompi.sv', $attrs['redirect_url']);
+    public function test_checkout_wompi_marca_el_pago_fallido_si_la_pasarela_falla(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $booking = $this->createBooking($user);
 
-        $this->assertDatabaseHas('payments', [
-            'gateway' => 'wompi',
-            'status' => 'pending',
-            'transaction_reference' => 'WOMPI_TXN_999',
-        ]);
+        $this->mock(WompiService::class, function ($mock) {
+            $mock->shouldReceive('createPaymentLink')
+                ->once()
+                ->andThrow(new \RuntimeException('Wompi: no se pudo crear el enlace de pago.'));
+        });
+
+        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'wompi'))
+            ->assertStatus(500);
+
+        // No queda un pago pendiente fantasma que bloquee el saldo.
+        $this->assertDatabaseHas('payments', ['gateway' => 'wompi', 'status' => 'failed']);
     }
 
     // ─── Casos generales ──────────────────────────────────────────────────────

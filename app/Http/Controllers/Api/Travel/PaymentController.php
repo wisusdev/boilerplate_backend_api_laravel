@@ -111,19 +111,13 @@ class PaymentController extends Controller
     /**
      * POST /api/v1/payments/checkout
      *
-     * Initiates an online payment (PayPal / Stripe / Wompi).
+     * Inicia un pago en línea.
      *
-     * Common attributes:
-     *   gateway        paypal | stripe | wompi
-     *   payable_type   booking | transport_booking
-     *   payable_id     UUID
-     *   amount         float
-     *   currency_code  ISO-4217 (default USD)
+     * Atributos: gateway (paypal|stripe|wompi), payable_type, payable_id. El
+     * importe y la moneda NO se aceptan del cliente: salen del saldo de la reserva.
      *
-     * Wompi-specific attributes (card + billing data):
-     *   card_number, cvv, expiration_month, expiration_year
-     *   first_name, last_name, email, city, address
-     *   country (ISO-2, default SV), state, postal_code, phone
+     * Wompi devuelve `redirect_url`: el enlace alojado donde el cliente introduce
+     * su tarjeta. Este servidor nunca recibe datos de tarjeta.
      */
     public function checkout(Request $request): JsonResponse
     {
@@ -160,7 +154,7 @@ class PaymentController extends Controller
         $result = match ($gateway) {
             'paypal' => $this->initPaypal($amount, $currency, $returnUrl, $cancelUrl, $payable),
             'stripe' => $this->initStripe($amount, $currency, $payable),
-            'wompi' => $this->initWompi($amount, $currency, $returnUrl, $payable, $attrs),
+            'wompi' => $this->initWompi($amount, $currency, $returnUrl, $payable),
             default => throw new \InvalidArgumentException("Unsupported gateway: {$gateway}"),
         };
 
@@ -213,10 +207,7 @@ class PaymentController extends Controller
             [$success, $transactionRef, $payload] = match ($gateway) {
                 'paypal' => $this->verifyPaypal($payment),
                 'stripe' => $this->verifyStripe($payment),
-                // Wompi no expone consulta de transacción en esta integración: el
-                // webhook firmado es la única fuente de verdad. Aquí solo se
-                // devuelve el estado ya persistido tras el retorno del 3DS.
-                'wompi' => [false, $payment->transaction_reference, null],
+                'wompi' => $this->verifyWompi($payment),
             };
         } catch (\Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 422);
@@ -228,7 +219,13 @@ class PaymentController extends Controller
             return $this->verifyResponse($payment->refresh(), 'paid');
         }
 
-        return $this->verifyResponse($payment, $gateway === 'wompi' ? $payment->status : 'failed');
+        // Wompi distingue "aún no ha pagado" de "lo intentó y fue rechazado": si no
+        // hay transacción, el enlace sigue abierto y el pago sigue pendiente.
+        if ($gateway === 'wompi' && empty($payload['transaction_id'])) {
+            return $this->verifyResponse($payment, 'pending');
+        }
+
+        return $this->verifyResponse($payment, 'failed');
     }
 
     /**
@@ -299,6 +296,34 @@ class PaymentController extends Controller
         $this->assertCurrencyMatches($payment, $intent['currency']);
 
         return [true, $intentId, $intent];
+    }
+
+    /**
+     * Consulta el enlace de pago en Wompi. La confirmación no depende de que el
+     * cliente vuelva a la aplicación: el webhook firmado hace lo mismo por su
+     * cuenta si el navegador se cierra.
+     *
+     * @return array{0: bool, 1: string, 2: array<string,mixed>}
+     */
+    private function verifyWompi(Payment $payment): array
+    {
+        $linkId = (string) $payment->transaction_reference;
+
+        if ($linkId === '') {
+            throw new \RuntimeException('El pago no tiene un enlace de Wompi asociado.');
+        }
+
+        $result = $this->wompiService->getPaymentLinkResult($linkId);
+
+        if (! $result['paid']) {
+            return [false, $linkId, $result];
+        }
+
+        $this->assertAmountMatches($payment, $result['amount'], (string) $payment->currency_code);
+
+        // A partir de aquí la referencia es la de la transacción real, que es la
+        // que llega en el webhook.
+        return [true, $result['transaction_id'] ?: $linkId, $result];
     }
 
     /**
@@ -380,80 +405,57 @@ class PaymentController extends Controller
     }
 
     /**
-     * Wompi El Salvador — server-side 3DS flow.
-     * Card + billing info is submitted to our backend, which calls the Wompi API
-     * and returns the 3DS redirect URL the user must visit to complete verification.
+     * Wompi El Salvador — enlace de pago alojado.
+     *
+     * Se crea un enlace en Wompi y se redirige allí al cliente: el formulario de
+     * tarjeta es de Wompi, así que el PAN y el CVV nunca tocan este servidor.
      */
-    private function initWompi(float $amount, string $currency, string $returnUrl, $payable, array $attrs): array
+    private function initWompi(float $amount, string $currency, string $returnUrl, $payable): array
     {
-        // Los datos de tarjeta atraviesan este servidor (ver AUDITORIA-SEGURIDAD.md,
-        // C-5: la solución definitiva es tokenizar en el navegador). Mientras tanto,
-        // se validan aquí y NUNCA se registran en logs ni en payments.payload.
-        request()->validate([
-            'data.attributes.card_number' => ['required', 'string', 'regex:/^\d{13,19}$/'],
-            'data.attributes.cvv' => ['required', 'string', 'regex:/^\d{3,4}$/'],
-            // El formulario admite año de 2 o 4 dígitos; se normaliza más abajo.
-            'data.attributes.expiration_month' => ['required', 'integer', 'between:1,12'],
-            'data.attributes.expiration_year' => ['required', 'integer', 'min:0', 'max:'.(date('Y') + 20)],
-            'data.attributes.first_name' => ['required', 'string', 'max:100'],
-            'data.attributes.last_name' => ['required', 'string', 'max:100'],
-            'data.attributes.email' => ['required', 'email', 'max:255'],
-            'data.attributes.address' => ['required', 'string', 'max:255'],
-            'data.attributes.city' => ['required', 'string', 'max:100'],
-            'data.attributes.country' => ['sometimes', 'string', 'size:2'],
-            'data.attributes.state' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'data.attributes.postal_code' => ['sometimes', 'nullable', 'string', 'max:20'],
-            'data.attributes.phone' => ['sometimes', 'nullable', 'string', 'max:30'],
-        ]);
-
-        $month = (int) $attrs['expiration_month'];
-        $year = (int) $attrs['expiration_year'];
-        $year = $year < 100 ? 2000 + $year : $year;
-
-        if ($year < (int) date('Y') || ($year === (int) date('Y') && $month < (int) date('n'))) {
-            throw ValidationException::withMessages([
-                'data.attributes.expiration_year' => ['message.cardExpired'],
-            ]);
-        }
-
-        $cardData = [
-            'card_number' => $attrs['card_number'] ?? '',
-            'cvv' => $attrs['cvv'] ?? '',
-            'expiration_month' => $month,
-            'expiration_year' => $year,
-            'first_name' => $attrs['first_name'] ?? '',
-            'last_name' => $attrs['last_name'] ?? '',
-            'email' => $attrs['email'] ?? '',
-            'city' => $attrs['city'] ?? '',
-            'address' => $attrs['address'] ?? '',
-            'country' => $attrs['country'] ?? 'SV',
-            'state' => $attrs['state'] ?? '',
-            'postal_code' => $attrs['postal_code'] ?? '',
-            'phone' => $attrs['phone'] ?? '',
-            'urlRedirect' => $returnUrl,
-        ];
-
-        $response = $this->wompiService->createPaymentWithCard($cardData, $amount);
-
-        // Wompi 3DS response: { idTransaccion, urlCompletarPago3Ds, monto, idExterno, esReal }
-        $transactionId = $response->idTransaccion ?? null;
-        $redirectUrl = $response->urlCompletarPago3Ds ?? null;
-
         $payment = $this->paymentService->create($payable, [
             'gateway' => 'wompi',
             'method' => 'card',
             'amount' => $amount,
             'currency_code' => $currency,
             'status' => 'pending',
-            'transaction_reference' => (string) $transactionId,
         ]);
+
+        try {
+            $link = $this->wompiService->createPaymentLink([
+                // Referencia única del comercio: permite localizar el pago cuando
+                // Wompi devuelve el resultado.
+                'reference' => 'pago-'.$payment->id,
+                'amount' => $amount,
+                'product' => $this->payableTitle($payable),
+                'description' => 'Reserva #'.$payable->getKey().' · '.$this->payableTitle($payable),
+                'redirect_url' => $returnUrl.'&payment_id='.$payment->id,
+                'webhook_url' => route('api.v1.payments.webhook', ['gateway' => 'wompi']),
+                'return_url' => config('app.frontend_url'),
+                'extra' => [
+                    'payment_id' => (string) $payment->id,
+                    'booking_id' => (string) $payable->getKey(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            $this->paymentService->markFailed($payment, ['error' => $e->getMessage()]);
+
+            throw $e;
+        }
+
+        // El id del enlace es la referencia con la que se consulta el resultado.
+        $payment->update(['transaction_reference' => $link['link_id']]);
 
         return [
             'payment_id' => $payment->id,
             'gateway' => 'wompi',
-            'redirect_url' => $redirectUrl,
-            'transaction_id' => $transactionId,
+            'redirect_url' => $link['url'],
+            'qr_url' => $link['qr_url'],
         ];
+    }
+
+    private function payableTitle($payable): string
+    {
+        return (string) ($payable->bookable?->title ?? ('Reserva #'.$payable->getKey()));
     }
 
     /**
