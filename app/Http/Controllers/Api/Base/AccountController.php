@@ -15,7 +15,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -29,13 +28,13 @@ class AccountController extends Controller
     public function updateProfile(AccountUpdateRequest $request): JsonResource
     {
         $user = $request->user();
+        // Se captura ANTES del update: comparándolo después la condición era
+        // siempre falsa, el correo cambiaba y la cuenta seguía "verificada".
+        $originalEmail = $user->email;
 
         if ($request->has('data.attributes.avatar') && $request->input('data.attributes.avatar')) {
-
-            if (isset($user->avatar) && Storage::disk('public')->exists($user->avatar)) {
-                Storage::disk('public')->delete($user->avatar);
-            }
-
+            // El avatar anterior lo retira UserObserver::updated() al detectar el
+            // cambio de columna, de modo que el fichero y la fila no se separen.
             $avatarName = $this->processAvatarUpload($request->input('data.attributes.avatar'));
         }
 
@@ -49,7 +48,7 @@ class AccountController extends Controller
             'phone_secondary' => $request->input('data.attributes.phone_secondary'),
         ]);
 
-        if ($user->email !== $request->input('data.attributes.email')) {
+        if ($originalEmail !== $user->email) {
             $user->email_verified_at = null;
             $user->save(['timestamps' => false]);
             $user->sendEmailVerificationNotification();
@@ -73,6 +72,13 @@ class AccountController extends Controller
             'password' => $request->input('data.attributes.password'),
         ]);
 
+        // Cambiar la contraseña cierra el resto de sesiones; se conserva la actual
+        // para que el usuario no quede desconectado del dispositivo que usa.
+        $currentTokenId = $user->token()?->id;
+        $user->tokens()
+            ->when($currentTokenId, fn ($q) => $q->where('id', '!=', $currentTokenId))
+            ->update(['revoked' => true]);
+
         $user->notify(new PasswordChangeNotification);
 
         return response()->json([
@@ -91,9 +97,11 @@ class AccountController extends Controller
         $user = $request->user();
         $token = Str::random(60);
 
-        DB::table('password_reset_tokens')->updateOrInsert(['email' => $user->email], [
-            'token' => $token,
-            'created_at' => now()->addHours(6),
+        // Tabla propia: compartirla con password_reset_tokens hacía que un token
+        // de restablecimiento sirviera para borrar la cuenta.
+        DB::table('account_deletion_tokens')->updateOrInsert(['email' => $user->email], [
+            'token' => hash('sha256', $token),
+            'created_at' => now(),
         ]);
 
         $url = config('app.frontend_url').'/account/delete-account-verify?token='.$token;
@@ -114,8 +122,10 @@ class AccountController extends Controller
 
     public function deleteAccountVerify(Request $request): JsonResponse
     {
-        $token = $request->input('data.attributes.token');
-        $account = DB::table('password_reset_tokens')->where('token', $token)->first();
+        $token = (string) $request->input('data.attributes.token');
+        $account = DB::table('account_deletion_tokens')
+            ->where('token', hash('sha256', $token))
+            ->first();
 
         // verify
         if (! $account) {
@@ -125,7 +135,9 @@ class AccountController extends Controller
         }
 
         // Validate expire token
-        if ($account->created_at < now()) {
+        if (now()->greaterThan(now()->parse($account->created_at)->addHours(6))) {
+            DB::table('account_deletion_tokens')->where('email', $account->email)->delete();
+
             throw ValidationException::withMessages([
                 'token' => ['validation.tokenExpired'],
             ]);
@@ -139,16 +151,18 @@ class AccountController extends Controller
             ]);
         }
 
-        if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-            Storage::disk('public')->delete($user->avatar);
+        // El enlace solo puede consumirlo el titular de la cuenta autenticado.
+        if ($request->user()->getKey() !== $user->getKey()) {
+            abort(403);
         }
 
-        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+        DB::table('account_deletion_tokens')->where('email', $user->email)->delete();
 
         // Send email to a user
         $user->notify(new DeleteAccountConfirmationNotification);
 
-        $user->tokens()->delete();
+        // UserObserver revoca las sesiones. El avatar se conserva mientras la
+        // fila exista (soft delete); solo se borra en un forceDelete.
         $user->delete();
 
         return response()->json(['message' => 'message.accountDeletedSuccessfully']);

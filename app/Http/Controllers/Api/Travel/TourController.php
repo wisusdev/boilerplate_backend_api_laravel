@@ -30,8 +30,12 @@ class TourController extends Controller
         return TourResource::collection($tours);
     }
 
-    public function show(Tour $tour): TourResource
+    public function show(Request $request, Tour $tour): TourResource
     {
+        // index() ya filtra por is_active; sin esto los borradores quedaban
+        // accesibles por id (que es secuencial).
+        abort_unless($tour->is_active || $request->user()?->can('tours:update'), 404);
+
         return TourResource::make($tour);
     }
 

@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Traits\EncryptsCredentials;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
@@ -20,6 +21,26 @@ class SettingsController extends Controller
         'wompi_public_key', 'wompi_private_key', 'wompi_audience',
         'dte_mh_password', 'dte_cert_password',
     ];
+
+    /**
+     * Secretos que NUNCA salen de la API en claro, ni siquiera para un admin: el
+     * frontend los cacheaba en localStorage, así que basta con un XSS o un equipo
+     * compartido para llevarse las llaves de las pasarelas. Se devuelven
+     * enmascarados y solo se escriben cuando llega un valor nuevo.
+     */
+    private const SECRET_KEYS = [
+        'paypal_client_secret',
+        'stripe_secret_key',
+        'wompi_private_key',
+        'dte_mh_password',
+        'dte_cert_password',
+    ];
+
+    /** Marca que identifica un valor enmascarado devuelto por la API. */
+    private const MASK = '••••••••';
+
+    /** Extensiones que puede tener un logo/imagen del sitio en disco. */
+    private const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'];
 
     // Public subset of keys exposed without auth
     private const PUBLIC_KEYS = [
@@ -90,7 +111,7 @@ class SettingsController extends Controller
             'default_currency',
         ];
         foreach ($pmFields as $f) {
-            if (array_key_exists($f, $attrs)) {
+            if (array_key_exists($f, $attrs) && ! $this->isMaskedValue($f, $attrs[$f])) {
                 $paymentGateway[$f] = in_array($f, self::CREDENTIAL_KEYS, true)
                     ? $this->encryptCredential((string) $attrs[$f])
                     : $attrs[$f];
@@ -136,7 +157,7 @@ class SettingsController extends Controller
             'dte_auto_generate',
         ];
         foreach ($dteFields as $f) {
-            if (array_key_exists($f, $attrs)) {
+            if (array_key_exists($f, $attrs) && ! $this->isMaskedValue($f, $attrs[$f])) {
                 $dte[$f] = in_array($f, self::CREDENTIAL_KEYS, true)
                     ? $this->encryptCredential((string) $attrs[$f])
                     : $attrs[$f];
@@ -176,7 +197,7 @@ class SettingsController extends Controller
     public function uploadLogo(Request $request): JsonResponse
     {
         $request->validate([
-            'image' => ['required', 'image', 'max:4096', 'mimes:jpeg,png,webp,svg'],
+            'image' => ['required', 'image', 'max:4096', 'mimes:jpeg,png,webp'],
             'variant' => ['sometimes', 'in:light,dark'],
         ]);
 
@@ -185,11 +206,13 @@ class SettingsController extends Controller
         $attribute = $variant === 'dark' ? 'app_logo_dark_url' : 'app_logo_url';
 
         $file = $request->file('image');
-        $extension = $file->getClientOriginalExtension();
+        // Extensión deducida del contenido real, no del nombre que envía el cliente:
+        // el nombre es la vía por la que se cuela un .phtml en el document root.
+        $extension = $this->safeExtension($file);
         $path = "settings/{$basename}.{$extension}";
 
         // Delete any existing file of this variant with any extension
-        foreach (['png', 'jpg', 'jpeg', 'webp', 'svg'] as $ext) {
+        foreach (self::IMAGE_EXTENSIONS as $ext) {
             Storage::disk('public')->delete("settings/{$basename}.{$ext}");
         }
 
@@ -217,14 +240,14 @@ class SettingsController extends Controller
     public function uploadAboutImage(Request $request): JsonResponse
     {
         $request->validate([
-            'image' => ['required', 'image', 'max:4096', 'mimes:jpeg,png,webp,svg'],
+            'image' => ['required', 'image', 'max:4096', 'mimes:jpeg,png,webp'],
         ]);
 
         $file = $request->file('image');
-        $extension = $file->getClientOriginalExtension();
+        $extension = $this->safeExtension($file);
         $path = "settings/about-team.{$extension}";
 
-        foreach (['png', 'jpg', 'jpeg', 'webp', 'svg'] as $ext) {
+        foreach (self::IMAGE_EXTENSIONS as $ext) {
             Storage::disk('public')->delete("settings/about-team.{$ext}");
         }
 
@@ -247,6 +270,44 @@ class SettingsController extends Controller
     // ── private helpers ────────────────────────────────────────────────────
 
     /**
+     * Extensión segura para un fichero subido: se deriva del MIME real y se
+     * contrasta con la lista blanca. Nunca se usa el nombre original.
+     */
+    private function safeExtension(UploadedFile $file): string
+    {
+        $extension = strtolower((string) $file->extension());
+
+        return in_array($extension, self::IMAGE_EXTENSIONS, true) ? $extension : 'png';
+    }
+
+    /**
+     * Enmascara un secreto dejando visibles los últimos 4 caracteres, lo justo
+     * para que un admin reconozca cuál tiene configurado.
+     */
+    private function maskSecret(string $value): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        return self::MASK.substr($value, -4);
+    }
+
+    /**
+     * ¿Hay que conservar el secreto ya guardado? Sí cuando el formulario devuelve
+     * el valor enmascarado o un campo vacío, es decir, cuando el admin no lo tocó.
+     * Para retirar una credencial se desactiva la pasarela.
+     */
+    private function isMaskedValue(string $field, mixed $value): bool
+    {
+        if (! in_array($field, self::SECRET_KEYS, true)) {
+            return false;
+        }
+
+        return ! is_string($value) || $value === '' || str_contains($value, self::MASK);
+    }
+
+    /**
      * Flatten all setting rows into a single key-value map.
      * Payment credentials are only included for admins.
      */
@@ -263,6 +324,14 @@ class SettingsController extends Controller
                 if (is_string($v) && in_array($k, self::CREDENTIAL_KEYS, true)) {
                     $v = $this->decryptCredential($v);
                 }
+
+                // Los secretos salen enmascarados; junto a cada uno viaja un flag
+                // para que el formulario sepa si ya hay valor guardado.
+                if (in_array($k, self::SECRET_KEYS, true)) {
+                    $flat[$k.'_configured'] = is_string($v) && $v !== '';
+                    $v = $this->maskSecret(is_string($v) ? $v : '');
+                }
+
                 $flat[$k] = $v;
             }
         }
@@ -277,7 +346,8 @@ class SettingsController extends Controller
                 $flat['paypal_mode'] = $pm['paypal']['mode'] ?? 'sandbox';
                 if ($isAdmin) {
                     $flat['paypal_client_id'] = $pm['paypal']['client_id'] ?? '';
-                    $flat['paypal_client_secret'] = $pm['paypal']['client_secret'] ?? '';
+                    $flat['paypal_client_secret_configured'] = ($pm['paypal']['client_secret'] ?? '') !== '';
+                    $flat['paypal_client_secret'] = $this->maskSecret((string) ($pm['paypal']['client_secret'] ?? ''));
                 }
             }
             if (isset($pm['stripe'])) {
@@ -285,7 +355,8 @@ class SettingsController extends Controller
                 $flat['stripe_mode'] = $pm['stripe']['mode'] ?? 'sandbox';
                 if ($isAdmin) {
                     $flat['stripe_public_key'] = $pm['stripe']['key'] ?? '';
-                    $flat['stripe_secret_key'] = $pm['stripe']['secret'] ?? '';
+                    $flat['stripe_secret_key_configured'] = ($pm['stripe']['secret'] ?? '') !== '';
+                    $flat['stripe_secret_key'] = $this->maskSecret((string) ($pm['stripe']['secret'] ?? ''));
                 }
             }
             if (isset($pm['wompi'])) {
@@ -293,7 +364,8 @@ class SettingsController extends Controller
                 $flat['wompi_mode'] = $pm['wompi']['mode'] ?? 'sandbox';
                 if ($isAdmin) {
                     $flat['wompi_public_key'] = $pm['wompi']['key'] ?? '';
-                    $flat['wompi_private_key'] = $pm['wompi']['secret'] ?? '';
+                    $flat['wompi_private_key_configured'] = ($pm['wompi']['secret'] ?? '') !== '';
+                    $flat['wompi_private_key'] = $this->maskSecret((string) ($pm['wompi']['secret'] ?? ''));
                 }
             }
         }

@@ -27,7 +27,9 @@ class ResetPasswordRequest extends FormRequest
             'data.type' => ['required', 'string', 'in:reset-password'],
             'data.attributes' => ['required', 'array'],
             'data.attributes.token' => ['required', 'string'],
-            'data.attributes.password' => ['required', 'string', 'confirmed'],
+            // Mismo mínimo que en el registro: sin esto se podía dejar la cuenta
+            // con una contraseña de un carácter a través del reseteo.
+            'data.attributes.password' => ['required', 'string', 'min:8', 'max:128', 'confirmed'],
         ];
     }
 
@@ -46,6 +48,8 @@ class ResetPasswordRequest extends FormRequest
             'data.attributes.password.required' => 'validation.passwordRequired',
             'data.attributes.password.string' => 'validation.passwordString',
             'data.attributes.password.confirmed' => 'validation.passwordConfirmed',
+            'data.attributes.password.min' => 'validation.passwordMin',
+            'data.attributes.password.max' => 'validation.passwordMax',
         ];
     }
 }

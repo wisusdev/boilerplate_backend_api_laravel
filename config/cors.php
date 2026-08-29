@@ -19,7 +19,13 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // Origenes explicitos: con '*' cualquier sitio podia consumir la API desde
+    // el navegador de la victima. Se configuran por entorno con CORS_ALLOWED_ORIGINS
+    // (lista separada por comas).
+    'allowed_origins' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('CORS_ALLOWED_ORIGINS', env('APP_FRONT_URL', 'http://localhost:5173')))
+    ))),
 
     'allowed_origins_patterns' => [],
 

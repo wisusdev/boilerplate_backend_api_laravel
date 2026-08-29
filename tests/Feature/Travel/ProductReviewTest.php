@@ -4,9 +4,10 @@ namespace Tests\Feature\Travel;
 
 use App\Models\Booking;
 use App\Models\ProductReview;
-use App\Models\Role;
 use App\Models\Tour;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
@@ -24,7 +25,7 @@ class ProductReviewTest extends TestCase
     {
         parent::setUp();
         // Siembra el catálogo real de permisos y roles (admin recibe todos).
-        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
     }
 
     private function apiJson(string $method, string $uri, array $payload = []): TestResponse
@@ -83,8 +84,10 @@ class ProductReviewTest extends TestCase
         $this->apiJson('POST', '/api/v1/product-reviews', $this->reviewPayload($tour->id))
             ->assertStatus(201);
 
+        // Nace pendiente de moderación: no se publica hasta que un moderador
+        // la aprueba (product-reviews:moderate).
         $this->assertDatabaseHas('product_reviews', [
-            'user_id' => $user->id, 'reviewable_id' => $tour->id, 'rating' => 5, 'is_approved' => true,
+            'user_id' => $user->id, 'reviewable_id' => $tour->id, 'rating' => 5, 'is_approved' => false,
         ]);
     }
 

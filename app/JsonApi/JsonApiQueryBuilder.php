@@ -79,10 +79,21 @@ class JsonApiQueryBuilder
                 return $this;
             }
 
-            $fields = explode(',', request('fields.'.$this->getResourceType()));
+            $requested = array_filter(array_map('trim', explode(',', (string) request('fields.'.$this->getResourceType()))));
+
+            // Solo columnas reales de la tabla: sin esta lista blanca se podía
+            // pedir cualquier columna (p. ej. fields[users]=password) y provocar
+            // errores 500 con nombres inexistentes.
+            $allowed = $this->getModel()->getConnection()
+                ->getSchemaBuilder()
+                ->getColumnListing($this->getModel()->getTable());
+
+            $hidden = $this->getModel()->getHidden();
+            $fields = array_values(array_intersect($requested, array_diff($allowed, $hidden)));
+
             $routeKeyName = $this->getModel()->getRouteKeyName();
 
-            if (! in_array($routeKeyName, $fields)) {
+            if (! in_array($routeKeyName, $fields, true)) {
                 $fields[] = $routeKeyName;
             }
 
@@ -94,11 +105,14 @@ class JsonApiQueryBuilder
     {
         return function () {
             /** @var Builder $this */
+            // Acotado: sin tope, ?page[size]=1000000 materializaba la tabla entera.
+            $perPage = min(max((int) request('page.size', 15), 1), 100);
+
             return $this->paginate(
-                $perPage = request('page.size', 15),
+                $perPage,
                 $columns = ['*'],
                 $pageName = 'page[number]',
-                $page = request('page.number', 1)
+                $page = max((int) request('page.number', 1), 1)
             )->appends(request()->only('sort', 'filter', 'page.size'));
         };
     }

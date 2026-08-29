@@ -129,7 +129,9 @@ class ProductReviewController extends Controller
             'reviewable_id' => $product->id,
             'rating' => $attrs['rating'],
             'comment' => $attrs['comment'] ?? null,
-            'is_approved' => true,
+            // Pendiente de moderación: el flujo de moderación ya existe
+            // (product-reviews:moderate) y autoaprobar lo dejaba sin efecto.
+            'is_approved' => false,
         ]);
 
         return ProductReviewResource::make($review->load('user'))

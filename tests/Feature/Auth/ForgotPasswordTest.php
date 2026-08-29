@@ -77,11 +77,30 @@ class ForgotPasswordTest extends TestCase
         ]);
     }
 
-    public function test_forgot_falla_con_email_no_registrado(): void
+    public function test_forgot_responde_igual_con_email_no_registrado(): void
     {
+        Notification::fake();
+
+        // Misma respuesta que con un correo existente: distinguirlas permitía
+        // enumerar qué direcciones tienen cuenta.
         $response = $this->postJson('/api/v1/auth/forgot-password', $this->forgotPayload('nobody@example.com'));
 
-        $response->assertStatus(422);
+        $response->assertOk();
+        $this->assertDatabaseMissing('password_reset_tokens', ['email' => 'nobody@example.com']);
+        Notification::assertNothingSent();
+    }
+
+    public function test_forgot_guarda_el_token_hasheado(): void
+    {
+        Notification::fake();
+        $this->createUser('hashed@example.com');
+
+        $this->postJson('/api/v1/auth/forgot-password', $this->forgotPayload('hashed@example.com'));
+
+        $row = DB::table('password_reset_tokens')->where('email', 'hashed@example.com')->first();
+
+        // 64 caracteres hex = sha256; el token en claro solo viaja en el correo.
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $row->token);
     }
 
     public function test_forgot_falla_sin_email(): void
@@ -102,8 +121,8 @@ class ForgotPasswordTest extends TestCase
 
         DB::table('password_reset_tokens')->insert([
             'email' => 'reset-ok@example.com',
-            'token' => 'valid_reset_token',
-            'created_at' => now()->addHours(6),
+            'token' => hash('sha256', 'valid_reset_token'),
+            'created_at' => now(),
         ]);
 
         $response = $this->postJson('/api/v1/auth/reset-password', $this->resetPayload('valid_reset_token', 'brandNew123'));
@@ -112,7 +131,7 @@ class ForgotPasswordTest extends TestCase
         // La contraseña realmente cambió.
         $this->assertTrue(Hash::check('brandNew123', $user->fresh()->password));
         // El token se consumió.
-        $this->assertDatabaseMissing('password_reset_tokens', ['token' => 'valid_reset_token']);
+        $this->assertDatabaseMissing('password_reset_tokens', ['token' => hash('sha256', 'valid_reset_token')]);
         // Se notificó al usuario.
         Notification::assertSentTo($user, PasswordChangeNotification::class);
     }
@@ -130,7 +149,7 @@ class ForgotPasswordTest extends TestCase
 
         DB::table('password_reset_tokens')->insert([
             'email' => 'reset@example.com',
-            'token' => 'expired_token_abc',
+            'token' => hash('sha256', 'expired_token_abc'),
             'created_at' => now()->subHours(12), // ya expiró
         ]);
 
@@ -145,8 +164,8 @@ class ForgotPasswordTest extends TestCase
 
         DB::table('password_reset_tokens')->insert([
             'email' => 'reset2@example.com',
-            'token' => 'valid_token_123',
-            'created_at' => now()->addHours(6),
+            'token' => hash('sha256', 'valid_token_123'),
+            'created_at' => now(),
         ]);
 
         $payload = [
@@ -163,6 +182,50 @@ class ForgotPasswordTest extends TestCase
         $response = $this->postJson('/api/v1/auth/reset-password', $payload);
 
         $response->assertStatus(422);
+    }
+
+    public function test_reset_rechaza_una_contrasena_corta(): void
+    {
+        $this->createUser('short@example.com');
+
+        DB::table('password_reset_tokens')->insert([
+            'email' => 'short@example.com',
+            'token' => hash('sha256', 'short_pwd_token'),
+            'created_at' => now(),
+        ]);
+
+        $this->postJson('/api/v1/auth/reset-password', $this->resetPayload('short_pwd_token', 'abc'))
+            ->assertStatus(422);
+    }
+
+    public function test_reset_revoca_las_sesiones_abiertas(): void
+    {
+        Notification::fake();
+        $user = $this->createUser('revoke@example.com');
+        // Token de sesión insertado directamente: en pruebas no hay personal
+        // access client de Passport configurado.
+        DB::table('oauth_access_tokens')->insert([
+            'id' => 'token-previo-'.uniqid(),
+            'user_id' => $user->id,
+            'client_id' => '00000000-0000-0000-0000-000000000001',
+            'name' => 'sesion previa',
+            'scopes' => '[]',
+            'revoked' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+            'expires_at' => now()->addWeek(),
+        ]);
+
+        DB::table('password_reset_tokens')->insert([
+            'email' => 'revoke@example.com',
+            'token' => hash('sha256', 'revoke_token'),
+            'created_at' => now(),
+        ]);
+
+        $this->postJson('/api/v1/auth/reset-password', $this->resetPayload('revoke_token', 'brandNew123'))
+            ->assertOk();
+
+        $this->assertSame(0, $user->tokens()->where('revoked', false)->count());
     }
 
     public function test_reset_falla_sin_token(): void

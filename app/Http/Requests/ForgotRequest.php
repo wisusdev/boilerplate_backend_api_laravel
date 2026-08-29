@@ -26,7 +26,9 @@ class ForgotRequest extends FormRequest
             'data' => ['required', 'array'],
             'data.attributes' => ['required', 'array'],
             'data.type' => ['required', 'string', 'in:users'],
-            'data.attributes.email' => ['required', 'email', 'exists:users,email'],
+            // Sin 'exists': confirmar si un correo está registrado permite
+            // enumerar usuarios. La respuesta es idéntica exista o no.
+            'data.attributes.email' => ['required', 'email'],
         ];
     }
 

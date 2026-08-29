@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Api\Base;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -38,9 +37,12 @@ class UserController extends Controller
         $this->authorize('store', User::class);
 
         $data = $request->validated();
+        $roles = (array) ($data['data']['attributes']['roles'] ?? []);
+        $this->assertCanAssignRoles($roles);
+
         $user = User::create($data['data']['attributes']);
 
-        $user->assignRole($data['data']['attributes']['roles']);
+        $user->assignRole($roles);
         $user->sendEmailVerificationNotification();
 
         return UserResource::make($user);
@@ -63,6 +65,13 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
+        $roles = (array) $request->input('data.attributes.roles', []);
+        $this->assertCanAssignRoles($roles, $user);
+
+        // Se captura ANTES del update: comparar después dejaba la condición
+        // siempre en falso y el correo se cambiaba conservando la verificación.
+        $originalEmail = $user->email;
+
         $data = [
             'username' => $request->input('data.attributes.username'),
             'first_name' => $request->input('data.attributes.first_name'),
@@ -76,15 +85,51 @@ class UserController extends Controller
 
         $user->update($data);
 
-        if ($user->email !== $request->input('data.attributes.email')) {
+        if ($originalEmail !== $user->email) {
             $user->email_verified_at = null;
             $user->save(['timestamps' => false]);
             $user->sendEmailVerificationNotification();
+            // Un cambio de correo invalida las sesiones abiertas.
+            $user->tokens()->delete();
         }
 
-        $user->syncRoles($request->input('data.attributes.roles'));
+        $user->syncRoles($roles);
 
         return UserResource::make($user);
+    }
+
+    /**
+     * Nadie puede otorgar un rol cuyos permisos no posee, ni tocar sus propios
+     * roles. Sin esto, cualquiera con 'users:update' se ascendía a admin.
+     *
+     * @param  array<int, string>  $roles
+     */
+    private function assertCanAssignRoles(array $roles, ?User $target = null): void
+    {
+        $actor = auth()->user();
+
+        if ($actor->hasRole('superadmin')) {
+            return;
+        }
+
+        if ($target && $target->getKey() === $actor->getKey()
+            && $target->getRoleNames()->sort()->values()->all() !== collect($roles)->sort()->values()->all()) {
+            abort(403, 'No puedes modificar tus propios roles.');
+        }
+
+        if (in_array('superadmin', $roles, true)) {
+            abort(403, 'Solo un superadmin puede otorgar el rol superadmin.');
+        }
+
+        $held = $actor->getAllPermissions()->pluck('name');
+
+        foreach (Role::whereIn('name', $roles)->with('permissions')->get() as $role) {
+            $excess = $role->permissions->pluck('name')->diff($held);
+
+            if ($excess->isNotEmpty()) {
+                abort(403, "No puedes otorgar el rol '{$role->name}': incluye permisos que no posees.");
+            }
+        }
     }
 
     /**
@@ -94,21 +139,10 @@ class UserController extends Controller
     {
         $this->authorize('delete', $user);
 
-        // Revoca todos los tokens de acceso del usuario
-        $user->tokens()->delete();
-
-        // Elimina también los refresh tokens si los estás usando
-        DB::table('oauth_refresh_tokens')
-            ->whereIn('access_token_id', $user->tokens()->pluck('id'))
-            ->delete();
-
-        // Elimina el usuario
+        // Soft delete: UserObserver revoca las sesiones y conserva el avatar
+        // (borrarlo aquí dejaba la fila apuntando a un fichero inexistente).
+        // El historial de reservas se mantiene: bookings.user_id es RESTRICT.
         $user->delete();
-
-        // Elimina el avatar del usuario si existe
-        if (isset($user->avatar) && Storage::disk('public')->exists($user->avatar)) {
-            Storage::disk('public')->delete($user->avatar);
-        }
 
         return response()->noContent();
     }

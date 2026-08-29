@@ -10,9 +10,12 @@ class TrustProxies extends Middleware
     /**
      * The trusted proxies for this application.
      *
+     * Sin esto, detrás de nginx/Cloudflare $request->ip() devuelve la IP del
+     * proxy y todos los rate limiters por IP caen en un único cubo compartido.
+     *
      * @var array<int, string>|string|null
      */
-    protected $proxies;
+    protected $proxies = '*';
 
     /**
      * The headers that should be used to detect proxies.

@@ -32,8 +32,11 @@ class UserRequest extends FormRequest
 
         if ($this->isMethod('put') || $this->isMethod('patch')) {
             $user = $this->route('user');
-            $rules['data.attributes.username'][] = ['required', 'string', 'min:3', 'max:255', Rule::unique('users', 'username')->ignore($user->id)];
-            $rules['data.attributes.email'][] = ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)];
+            // Asignación directa, no `[]=`: anidar un array de reglas dentro del
+            // array hace que Laravel las ignore en silencio, y estos campos se
+            // quedaban sin validar (formato ni unicidad) en el update.
+            $rules['data.attributes.username'] = ['required', 'string', 'min:3', 'max:255', Rule::unique('users', 'username')->ignore($user->id)];
+            $rules['data.attributes.email'] = ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)];
             $rules['data.attributes.password'] = ['nullable', 'confirmed', 'string', 'min:8', 'max:255', 'not_regex:/^$/'];
         } else {
             $rules['data.attributes.username'] = ['required', 'string', 'min:3', 'max:255', Rule::unique('users', 'username')];

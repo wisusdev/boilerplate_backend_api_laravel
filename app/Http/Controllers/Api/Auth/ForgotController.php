@@ -15,21 +15,39 @@ use Illuminate\Validation\ValidationException;
 
 class ForgotController extends Controller
 {
+    /**
+     * Minutos de validez del enlace de restablecimiento.
+     */
+    private function ttlMinutes(): int
+    {
+        return (int) config('auth.passwords.users.expire', 60);
+    }
+
+    /**
+     * Envía el enlace de restablecimiento.
+     *
+     * La respuesta es SIEMPRE la misma exista o no la cuenta: antes, un correo
+     * desconocido devolvía un error distinto y permitía enumerar usuarios.
+     */
     public function forgot(ForgotRequest $request): JsonResponse
     {
         $email = $request->input('data.attributes.email');
         $user = User::whereEmail($email)->first();
-        $token = Str::random(60); // Asegúrate de que el token sea lo suficientemente largo
 
-        DB::table('password_reset_tokens')->updateOrInsert(['email' => $email], [
-            'token' => $token,
-            'created_at' => now()->addHours(6),
-        ]);
+        if ($user) {
+            $token = Str::random(64);
 
-        $url = config('app.frontend_url').'/auth/reset-password?token='.$token;
+            DB::table('password_reset_tokens')->updateOrInsert(['email' => $email], [
+                // Solo se guarda el hash: con acceso de lectura a la BD ya no se
+                // pueden tomar cuentas usando los tokens almacenados.
+                'token' => hash('sha256', $token),
+                'created_at' => now(),
+            ]);
 
-        // Send email
-        $user->notify(new ForgotPassword($url, $user->first_name));
+            $url = config('app.frontend_url').'/auth/reset-password?token='.$token;
+
+            $user->notify(new ForgotPassword($url, $user->first_name));
+        }
 
         return response()->json([
             'data' => [
@@ -40,23 +58,26 @@ class ForgotController extends Controller
                 ],
             ],
         ]);
-
     }
 
     public function reset(ResetPasswordRequest $request): JsonResponse
     {
-        $token = $request->input('data.attributes.token');
-        $passwordReset = DB::table('password_reset_tokens')->where('token', $token)->first();
+        $token = (string) $request->input('data.attributes.token');
 
-        // verify
+        $passwordReset = DB::table('password_reset_tokens')
+            ->where('token', hash('sha256', $token))
+            ->first();
+
         if (! $passwordReset) {
             throw ValidationException::withMessages([
                 'token' => ['validation.tokenInvalid'],
             ]);
         }
 
-        // Validate expire token
-        if ($passwordReset->created_at < now()) {
+        // `created_at` es el momento de emisión; el enlace caduca a los N minutos.
+        if (now()->greaterThan(now()->parse($passwordReset->created_at)->addMinutes($this->ttlMinutes()))) {
+            DB::table('password_reset_tokens')->where('email', $passwordReset->email)->delete();
+
             throw ValidationException::withMessages([
                 'token' => ['validation.tokenExpired'],
             ]);
@@ -73,6 +94,10 @@ class ForgotController extends Controller
         // Asigna la nueva contraseña (el cast 'hashed' del modelo la encripta).
         $user->password = $request->input('data.attributes.password');
         $user->save();
+
+        // Un restablecimiento invalida las sesiones abiertas: si la cuenta estaba
+        // comprometida, cambiar la contraseña debe expulsar al intruso.
+        $user->tokens()->delete();
 
         DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 

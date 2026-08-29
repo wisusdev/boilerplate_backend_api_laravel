@@ -63,7 +63,11 @@ Route::prefix('auth')->withoutMiddleware([ValidateJsonApiHeaders::class, Validat
     Route::post('/forgot-password', [ForgotController::class, 'forgot'])->name('auth.forgot')->middleware('throttle:auth-forgot');
     Route::post('/reset-password', [ForgotController::class, 'reset'])->name('auth.reset')->middleware('throttle:auth');
     Route::post('/email/resend', [VerifyEmailController::class, 'resend'])->name('verification.send')->middleware(['auth:api', 'throttle:email-resend']);
-    Route::get('/email/verify/{id}/{hash}', [VerifyEmailController::class, 'verifyEmail'])->name('verification.verify');
+    // Enlace firmado y temporal (ver App\Notifications\VerifyEmail). 'signed:relative'
+    // porque la firma se genera sobre la URI relativa (absolute: false).
+    Route::get('/email/verify/{id}/{hash}', [VerifyEmailController::class, 'verifyEmail'])
+        ->middleware(['signed:relative', 'throttle:auth'])
+        ->name('verification.verify');
     Route::post('/refresh-token', [RefreshTokenController::class, 'refreshToken'])->name('auth.refresh-token')->middleware('auth:api');
     Route::post('/verify-social-token', [SocialAuthController::class, 'verifySocialToken'])->name('auth.verify-social-token')->middleware('throttle:auth');
 });

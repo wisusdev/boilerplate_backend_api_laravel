@@ -11,11 +11,22 @@ use Illuminate\Validation\ValidationException;
 
 class VerifyEmailController extends Controller
 {
+    /**
+     * La ruta va protegida por 'signed:relative'; aquí se comprueba además que el
+     * hash corresponda al correo actual del usuario. Sin ambas cosas, bastaba con
+     * pedir /auth/email/verify/{id}/loquesea para verificar cualquier cuenta.
+     */
     public function verifyEmail(Request $request): JsonResponse
     {
         $user = User::where('id', $request->route('id'))->first();
 
         if (! $user) {
+            throw ValidationException::withMessages([
+                'email' => ['validation.invalidEmail'],
+            ]);
+        }
+
+        if (! hash_equals(sha1($user->getEmailForVerification()), (string) $request->route('hash'))) {
             throw ValidationException::withMessages([
                 'email' => ['validation.invalidEmail'],
             ]);

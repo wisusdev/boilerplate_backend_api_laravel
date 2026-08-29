@@ -63,9 +63,20 @@ class SubscriberController extends Controller
             $this->sendSubscriptionEmails($subscriber);
         }
 
+        // Mismo código siempre: 201 vs 200 revelaba si el correo ya estaba dado
+        // de alta y permitía enumerar suscriptores.
         return SubscriberResource::make($subscriber)
             ->response()
-            ->setStatusCode($isNew ? 201 : 200);
+            ->setStatusCode(200);
+    }
+
+    /**
+     * Token de baja ligado al correo y derivado de APP_KEY. No necesita columna
+     * en base de datos y no es adivinable.
+     */
+    public static function unsubscribeToken(string $email): string
+    {
+        return hash_hmac('sha256', Str::lower(trim($email)), (string) config('app.key'));
     }
 
     /**
@@ -86,7 +97,7 @@ class SubscriberController extends Controller
     {
         try {
             Notification::route('mail', $subscriber->email)
-                ->notify(new SubscriberWelcomeNotification($subscriber->name));
+                ->notify(new SubscriberWelcomeNotification($subscriber->name, $subscriber->email));
 
             $adminEmails = config('services.notifications.admin_emails', []);
             foreach ($adminEmails as $email) {
@@ -114,9 +125,15 @@ class SubscriberController extends Controller
     {
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255'],
+            'token' => ['required', 'string'],
         ]);
 
         $email = Str::lower(trim($validated['email']));
+
+        // Sin token, cualquiera podía dar de baja el correo de otra persona.
+        if (! hash_equals(self::unsubscribeToken($email), $validated['token'])) {
+            abort(403);
+        }
 
         Subscriber::where('email', $email)->update([
             'status' => Subscriber::STATUS_UNSUBSCRIBED,

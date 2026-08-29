@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Travel;
 
-use App\Models\Role;
+use App\Http\Controllers\Api\Travel\SubscriberController;
 use App\Models\Setting;
 use App\Models\Subscriber;
 use App\Models\User;
 use App\Notifications\SubscriberWelcomeNotification;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Testing\TestResponse;
@@ -26,7 +28,7 @@ class SubscriberTest extends TestCase
     {
         parent::setUp();
         // Siembra el catálogo real de permisos y roles (admin recibe todos).
-        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
     }
 
     private function apiJson(string $method, string $uri, array $payload = []): TestResponse
@@ -66,7 +68,8 @@ class SubscriberTest extends TestCase
             'source' => 'footer',
         ]));
 
-        $response->assertStatus(201);
+        // Siempre 200: distinguir 201/200 revelaba si el correo ya existía.
+        $response->assertStatus(200);
         $this->assertDatabaseHas('subscribers', [
             'email' => 'lead@example.com',
             'status' => 'subscribed',
@@ -112,10 +115,28 @@ class SubscriberTest extends TestCase
     {
         Subscriber::create(['email' => 'bye@example.com', 'status' => 'subscribed']);
 
-        $this->postJson('/api/v1/subscribers/unsubscribe', ['email' => 'bye@example.com'])
-            ->assertStatus(200);
+        $this->postJson('/api/v1/subscribers/unsubscribe', [
+            'email' => 'bye@example.com',
+            'token' => SubscriberController::unsubscribeToken('bye@example.com'),
+        ])->assertStatus(200);
 
         $this->assertDatabaseHas('subscribers', ['email' => 'bye@example.com', 'status' => 'unsubscribed']);
+    }
+
+    public function test_public_unsubscribe_requires_a_valid_token(): void
+    {
+        Subscriber::create(['email' => 'keep@example.com', 'status' => 'subscribed']);
+
+        // Sin el token nadie puede dar de baja el correo de otra persona.
+        $this->postJson('/api/v1/subscribers/unsubscribe', ['email' => 'keep@example.com'])
+            ->assertStatus(422);
+
+        $this->postJson('/api/v1/subscribers/unsubscribe', [
+            'email' => 'keep@example.com',
+            'token' => 'not-the-right-token',
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('subscribers', ['email' => 'keep@example.com', 'status' => 'subscribed']);
     }
 
     public function test_subscription_is_blocked_when_module_disabled(): void
