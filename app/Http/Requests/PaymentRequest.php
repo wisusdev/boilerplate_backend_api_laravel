@@ -18,6 +18,9 @@ class PaymentRequest extends FormRequest
      */
     public function rules(): array
     {
+        // NO se aceptan del cliente: `amount` y `currency_code` se derivan del saldo
+        // pendiente de la reserva, y `transaction_reference` / `payload` los fija la
+        // pasarela. Aceptarlos permitía pagar 0,00 y darse la reserva por pagada.
         return [
             'data' => ['required', 'array'],
             'data.attributes' => ['required', 'array'],
@@ -27,11 +30,9 @@ class PaymentRequest extends FormRequest
             'data.attributes.payable_id' => ['required', 'integer'],
             'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'manual'])],
             'data.attributes.method' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'data.attributes.amount' => ['required', 'numeric', 'min:0'],
-            'data.attributes.currency_code' => ['sometimes', 'string', 'size:3'],
-            'data.attributes.transaction_reference' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'data.attributes.status' => ['sometimes', 'string', Rule::in(['pending', 'paid', 'failed'])],
-            'data.attributes.payload' => ['sometimes', 'array'],
+            // `status` solo lo honra el controlador si el usuario tiene
+            // 'payments:mark-paid'; para el resto el pago nace en 'pending'.
+            'data.attributes.status' => ['sometimes', 'string', Rule::in(['pending', 'paid'])],
         ];
     }
 }

@@ -65,8 +65,6 @@ class PaymentCheckoutTest extends TestCase
                     'gateway' => $gateway,
                     'payable_type' => 'booking',
                     'payable_id' => $booking->id,
-                    'amount' => 200.00,
-                    'currency_code' => 'USD',
                 ], $extra),
             ],
         ];
@@ -246,9 +244,51 @@ class PaymentCheckoutTest extends TestCase
         $user = $this->createAuthenticatedUser();
         $booking = $this->createBooking($user);
 
-        $this->withoutExceptionHandling();
-        $this->expectException(\InvalidArgumentException::class);
+        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'bitcoin'))
+            ->assertStatus(422);
+    }
 
-        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'bitcoin'));
+    public function test_checkout_ignora_el_importe_enviado_por_el_cliente(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $booking = $this->createBooking($user); // total_price = 200
+
+        $this->mock(StripeService::class, function ($mock) {
+            $mock->shouldReceive('createPaymentIntent')
+                ->once()
+                // El importe cobrado sale de la reserva, no del payload.
+                ->with(200.0, 'USD')
+                ->andReturn(['client_secret' => 'cs_test', 'payment_intent_id' => 'pi_test']);
+            $mock->shouldReceive('getPublicKey')->andReturn('pk_test');
+        });
+
+        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'stripe', [
+            'amount' => 0.01,
+            'currency_code' => 'EUR',
+        ]))->assertOk();
+
+        $this->assertDatabaseHas('payments', [
+            'gateway' => 'stripe',
+            'amount' => 200.00,
+            'currency_code' => 'USD',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_checkout_rechaza_una_reserva_ajena(): void
+    {
+        $owner = User::create([
+            'username' => 'owner_checkout',
+            'first_name' => 'Owner',
+            'last_name' => 'User',
+            'email' => 'owner_checkout@example.com',
+            'password' => bcrypt('password123'),
+        ]);
+        $booking = $this->createBooking($owner);
+
+        $this->createAuthenticatedUser();
+
+        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'stripe'))
+            ->assertForbidden();
     }
 }

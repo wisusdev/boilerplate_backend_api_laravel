@@ -5,6 +5,8 @@ namespace Tests\Feature\Travel;
 use App\Models\Booking;
 use App\Models\Tour;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
@@ -13,6 +15,14 @@ use Tests\TestCase;
 class BookingFlowTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Confirmar una reserva exige permisos reales, así que hace falta el
+        // catálogo de permisos y roles.
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
+    }
 
     private function apiHeaders(): array
     {
@@ -175,6 +185,9 @@ class BookingFlowTest extends TestCase
             'password' => bcrypt('password123'),
         ]);
 
+        // Confirmar requiere permisos de back-office ('bookings:view-all'); el
+        // dueño solo puede cancelar la suya.
+        $user->assignRole('admin');
         Passport::actingAs($user);
 
         $tour = Tour::create([

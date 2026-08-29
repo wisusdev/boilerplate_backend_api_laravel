@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\User;
 use App\Services\PaypalService;
+use App\Services\StripeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
@@ -66,6 +67,39 @@ class PaymentVerifyTest extends TestCase
         ]);
     }
 
+    /**
+     * Respuesta de captura de PayPal con el importe en el bloque de la captura.
+     */
+    private function paypalCapture(string $orderId, string $value): array
+    {
+        return [
+            'id' => $orderId,
+            'status' => 'COMPLETED',
+            'purchase_units' => [[
+                'payments' => ['captures' => [[
+                    'id' => 'CAPTURE_'.$orderId,
+                    'amount' => ['value' => $value, 'currency_code' => 'USD'],
+                ]]],
+            ]],
+        ];
+    }
+
+    private function mockStripeIntent(string $intentId, string $status, int $amountReceived): void
+    {
+        $this->mock(StripeService::class, function ($mock) use ($intentId, $status, $amountReceived) {
+            $mock->shouldReceive('retrievePaymentIntent')
+                ->once()
+                ->with($intentId)
+                ->andReturn([
+                    'id' => $intentId,
+                    'status' => $status,
+                    'amount_received' => $amountReceived,
+                    'currency' => 'USD',
+                ]);
+            $mock->shouldReceive('toCents')->andReturnUsing(fn ($amount) => (int) round($amount * 100));
+        });
+    }
+
     private function verifyPayload(Payment $payment, string $token): array
     {
         return [
@@ -91,11 +125,7 @@ class PaymentVerifyTest extends TestCase
             $mock->shouldReceive('captureOrder')
                 ->once()
                 ->with('PAYPAL_ORDER_777')
-                ->andReturn([
-                    'id' => 'CAPTURE_PAYPAL_001',
-                    'status' => 'COMPLETED',
-                    'payer' => ['email_address' => 'buyer@paypal.com'],
-                ]);
+                ->andReturn($this->paypalCapture('PAYPAL_ORDER_777', '60.00'));
         });
 
         $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'PAYPAL_ORDER_777'));
@@ -103,13 +133,47 @@ class PaymentVerifyTest extends TestCase
         $response->assertOk();
         $attrs = $response->json('data.attributes');
         $this->assertEquals('paid', $attrs['status']);
-        $this->assertEquals('CAPTURE_PAYPAL_001', $attrs['transaction_reference']);
 
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
             'status' => 'paid',
-            'transaction_reference' => 'CAPTURE_PAYPAL_001',
+            'transaction_reference' => 'PAYPAL_ORDER_777',
         ]);
+    }
+
+    public function test_verify_paypal_rechaza_una_captura_de_menor_importe(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $payment = $this->createPendingPayment($user, 'paypal', 'PAYPAL_ORDER_CHEAP');
+
+        // Orden pagada por 1,00 para un pago de 60,00.
+        $this->mock(PaypalService::class, function ($mock) {
+            $mock->shouldReceive('captureOrder')
+                ->once()
+                ->andReturn($this->paypalCapture('PAYPAL_ORDER_CHEAP', '1.00'));
+        });
+
+        $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'PAYPAL_ORDER_CHEAP'))
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+    }
+
+    public function test_verify_paypal_ignora_el_token_enviado_por_el_cliente(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $payment = $this->createPendingPayment($user, 'paypal', 'PAYPAL_ORDER_REAL');
+
+        // Se captura la orden guardada en el pago, no la que envía el cliente.
+        $this->mock(PaypalService::class, function ($mock) {
+            $mock->shouldReceive('captureOrder')
+                ->once()
+                ->with('PAYPAL_ORDER_REAL')
+                ->andReturn($this->paypalCapture('PAYPAL_ORDER_REAL', '60.00'));
+        });
+
+        $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'ORDEN_DEL_ATACANTE'))
+            ->assertOk();
     }
 
     public function test_verify_paypal_retorna_failed_cuando_captura_no_es_completed(): void
@@ -156,23 +220,48 @@ class PaymentVerifyTest extends TestCase
 
     // ─── Stripe ───────────────────────────────────────────────────────────────
 
-    public function test_verify_stripe_marca_pago_como_paid_sin_llamada_externa(): void
+    public function test_verify_stripe_consulta_el_payment_intent_en_el_servidor(): void
     {
         $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'stripe', 'pi_test_intent_123');
 
-        // Stripe no debería hacer ninguna llamada HTTP desde el servidor
-        // (la confirmación ya ocurrió en el cliente con Stripe.js)
+        // La confirmación de Stripe.js ocurre en el navegador y no prueba nada:
+        // el estado real se recupera desde el servidor.
+        $this->mockStripeIntent('pi_test_intent_123', 'succeeded', 6000);
+
         $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'pi_test_intent_123'));
 
         $response->assertOk();
-        $attrs = $response->json('data.attributes');
-        $this->assertEquals('paid', $attrs['status']);
+        $this->assertEquals('paid', $response->json('data.attributes.status'));
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'paid']);
+    }
 
-        $this->assertDatabaseHas('payments', [
-            'id' => $payment->id,
-            'status' => 'paid',
-        ]);
+    public function test_verify_stripe_no_marca_paid_si_el_intent_no_esta_pagado(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $payment = $this->createPendingPayment($user, 'stripe', 'pi_unpaid');
+
+        $this->mockStripeIntent('pi_unpaid', 'requires_payment_method', 0);
+
+        $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'pi_unpaid'));
+
+        $response->assertOk();
+        $this->assertEquals('failed', $response->json('data.attributes.status'));
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+    }
+
+    public function test_verify_stripe_rechaza_un_cobro_por_menos_importe(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $payment = $this->createPendingPayment($user, 'stripe', 'pi_cheap');
+
+        // Cobrado 1,00 para un pago de 60,00.
+        $this->mockStripeIntent('pi_cheap', 'succeeded', 100);
+
+        $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'pi_cheap'))
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
     }
 
     public function test_verify_stripe_actualiza_paid_at(): void
@@ -181,6 +270,7 @@ class PaymentVerifyTest extends TestCase
         $payment = $this->createPendingPayment($user, 'stripe', 'pi_test_456');
 
         $this->assertNull($payment->paid_at);
+        $this->mockStripeIntent('pi_test_456', 'succeeded', 6000);
 
         $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'pi_test_456'));
 
@@ -189,23 +279,46 @@ class PaymentVerifyTest extends TestCase
 
     // ─── Wompi ────────────────────────────────────────────────────────────────
 
-    public function test_verify_wompi_marca_pago_como_paid_tras_3ds(): void
+    public function test_verify_wompi_no_marca_paid_por_si_solo(): void
     {
         $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'wompi', 'WOMPI_TXN_444');
 
+        // Tras el 3DS el cliente vuelve a la app, pero la confirmación real llega
+        // por el webhook firmado; /verify solo refleja el estado persistido.
         $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'WOMPI_TXN_444'));
 
         $response->assertOk();
-        $this->assertEquals('paid', $response->json('data.attributes.status'));
+        $this->assertEquals('pending', $response->json('data.attributes.status'));
 
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
-            'status' => 'paid',
+            'status' => 'pending',
         ]);
     }
 
     // ─── Casos generales ──────────────────────────────────────────────────────
+
+    public function test_verify_rechaza_un_pago_ajeno(): void
+    {
+        $owner = User::create([
+            'username' => 'owner_verify',
+            'first_name' => 'Owner',
+            'last_name' => 'User',
+            'email' => 'owner_verify@example.com',
+            'password' => bcrypt('password123'),
+        ]);
+        $payment = $this->createPendingPayment($owner, 'stripe', 'pi_de_otro');
+
+        // Otro usuario autenticado no puede confirmar pagos que no son suyos
+        // (payments.id es autoincremental y por tanto enumerable).
+        $this->createAuthenticatedUser();
+
+        $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'pi_de_otro'))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+    }
 
     public function test_verify_requiere_autenticacion(): void
     {
@@ -238,6 +351,7 @@ class PaymentVerifyTest extends TestCase
     {
         $user = $this->createAuthenticatedUser();
         $payment = $this->createPendingPayment($user, 'stripe', 'pi_abc');
+        $this->mockStripeIntent('pi_abc', 'succeeded', 6000);
 
         $response = $this->postJsonApi('/api/v1/payments/verify', $this->verifyPayload($payment, 'pi_abc'));
 

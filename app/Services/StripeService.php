@@ -214,6 +214,43 @@ class StripeService
         ];
     }
 
+    /**
+     * Recupera un PaymentIntent para confirmar server-side su estado real.
+     * Nunca confíes en la confirmación del cliente: Stripe.js corre en el navegador.
+     *
+     * @return array{id: string, status: string, amount_received: int, currency: string}
+     */
+    public function retrievePaymentIntent(string $paymentIntentId): array
+    {
+        $response = $this->makeRequest(
+            'GET',
+            $this->base_url.'/v1/payment_intents/'.$paymentIntentId,
+            [],
+            [
+                'Authorization: Bearer '.$this->client_secret,
+            ]
+        );
+
+        $data = json_decode($response, true) ?: [];
+
+        if (isset($data['error'])) {
+            throw new \RuntimeException('Stripe: '.($data['error']['message'] ?? 'no se pudo recuperar el PaymentIntent.'));
+        }
+
+        return [
+            'id' => (string) ($data['id'] ?? ''),
+            'status' => (string) ($data['status'] ?? ''),
+            'amount_received' => (int) ($data['amount_received'] ?? 0),
+            'currency' => strtoupper((string) ($data['currency'] ?? '')),
+        ];
+    }
+
+    /** Convierte un importe decimal a centavos (unidad mínima de Stripe). */
+    public function toCents(float $amount): int
+    {
+        return $this->convertToCents($amount);
+    }
+
     /** Get publishable key (for frontend). */
     public function getPublicKey(): string
     {

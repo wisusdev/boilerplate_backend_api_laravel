@@ -124,6 +124,8 @@ class PermissionSeeder extends Seeder
             // ── Travel: reservas / pagos (alcance admin: ver TODO, no solo lo propio) ──
             'bookings:view-all',
             'payments:view-all',
+            // Dar por cobrado un pago manual (efectivo / transferencia ya recibidos).
+            'payments:mark-paid',
         ];
     }
 

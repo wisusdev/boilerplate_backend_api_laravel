@@ -164,10 +164,16 @@ class BookingController extends Controller
         // el flujo en que el cliente gestiona la suya.
         $this->ensureOwnerOrAdmin($request, $booking);
 
-        $booking = $this->bookingService->changeStatus(
-            $booking,
-            $request->validated()['data']['attributes']['status']
-        );
+        $status = $request->validated()['data']['attributes']['status'];
+
+        // Confirmar una reserva es una decisión de back-office: implica darla por
+        // buena y dispara la notificación al cliente. El dueño solo puede cancelar
+        // la suya (para eso está POST /bookings/{id}/cancel).
+        if ($status !== Booking::STATUS_CANCELLED && ! $this->isAdmin($request)) {
+            abort(403);
+        }
+
+        $booking = $this->bookingService->changeStatus($booking, $status);
 
         return BookingResource::make($booking);
     }

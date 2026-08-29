@@ -3,9 +3,10 @@
 namespace Tests\Feature\Travel;
 
 use App\Models\Coupon;
-use App\Models\Role;
 use App\Models\Tour;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
@@ -19,7 +20,7 @@ class CouponTest extends TestCase
     {
         parent::setUp();
         // Siembra el catálogo real de permisos y roles (admin recibe todos).
-        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
     }
 
     private function makeUser(?string $role = null): User
@@ -154,7 +155,14 @@ class CouponTest extends TestCase
             ]],
         ])->assertSuccessful()->json('data.id');
 
-        // El dueño confirma la reserva → se genera la factura con el total descontado.
+        // Confirmar es una acción de back-office: el dueño no puede darse por
+        // confirmada su propia reserva (lo haría sin haber pagado).
+        $this->apiJson('PATCH', '/api/v1/bookings/'.$booking, [
+            'data' => ['id' => (string) $booking, 'type' => 'bookings', 'attributes' => ['status' => 'confirmed']],
+        ])->assertForbidden();
+
+        // Un admin sí → se genera la factura con el total descontado.
+        Passport::actingAs($this->makeUser('admin'));
         $this->apiJson('PATCH', '/api/v1/bookings/'.$booking, [
             'data' => ['id' => (string) $booking, 'type' => 'bookings', 'attributes' => ['status' => 'confirmed']],
         ])->assertOk();

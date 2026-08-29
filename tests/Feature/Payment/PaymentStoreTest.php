@@ -3,6 +3,7 @@
 namespace Tests\Feature\Payment;
 
 use App\Models\Booking;
+use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,9 +64,6 @@ class PaymentStoreTest extends TestCase
                     'payable_id' => $bookingId,
                     'gateway' => 'manual',
                     'method' => 'cash',
-                    'amount' => 150.00,
-                    'currency_code' => 'USD',
-                    'status' => 'paid',
                 ], $overrides['data']['attributes'] ?? []),
             ],
         ], $overrides);
@@ -73,7 +71,7 @@ class PaymentStoreTest extends TestCase
 
     // ─── Tests ────────────────────────────────────────────────────────────────
 
-    public function test_store_crea_pago_manual_en_efectivo(): void
+    public function test_store_crea_pago_manual_en_efectivo_pendiente_de_cobro(): void
     {
         $user = $this->createAuthenticatedUser();
         $booking = $this->createBookingForUser($user);
@@ -81,13 +79,64 @@ class PaymentStoreTest extends TestCase
         $response = $this->postJsonApi('/api/v1/payments', $this->storePayload($booking->id));
 
         $response->assertCreated();
+        // El cliente declara una intención de pago; darlo por cobrado es
+        // decisión del back-office ('payments:mark-paid').
         $this->assertDatabaseHas('payments', [
             'payable_type' => Booking::class,
             'payable_id' => $booking->id,
             'gateway' => 'manual',
             'method' => 'cash',
+            'amount' => 150.00,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_store_ignora_status_paid_de_un_cliente(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $booking = $this->createBookingForUser($user);
+
+        $this->postJsonApi('/api/v1/payments', $this->storePayload($booking->id, [
+            'data' => ['attributes' => ['status' => 'paid']],
+        ]))->assertCreated();
+
+        $this->assertDatabaseMissing('payments', [
+            'payable_id' => $booking->id,
             'status' => 'paid',
         ]);
+    }
+
+    public function test_store_ignora_el_importe_enviado_por_el_cliente(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $booking = $this->createBookingForUser($user); // total_price = 150
+
+        $this->postJsonApi('/api/v1/payments', $this->storePayload($booking->id, [
+            'data' => ['attributes' => ['amount' => 0.01]],
+        ]))->assertCreated();
+
+        // El importe sale del saldo de la reserva, no del payload.
+        $this->assertDatabaseHas('payments', [
+            'payable_id' => $booking->id,
+            'amount' => 150.00,
+        ]);
+    }
+
+    public function test_store_rechaza_una_reserva_ajena(): void
+    {
+        $owner = User::create([
+            'username' => 'owner_store',
+            'first_name' => 'Owner',
+            'last_name' => 'User',
+            'email' => 'owner_store@example.com',
+            'password' => bcrypt('password123'),
+        ]);
+        $booking = $this->createBookingForUser($owner);
+
+        $this->createAuthenticatedUser();
+
+        $this->postJsonApi('/api/v1/payments', $this->storePayload($booking->id))
+            ->assertForbidden();
     }
 
     public function test_store_crea_pago_manual_por_transferencia(): void
@@ -136,16 +185,23 @@ class PaymentStoreTest extends TestCase
         $response->assertNotFound();
     }
 
-    public function test_store_falla_con_amount_negativo(): void
+    public function test_store_falla_si_la_reserva_ya_esta_pagada(): void
     {
         $user = $this->createAuthenticatedUser();
         $booking = $this->createBookingForUser($user);
 
-        $response = $this->postJsonApi('/api/v1/payments', $this->storePayload($booking->id, [
-            'data' => ['attributes' => ['amount' => -10]],
-        ]));
+        Payment::create([
+            'payable_type' => Booking::class,
+            'payable_id' => $booking->id,
+            'gateway' => 'manual',
+            'amount' => 150.00,
+            'currency_code' => 'USD',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
 
-        $response->assertStatus(422);
+        $this->postJsonApi('/api/v1/payments', $this->storePayload($booking->id))
+            ->assertStatus(422);
     }
 
     public function test_store_falla_sin_payable_id(): void
@@ -179,9 +235,7 @@ class PaymentStoreTest extends TestCase
         $user = $this->createAuthenticatedUser();
         $booking = $this->createBookingForUser($user);
 
-        $response = $this->postJsonApi('/api/v1/payments', $this->storePayload($booking->id, [
-            'data' => ['attributes' => ['amount' => 75.50]],
-        ]));
+        $response = $this->postJsonApi('/api/v1/payments', $this->storePayload($booking->id));
 
         $response->assertCreated();
         $responseData = $response->json('data');

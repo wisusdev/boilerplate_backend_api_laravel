@@ -14,6 +14,8 @@ use App\Services\WompiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PaymentController extends Controller
 {
@@ -63,6 +65,14 @@ class PaymentController extends Controller
         return PaymentResource::collection($payments);
     }
 
+    /**
+     * Registra un pago sobre una reserva.
+     *
+     * El importe se deriva SIEMPRE del saldo pendiente de la reserva y el estado
+     * inicial es 'pending'. Solo el back-office ('payments:mark-paid') puede dar
+     * un pago por cobrado directamente (efectivo o transferencia ya recibidos);
+     * para el cliente, registrar un pago manual es declarar una intención de pago.
+     */
     public function store(PaymentRequest $request): PaymentResource
     {
         $data = $request->validated()['data']['attributes'];
@@ -70,7 +80,25 @@ class PaymentController extends Controller
         $payable = Booking::findOrFail($data['payable_id']);
         $this->ensureCanAccessBooking($request, $payable);
 
-        return PaymentResource::make($this->paymentService->create($payable, $data));
+        $outstanding = $this->paymentService->outstandingFor($payable);
+
+        if ($outstanding <= 0) {
+            throw ValidationException::withMessages([
+                'data.attributes.payable_id' => ['message.bookingAlreadyPaid'],
+            ]);
+        }
+
+        $canMarkPaid = $request->user()->can('payments:mark-paid');
+
+        $payment = $this->paymentService->create($payable, [
+            'gateway' => $data['gateway'],
+            'method' => $data['method'] ?? null,
+            'amount' => $outstanding,
+            'currency_code' => $payable->currency_code ?: config('app.currency', 'USD'),
+            'status' => ($canMarkPaid && ($data['status'] ?? null) === 'paid') ? 'paid' : 'pending',
+        ]);
+
+        return PaymentResource::make($payment);
     }
 
     public function show(Request $request, Payment $payment): PaymentResource
@@ -99,16 +127,31 @@ class PaymentController extends Controller
      */
     public function checkout(Request $request): JsonResponse
     {
+        $request->validate([
+            'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'wompi'])],
+            'data.attributes.payable_type' => ['sometimes', 'string', Rule::in(['booking'])],
+            'data.attributes.payable_id' => ['required', 'integer'],
+        ]);
+
         $attrs = $request->input('data.attributes', []);
-        $gateway = $attrs['gateway'] ?? '';
-        $amount = (float) ($attrs['amount'] ?? 0);
-        $currency = $attrs['currency_code'] ?? 'USD';
+        $gateway = $attrs['gateway'];
 
         $payableType = $attrs['payable_type'] ?? 'booking';
-        $payableId = $attrs['payable_id'] ?? null;
+        $payableId = $attrs['payable_id'];
 
         $payable = Booking::findOrFail($payableId);
         $this->ensureCanAccessBooking($request, $payable);
+
+        // El importe y la moneda NUNCA se aceptan del cliente: se derivan del
+        // saldo pendiente de la reserva, calculado en servidor.
+        $amount = $this->paymentService->outstandingFor($payable);
+        $currency = $payable->currency_code ?: config('app.currency', 'USD');
+
+        if ($amount <= 0) {
+            throw ValidationException::withMessages([
+                'data.attributes.payable_id' => ['message.bookingAlreadyPaid'],
+            ]);
+        }
 
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
         $returnUrl = "{$frontendUrl}/payment/result?gateway={$gateway}&payable_type={$payableType}&payable_id={$payableId}";
@@ -142,45 +185,150 @@ class PaymentController extends Controller
      */
     public function verify(Request $request): JsonResponse
     {
+        $request->validate([
+            'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'wompi'])],
+            'data.attributes.payment_id' => ['required', 'integer'],
+        ]);
+
         $attrs = $request->input('data.attributes', []);
-        $gateway = $attrs['gateway'] ?? '';
-        $paymentId = $attrs['payment_id'] ?? null;
-        $token = $attrs['token'] ?? '';
+        $gateway = $attrs['gateway'];
 
-        $payment = Payment::findOrFail($paymentId);
+        $payment = Payment::findOrFail($attrs['payment_id']);
+        // Sin esto, cualquier usuario autenticado podía confirmar pagos ajenos
+        // enumerando ids (payments.id es autoincremental).
+        $this->ensureCanAccessPayment($request, $payment);
 
-        $transactionRef = $token;
-        $payload = $attrs;
-        $success = false;
+        // Idempotencia: un pago ya resuelto no se revalida.
+        if ($payment->status === 'paid') {
+            return $this->verifyResponse($payment, 'paid');
+        }
 
-        if ($gateway === 'paypal') {
-            try {
-                $capture = $this->paypalService->captureOrder($token);
-                $success = ($capture['status'] ?? '') === 'COMPLETED';
-                $transactionRef = $capture['id'] ?? $token;
-                $payload = $capture;
-            } catch (\Throwable $e) {
-                return response()->json(['error' => $e->getMessage()], 422);
-            }
-        } elseif ($gateway === 'stripe') {
-            // Stripe PaymentIntent confirmed client-side via Stripe.js
-            $success = true;
-        } elseif ($gateway === 'wompi') {
-            // After 3DS redirect Wompi returns the transactionId as token
-            $success = true;
+        if ($gateway !== $payment->gateway) {
+            throw ValidationException::withMessages([
+                'data.attributes.gateway' => ['message.paymentGatewayMismatch'],
+            ]);
+        }
+
+        try {
+            [$success, $transactionRef, $payload] = match ($gateway) {
+                'paypal' => $this->verifyPaypal($payment),
+                'stripe' => $this->verifyStripe($payment),
+                // Wompi no expone consulta de transacción en esta integración: el
+                // webhook firmado es la única fuente de verdad. Aquí solo se
+                // devuelve el estado ya persistido tras el retorno del 3DS.
+                'wompi' => [false, $payment->transaction_reference, null],
+            };
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
         }
 
         if ($success) {
             $this->paymentService->markPaid($payment, $transactionRef, $payload);
+
+            return $this->verifyResponse($payment->refresh(), 'paid');
         }
 
+        return $this->verifyResponse($payment, $gateway === 'wompi' ? $payment->status : 'failed');
+    }
+
+    /**
+     * Captura el pedido de PayPal referenciado por el propio pago (no por el
+     * cliente) y comprueba que el importe y la moneda coinciden.
+     *
+     * @return array{0: bool, 1: string, 2: array<string,mixed>}
+     */
+    private function verifyPaypal(Payment $payment): array
+    {
+        $orderId = (string) $payment->transaction_reference;
+
+        if ($orderId === '') {
+            throw new \RuntimeException('El pago no tiene una orden de PayPal asociada.');
+        }
+
+        $capture = $this->paypalService->captureOrder($orderId);
+
+        if (($capture['status'] ?? '') !== 'COMPLETED') {
+            return [false, $orderId, $capture];
+        }
+
+        // El pedido capturado debe ser exactamente el que se creó para este pago.
+        if ((string) ($capture['id'] ?? '') !== $orderId) {
+            throw new \RuntimeException('La orden capturada no corresponde a este pago.');
+        }
+
+        $unit = $capture['purchase_units'][0] ?? [];
+        $captured = $unit['payments']['captures'][0]['amount']
+            ?? $unit['amount']
+            ?? [];
+
+        $this->assertAmountMatches(
+            $payment,
+            (float) ($captured['value'] ?? 0),
+            strtoupper((string) ($captured['currency_code'] ?? ''))
+        );
+
+        return [true, $orderId, $capture];
+    }
+
+    /**
+     * Recupera el PaymentIntent en el servidor. La confirmación de Stripe.js
+     * ocurre en el navegador y por sí sola no prueba nada.
+     *
+     * @return array{0: bool, 1: string, 2: array<string,mixed>}
+     */
+    private function verifyStripe(Payment $payment): array
+    {
+        $intentId = (string) $payment->transaction_reference;
+
+        if ($intentId === '') {
+            throw new \RuntimeException('El pago no tiene un PaymentIntent asociado.');
+        }
+
+        $intent = $this->stripeService->retrievePaymentIntent($intentId);
+
+        if ($intent['status'] !== 'succeeded') {
+            return [false, $intentId, $intent];
+        }
+
+        $expectedCents = $this->stripeService->toCents((float) $payment->amount);
+
+        if ($intent['amount_received'] < $expectedCents) {
+            throw new \RuntimeException('El importe cobrado no coincide con el pago.');
+        }
+
+        $this->assertCurrencyMatches($payment, $intent['currency']);
+
+        return [true, $intentId, $intent];
+    }
+
+    /**
+     * El importe cobrado en la pasarela debe cubrir el pago local.
+     */
+    private function assertAmountMatches(Payment $payment, float $amount, string $currency): void
+    {
+        if (round($amount, 2) + 0.009 < round((float) $payment->amount, 2)) {
+            throw new \RuntimeException('El importe cobrado no coincide con el pago.');
+        }
+
+        $this->assertCurrencyMatches($payment, $currency);
+    }
+
+    private function assertCurrencyMatches(Payment $payment, string $currency): void
+    {
+        if ($currency !== '' && $currency !== strtoupper((string) $payment->currency_code)) {
+            throw new \RuntimeException('La moneda cobrada no coincide con el pago.');
+        }
+    }
+
+    private function verifyResponse(Payment $payment, string $status): JsonResponse
+    {
         return response()->json([
             'data' => [
                 'type' => 'payment-verify',
                 'id' => $payment->id,
                 'attributes' => [
-                    'status' => $success ? 'paid' : 'failed',
-                    'transaction_reference' => $transactionRef,
+                    'status' => $status,
+                    'transaction_reference' => $payment->transaction_reference,
                 ],
             ],
         ]);
@@ -238,11 +386,41 @@ class PaymentController extends Controller
      */
     private function initWompi(float $amount, string $currency, string $returnUrl, $payable, array $attrs): array
     {
+        // Los datos de tarjeta atraviesan este servidor (ver AUDITORIA-SEGURIDAD.md,
+        // C-5: la solución definitiva es tokenizar en el navegador). Mientras tanto,
+        // se validan aquí y NUNCA se registran en logs ni en payments.payload.
+        request()->validate([
+            'data.attributes.card_number' => ['required', 'string', 'regex:/^\d{13,19}$/'],
+            'data.attributes.cvv' => ['required', 'string', 'regex:/^\d{3,4}$/'],
+            // El formulario admite año de 2 o 4 dígitos; se normaliza más abajo.
+            'data.attributes.expiration_month' => ['required', 'integer', 'between:1,12'],
+            'data.attributes.expiration_year' => ['required', 'integer', 'min:0', 'max:'.(date('Y') + 20)],
+            'data.attributes.first_name' => ['required', 'string', 'max:100'],
+            'data.attributes.last_name' => ['required', 'string', 'max:100'],
+            'data.attributes.email' => ['required', 'email', 'max:255'],
+            'data.attributes.address' => ['required', 'string', 'max:255'],
+            'data.attributes.city' => ['required', 'string', 'max:100'],
+            'data.attributes.country' => ['sometimes', 'string', 'size:2'],
+            'data.attributes.state' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'data.attributes.postal_code' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'data.attributes.phone' => ['sometimes', 'nullable', 'string', 'max:30'],
+        ]);
+
+        $month = (int) $attrs['expiration_month'];
+        $year = (int) $attrs['expiration_year'];
+        $year = $year < 100 ? 2000 + $year : $year;
+
+        if ($year < (int) date('Y') || ($year === (int) date('Y') && $month < (int) date('n'))) {
+            throw ValidationException::withMessages([
+                'data.attributes.expiration_year' => ['message.cardExpired'],
+            ]);
+        }
+
         $cardData = [
             'card_number' => $attrs['card_number'] ?? '',
             'cvv' => $attrs['cvv'] ?? '',
-            'expiration_month' => (int) ($attrs['expiration_month'] ?? 0),
-            'expiration_year' => (int) ($attrs['expiration_year'] ?? 0),
+            'expiration_month' => $month,
+            'expiration_year' => $year,
             'first_name' => $attrs['first_name'] ?? '',
             'last_name' => $attrs['last_name'] ?? '',
             'email' => $attrs['email'] ?? '',

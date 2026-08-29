@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleSeeder extends Seeder
 {
@@ -28,7 +29,7 @@ class RoleSeeder extends Seeder
                 'expenses:index', 'expenses:store', 'expenses:update', 'expenses:delete', 'expenses:view-all',
                 'expense-categories:index', 'expense-categories:store', 'expense-categories:update', 'expense-categories:delete',
                 'invoices:index', 'invoices:show', 'invoices:update', 'invoices:generate-dte',
-                'payments:view-all',
+                'payments:view-all', 'payments:mark-paid',
             ],
 
             // Editor de contenido: catálogo público (tours, transporte, categorías,
@@ -85,6 +86,6 @@ class RoleSeeder extends Seeder
         }
 
         // Descarta cualquier caché de permisos de spatie tras el sync.
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }
