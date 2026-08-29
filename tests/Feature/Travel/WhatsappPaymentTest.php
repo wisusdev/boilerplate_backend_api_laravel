@@ -9,6 +9,8 @@ use App\Models\Tour;
 use App\Models\TransportVehicle;
 use App\Models\User;
 use App\Notifications\BookingReceiptNotification;
+use App\Notifications\ReservationConfirmedNotification;
+use App\Services\PaymentService;
 use App\Support\SiteSettings;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
@@ -280,6 +282,54 @@ class WhatsappPaymentTest extends TestCase
         $this->assertNotNull($adjunto, 'El correo debe llevar el comprobante adjunto.');
         $this->assertSame('comprobante-reserva-'.$booking->id.'.pdf', $adjunto['name']);
         // Firma de un PDF real, no una plantilla vacía.
+        $this->assertStringStartsWith('%PDF', $adjunto['data']);
+    }
+
+    public function test_se_envia_el_comprobante_cuando_el_pago_se_cobra(): void
+    {
+        Notification::fake();
+        $this->paymentSettings();
+        $user = $this->user();
+        $booking = $this->booking($user);
+
+        $pago = Payment::create([
+            'payable_type' => Booking::class, 'payable_id' => $booking->id,
+            'gateway' => 'wompi', 'amount' => 80, 'currency_code' => 'USD', 'status' => 'pending',
+        ]);
+
+        // Único punto de cobro: cubre webhook, /verify y back-office.
+        app(PaymentService::class)->markPaid($pago, 'WOMPI-TXN-1');
+
+        Notification::assertSentTo($user, BookingReceiptNotification::class);
+    }
+
+    public function test_el_comprobante_del_cobro_dice_pagado(): void
+    {
+        $this->paymentSettings();
+        $user = $this->user();
+        $booking = $this->booking($user);
+
+        $mail = (new BookingReceiptNotification($booking, null, true))->toMail($user);
+        $array = $mail->toArray();
+
+        $this->assertSame('Pago recibido · reserva #'.$booking->id, $array['subject']);
+        $this->assertStringContainsString('pagada', json_encode($array['introLines'] ?? []));
+        $this->assertNotEmpty($mail->rawAttachments, 'El correo de cobro debe llevar el comprobante.');
+    }
+
+    public function test_la_confirmacion_de_la_reserva_adjunta_el_comprobante(): void
+    {
+        $this->paymentSettings();
+        $user = $this->user();
+        $booking = $this->booking($user);
+
+        $mail = (new ReservationConfirmedNotification(
+            'Your tour booking is confirmed', 'Confirmada.', ['booking_id' => $booking->id], $booking
+        ))->toMail($user);
+
+        $adjunto = $mail->rawAttachments[0] ?? null;
+        $this->assertNotNull($adjunto, 'La confirmación debe llevar el comprobante adjunto.');
+        $this->assertSame('comprobante-reserva-'.$booking->id.'.pdf', $adjunto['name']);
         $this->assertStringStartsWith('%PDF', $adjunto['data']);
     }
 

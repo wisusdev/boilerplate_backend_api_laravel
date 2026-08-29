@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Booking;
 use App\Models\Payment;
+use App\Notifications\BookingReceiptNotification;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class PaymentService
 {
@@ -33,6 +36,11 @@ class PaymentService
         ]);
     }
 
+    /**
+     * Único punto por el que un pago pasa a cobrado (webhook, /verify o
+     * back-office), así que también es donde se avisa al cliente: antes, quien
+     * pagaba con tarjeta no recibía ningún correo nuestro.
+     */
     public function markPaid(Payment $payment, ?string $transactionReference = null, ?array $payload = null): Payment
     {
         $payment->update([
@@ -42,7 +50,33 @@ class PaymentService
             'paid_at' => now(),
         ]);
 
-        return $payment->refresh();
+        $payment->refresh();
+
+        $this->notifyPayer($payment);
+
+        return $payment;
+    }
+
+    /**
+     * Envía el comprobante al titular de la reserva. Un fallo de correo no debe
+     * tumbar el cobro, que ya está confirmado en la pasarela.
+     */
+    private function notifyPayer(Payment $payment): void
+    {
+        $payable = $payment->payable;
+
+        if (! $payable instanceof Booking || ! $payable->user) {
+            return;
+        }
+
+        try {
+            $payable->user->notify(new BookingReceiptNotification($payable, null, true));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo enviar el comprobante del pago.', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function markFailed(Payment $payment, ?array $payload = null): Payment

@@ -2,10 +2,9 @@
 
 namespace App\Notifications;
 
-use App\Http\Resources\BookingResource;
 use App\Models\Booking;
+use App\Support\BookingReceipt;
 use App\Support\SiteSettings;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -24,6 +23,7 @@ class BookingReceiptNotification extends Notification
     public function __construct(
         private readonly Booking $booking,
         private readonly ?string $whatsappUrl = null,
+        private readonly bool $paid = false,
     ) {}
 
     public function via(object $notifiable): array
@@ -40,33 +40,36 @@ class BookingReceiptNotification extends Notification
         $total = number_format((float) $booking->total_price, 2, '.', ',');
 
         $mensaje = (new MailMessage)
-            ->subject('Tu reserva #'.$booking->id.' está apartada')
+            ->subject($this->paid
+                ? 'Pago recibido · reserva #'.$booking->id
+                : 'Tu reserva #'.$booking->id.' está apartada')
             ->greeting('¡Hola '.($booking->user?->first_name ?? '').'!')
-            ->line('Hemos apartado tu reserva de **'.$titulo.'**. Adjuntamos el comprobante con todo el detalle.')
+            ->line($this->paid
+                ? 'Hemos recibido tu pago de **'.$titulo.'**. Adjuntamos el comprobante.'
+                : 'Hemos apartado tu reserva de **'.$titulo.'**. Adjuntamos el comprobante con todo el detalle.')
             ->line('**Referencia:** #'.$booking->id)
             ->line($esTransporte
                 ? '**Recogida:** '.$booking->starts_at?->format('d/m/Y H:i')
                 : '**Fecha:** '.$booking->starts_at?->format('d/m/Y'))
             ->line(($esTransporte ? '**Unidades:** ' : '**Personas:** ').$booking->party_size)
             ->line('**Total:** '.$total.' '.$moneda)
-            ->line('Tu reserva está **pendiente de pago**. Un agente te acompañará por WhatsApp para completarlo.');
+            ->line($this->paid
+                ? 'Tu reserva queda **pagada**. Nos vemos pronto.'
+                : 'Tu reserva está **pendiente de pago**. Un agente te acompañará por WhatsApp para completarlo.');
 
         if ($this->whatsappUrl) {
             $mensaje->action('Continuar por WhatsApp', $this->whatsappUrl);
         }
 
-        $mensaje->line('Si no completas el pago, la reserva podría liberarse. Cualquier duda, respóndenos a este correo.');
+        $mensaje->line($this->paid
+            ? 'Cualquier duda, respóndenos a este correo.'
+            : 'Si no completas el pago, la reserva podría liberarse. Cualquier duda, respóndenos a este correo.');
 
         // El PDF se genera aquí para que el adjunto refleje el estado actual.
-        $pdf = Pdf::loadView('pdf.booking-receipt', [
-            'booking' => $booking,
-            'attrs' => (new BookingResource($booking))->toJsonApi(),
-        ]);
-
         return $mensaje->attachData(
-            $pdf->output(),
-            'comprobante-reserva-'.$booking->id.'.pdf',
-            ['mime' => 'application/pdf'],
+            BookingReceipt::pdf($booking),
+            BookingReceipt::filename($booking),
+            BookingReceipt::attachmentOptions(),
         );
     }
 }

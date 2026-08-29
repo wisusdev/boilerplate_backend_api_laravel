@@ -26,6 +26,9 @@
         $isTour = ($attrs['booking_type'] ?? '') === 'tour';
         $statusClass = ['confirmed' => 'b-confirmed', 'pending' => 'b-pending', 'cancelled' => 'b-cancelled'][$attrs['status'] ?? ''] ?? 'b-pending';
         $statusLabel = ['confirmed' => 'Confirmada', 'pending' => 'Pendiente', 'cancelled' => 'Cancelada'][$attrs['status'] ?? ''] ?? ($attrs['status'] ?? '');
+        // El estado del pago llega como enum en inglés; sin traducirlo, el
+        // comprobante del cliente mostraba literalmente "paid".
+        $paymentLabel = ['paid' => 'Pagado', 'pending' => 'Pendiente', 'failed' => 'Fallido'][$attrs['payment_status'] ?? ''] ?? ($attrs['payment_status'] ?? 'Pendiente');
         $money = fn ($n) => ($attrs['currency_code'] ?? 'USD') . ' ' . number_format((float) $n, 2);
     @endphp
 
@@ -65,7 +68,7 @@
             <tr><td class="k">Cantidad</td><td class="v">{{ $attrs['quantity'] ?? 1 }}</td></tr>
         @endif
 
-        <tr><td class="k">Estado del pago</td><td class="v">{{ $attrs['payment_status'] ?? 'Pendiente' }}</td></tr>
+        <tr><td class="k">Estado del pago</td><td class="v">{{ $paymentLabel }}</td></tr>
         @if (!empty($attrs['payment_method']))
             <tr><td class="k">Método de pago</td><td class="v">{{ $attrs['payment_method'] }}</td></tr>
         @endif

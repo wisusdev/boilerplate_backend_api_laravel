@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Booking;
 use App\Models\User;
 use App\Notifications\AdminAlertNotification;
-use App\Notifications\InvoiceCreatedNotification;
 use App\Notifications\ReservationConfirmedNotification;
 use App\Services\Booking\BookingHandlerInterface;
 use Illuminate\Support\Arr;
@@ -81,9 +80,9 @@ class BookingService
                 }
             }
 
-            if ($status === Booking::STATUS_CONFIRMED) {
-                $this->notifyConfirmation($booking);
-            }
+            // La notificación la dispara BookingObserver::updated al detectar el
+            // cambio de estado. Hacerlo también aquí enviaba el correo (y su
+            // comprobante adjunto) por duplicado.
 
             return $booking->refresh();
         });
@@ -96,26 +95,29 @@ class BookingService
         if ($booking->user) {
             $isTransport = $booking->booking_type === Booking::TYPE_TRANSPORT;
 
+            $detalles = $isTransport ? [
+                'booking_id' => $booking->id,
+                'vehicle' => $booking->bookable?->title,
+                'pickup_at' => $booking->starts_at?->toDateTimeString(),
+            ] : [
+                'booking_id' => $booking->id,
+                'tour' => $booking->bookable?->title,
+                'booking_date' => $booking->starts_at?->toDateString(),
+            ];
+
+            // El número de factura viaja en el mismo correo, que ya lleva el
+            // comprobante adjunto. Antes salía un segundo correo anunciando una
+            // factura que no acompañaba ningún documento.
+            if ($booking->invoice) {
+                $detalles['invoice'] = 'INV-'.str_pad((string) $booking->invoice->id, 6, '0', STR_PAD_LEFT);
+            }
+
             $booking->user->notify(new ReservationConfirmedNotification(
                 $isTransport ? 'Your transport booking is confirmed' : 'Your tour booking is confirmed',
                 $isTransport ? 'Your vehicle rental has been confirmed successfully.' : 'Your trip booking has been confirmed successfully.',
-                $isTransport ? [
-                    'booking_id' => $booking->id,
-                    'vehicle' => $booking->bookable?->title,
-                    'pickup_at' => $booking->starts_at?->toDateTimeString(),
-                ] : [
-                    'booking_id' => $booking->id,
-                    'tour' => $booking->bookable?->title,
-                    'booking_date' => $booking->starts_at?->toDateString(),
-                ]
+                $detalles,
+                $booking,
             ));
-
-            if ($booking->invoice) {
-                $booking->user->notify(new InvoiceCreatedNotification(
-                    'INV-'.str_pad((string) $booking->invoice->id, 6, '0', STR_PAD_LEFT),
-                    (string) $booking->invoice->amount
-                ));
-            }
         }
 
         foreach (config('services.notifications.admin_emails', []) as $email) {
