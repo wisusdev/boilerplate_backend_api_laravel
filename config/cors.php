@@ -27,7 +27,15 @@ return [
         explode(',', (string) env('CORS_ALLOWED_ORIGINS', env('APP_FRONT_URL', 'http://localhost:5173')))
     ))),
 
-    'allowed_origins_patterns' => [],
+    /*
+     * En desarrollo el servidor de Vite cambia de puerto cuando el habitual está
+     * ocupado (5173 → 5174…), y con la lista fija el navegador bloqueaba todas
+     * las llamadas con un "Failed to fetch". En producción esto queda vacío: los
+     * orígenes se declaran uno a uno en CORS_ALLOWED_ORIGINS.
+     */
+    'allowed_origins_patterns' => env('APP_ENV') === 'production'
+        ? []
+        : ['#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#'],
 
     'allowed_headers' => ['*'],
 
