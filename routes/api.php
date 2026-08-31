@@ -88,7 +88,11 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/profile', [AccountController::class, 'profile'])->name('account.profile');
         Route::patch('/profile', [AccountController::class, 'updateProfile'])->name('account.update-profile');
         Route::patch('/change-password', [AccountController::class, 'changePassword'])->name('account.change-password');
-        Route::post('/delete-account', [AccountController::class, 'deleteAccount'])->name('account.delete-account');
+        // Acción sin documento: pide el enlace de confirmación y no lleva cuerpo,
+        // así que no puede satisfacer el `data.attributes` que exige JSON:API.
+        Route::post('/delete-account', [AccountController::class, 'deleteAccount'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->name('account.delete-account');
         Route::delete('/delete-account-verify', [AccountController::class, 'deleteAccountVerify'])->name('account.delete-account-verify');
     });
 
