@@ -164,6 +164,8 @@ class SettingsController extends Controller
             // Política de reserva GLOBAL (aplica a todos los tours y vehículos).
             'booking_min_advance_days',
             'booking_cancellation_hours',
+            // Diseño del PDF de factura (ver App\Support\InvoiceDocument).
+            'invoice_template',
         ];
         foreach ($appFields as $f) {
             if (array_key_exists($f, $attrs)) {

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends Model
@@ -46,6 +47,7 @@ class Invoice extends Model
         'receptor_name',
         'receptor_document',
         'receptor_email',
+        'notes',
         'dte_json',
         'mh_response',
         'dte_environment',
@@ -84,5 +86,37 @@ class Invoice extends Model
     public function getResourceType(): string
     {
         return 'invoices';
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * Recalcula el total desde los conceptos. El importe de una factura nunca se
+     * acepta del cliente: se deriva de sus líneas, igual que en las reservas.
+     */
+    public function recalculateTotal(): self
+    {
+        $total = $this->items()->sum('total');
+
+        if ((float) $this->amount !== (float) $total) {
+            $this->update(['amount' => round((float) $total, 2)]);
+        }
+
+        return $this;
+    }
+
+    /** Número visible del documento. */
+    public function getNumberAttribute(): string
+    {
+        return 'INV-'.str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
+    }
+
+    /** Una factura manual no nace de una reserva. */
+    public function isManual(): bool
+    {
+        return $this->booking_id === null;
     }
 }

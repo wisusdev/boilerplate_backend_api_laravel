@@ -13,7 +13,10 @@ return new class extends Migration
     {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('booking_id')->constrained()->restrictOnDelete()->unique();
+            // Opcional: una factura puede emitirse a mano, sin reserva detrás.
+            // El índice único admite varios NULL, así que una reserva sigue
+            // teniendo como mucho una factura.
+            $table->foreignId('booking_id')->nullable()->constrained()->restrictOnDelete()->unique();
             $table->decimal('amount', 12, 2);
             $table->string('currency_code', 3)->default('USD');
             $table->string('status')->default('pending');
@@ -28,6 +31,7 @@ return new class extends Migration
             $table->string('receptor_name', 250)->nullable();
             $table->string('receptor_document', 50)->nullable(); // NIT/DUI
             $table->string('receptor_email', 150)->nullable();
+            $table->text('notes')->nullable();
             // Documento completo y respuesta de MH
             $table->json('dte_json')->nullable();
             $table->json('mh_response')->nullable();

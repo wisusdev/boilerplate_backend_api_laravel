@@ -3,17 +3,24 @@
 namespace App\Http\Controllers\Api\Travel;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\InvoiceRequest;
 use App\Http\Resources\InvoiceResource;
 use App\Models\Booking;
 use App\Models\Invoice;
 use App\Services\DteService;
+use App\Services\InvoiceBuilder;
+use App\Support\InvoiceDocument;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
 {
-    public function __construct(private readonly DteService $dteService) {}
+    public function __construct(
+        private readonly DteService $dteService,
+        private readonly InvoiceBuilder $builder,
+    ) {}
 
     /**
      * GET /api/invoices
@@ -22,7 +29,7 @@ class InvoiceController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $invoices = Invoice::query()
-            ->with(['booking.bookable'])
+            ->with(['booking.bookable', 'items'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('dte_status'), fn ($q) => $q->where('dte_status', $request->string('dte_status')))
             ->when($request->filled('booking_type'), fn ($q) => $q->whereHas('booking', fn ($bq) => $bq->where('bookable_type', Booking::bookableClassFor($request->string('booking_type'))))
@@ -39,28 +46,82 @@ class InvoiceController extends Controller
      */
     public function show(Invoice $invoice): InvoiceResource
     {
-        $invoice->loadMissing(['booking.bookable']);
+        $invoice->loadMissing(['booking.bookable', 'items']);
 
         return InvoiceResource::make($invoice);
+    }
+
+    /**
+     * POST /api/invoices
+     * Emite una factura manual, con conceptos del catálogo o líneas libres.
+     */
+    public function store(InvoiceRequest $request): JsonResponse
+    {
+        $invoice = $this->builder->create($request->validated());
+
+        return InvoiceResource::make($invoice->load(['items']))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    /**
+     * DELETE /api/invoices/{invoice}
+     * Solo se borran facturas manuales sin DTE: una factura ligada a una reserva
+     * o ya declarada al Ministerio de Hacienda no puede desaparecer.
+     */
+    public function destroy(Invoice $invoice): JsonResponse
+    {
+        if (! $invoice->isManual()) {
+            return response()->json(['errors' => [[
+                'status' => '409',
+                'title' => 'invoice.linkedToBooking',
+                'detail' => 'Esta factura pertenece a una reserva y no puede eliminarse.',
+            ]]], 409);
+        }
+
+        if ($invoice->dte_status !== Invoice::DTE_NOT_GENERATED) {
+            return response()->json(['errors' => [[
+                'status' => '409',
+                'title' => 'invoice.dteIssued',
+                'detail' => 'Esta factura ya tiene un DTE y no puede eliminarse.',
+            ]]], 409);
+        }
+
+        $invoice->delete();
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * GET /api/invoices/{invoice}/pdf
+     * Descarga la factura con el diseño configurado. `template` permite
+     * previsualizar otro sin cambiar el ajuste.
+     */
+    public function pdf(Request $request, Invoice $invoice)
+    {
+        $request->validate([
+            'template' => ['sometimes', 'string', Rule::in(array_keys(InvoiceDocument::TEMPLATES))],
+        ]);
+
+        return response(
+            InvoiceDocument::pdf($invoice, $request->string('template')->toString() ?: null),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.InvoiceDocument::filename($invoice).'"',
+            ]
+        );
     }
 
     /**
      * PATCH /api/invoices/{invoice}
      * Actualiza datos del receptor (nombre, documento, email) antes de generar el DTE.
      */
-    public function update(Request $request, Invoice $invoice): InvoiceResource
+    public function update(InvoiceRequest $request, Invoice $invoice): InvoiceResource
     {
-        $data = $request->validate([
-            'data.attributes.receptor_name' => ['sometimes', 'nullable', 'string', 'max:250'],
-            'data.attributes.receptor_document' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'data.attributes.receptor_email' => ['sometimes', 'nullable', 'email', 'max:150'],
-            'data.attributes.status' => ['sometimes', 'string', 'in:pending,issued,cancelled'],
-        ]);
+        $invoice = $this->builder->update($invoice, $request->validated());
 
-        $attrs = $data['data']['attributes'] ?? [];
-        $invoice->update(array_filter($attrs, fn ($v) => $v !== null));
-
-        return InvoiceResource::make($invoice->fresh());
+        return InvoiceResource::make($invoice->load(['items']));
     }
 
     /**

@@ -92,6 +92,8 @@ class PermissionSeeder extends Seeder
 
             // ── Travel: facturas / DTE ──
             'invoices:index',
+            'invoices:store',
+            'invoices:delete',
             'invoices:show',
             'invoices:update',
             'invoices:generate-dte',

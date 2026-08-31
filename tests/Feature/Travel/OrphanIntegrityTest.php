@@ -256,9 +256,11 @@ class OrphanIntegrityTest extends TestCase
         $media = $expense->getFirstMedia('receipt');
         $path = ltrim($media->getPathRelativeToRoot(), '/');
 
-        // El fichero vive en un árbol de fecha (2026/08/28/…), no en una carpeta
-        // con el id como nombre.
-        $this->assertStringNotContainsString((string) $media->id.'/', $path);
+        // El fichero vive en un árbol de fecha (2026/08/31/…). El layout por
+        // defecto de Spatie sería "{id}/fichero", que no casa con este patrón.
+        // Comprobar la forma de la ruta evita la fragilidad de buscar "{id}/":
+        // los días como el 31 contienen el "1/" del id y daban un falso fallo.
+        $this->assertMatchesRegularExpression('#^\d{4}/\d{2}/\d{2}/[^/]+$#', $path);
         Storage::disk('public')->assertExists($path);
 
         $this->artisan('integrity:scan', ['--fix' => true])->assertSuccessful();

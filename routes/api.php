@@ -245,6 +245,12 @@ Route::middleware(['auth:api'])->group(function () {
     Route::prefix('invoices')->name('api.v1.invoices.')->group(function () {
         Route::get('/', [InvoiceController::class, 'index'])->middleware('permission:invoices:index')->name('index');
         Route::get('/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:invoices:show')->name('show');
+        // Facturación manual: conceptos del catálogo o líneas libres.
+        Route::post('/', [InvoiceController::class, 'store'])->middleware('permission:invoices:store')->name('store');
+        Route::delete('/{invoice}', [InvoiceController::class, 'destroy'])->middleware('permission:invoices:delete')->name('destroy');
+        Route::get('/{invoice}/pdf', [InvoiceController::class, 'pdf'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:invoices:show')->name('pdf');
         Route::patch('/{invoice}', [InvoiceController::class, 'update'])->middleware('permission:invoices:update')->name('update');
         Route::post('/{invoice}/generate-dte', [InvoiceController::class, 'generateDte'])->middleware('permission:invoices:generate-dte')->name('generate-dte');
         Route::get('/{invoice}/preview-dte', [InvoiceController::class, 'previewDte'])->middleware('permission:invoices:generate-dte')->name('preview-dte');
