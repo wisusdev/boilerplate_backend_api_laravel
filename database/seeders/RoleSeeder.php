@@ -36,10 +36,11 @@ class RoleSeeder extends Seeder
             // Editor de contenido: catálogo público (tours, transporte, categorías,
             // monedas, testimonios, reseñas, galería).
             'editor' => [
-                'tours:store', 'tours:update', 'tours:media',
+                'tours:store', 'tours:update', 'tours:media', 'tours:delete',
                 'transport-vehicles:store', 'transport-vehicles:update', 'transport-vehicles:media',
+                'transport-vehicles:delete',
                 'tour-categories:store', 'tour-categories:update', 'tour-categories:delete',
-                'currencies:store',
+                'currencies:store', 'currencies:update',
                 'reviews:store', 'reviews:update', 'reviews:delete',
                 'product-reviews:moderate',
                 'gallery:store', 'gallery:delete', 'gallery:reorder',

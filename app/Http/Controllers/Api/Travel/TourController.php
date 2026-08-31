@@ -112,6 +112,30 @@ class TourController extends Controller
     }
 
     /**
+     * DELETE /api/tours/{tour}
+     *
+     * Un tour con reservas NO se borra: su historial y sus facturas deben poder
+     * leerse. BookableObserver es quien lo impide; aquí se traduce a un 409 con
+     * el motivo, en vez de dejar escapar una excepción como error 500.
+     */
+    public function destroy(Tour $tour): JsonResponse
+    {
+        try {
+            $tour->delete();
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'errors' => [[
+                    'status' => '409',
+                    'title' => 'tour.hasBookings',
+                    'detail' => $e->getMessage(),
+                ]],
+            ], 409);
+        }
+
+        return response()->json(null, 204);
+    }
+
+    /**
      * Upload or replace the featured image for a tour.
      */
     public function uploadFeaturedImage(Request $request, Tour $tour): TourResource

@@ -108,6 +108,8 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('/{tour}/gallery/{media}', [TourController::class, 'destroyGalleryImage'])
             ->middleware('permission:tours:media')
             ->name('gallery.destroy');
+        Route::delete('/{tour}', [TourController::class, 'destroy'])
+            ->middleware('permission:tours:delete')->name('destroy');
     });
 
     // Transport Vehicles (escritura admin — gateada por permiso)
@@ -126,10 +128,13 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('/{transportVehicle}/gallery/{media}', [TransportVehicleController::class, 'destroyGalleryImage'])
             ->middleware('permission:transport-vehicles:media')
             ->name('gallery.destroy');
+        Route::delete('/{transportVehicle}', [TransportVehicleController::class, 'destroy'])
+            ->middleware('permission:transport-vehicles:delete')->name('destroy');
     });
 
     // Escritura admin — cada ruta gateada por su permiso.
     Route::post('/currencies', [CurrencyController::class, 'store'])->middleware('permission:currencies:store')->name('api.v1.currencies.store');
+    Route::patch('/currencies/{currency}', [CurrencyController::class, 'update'])->middleware('permission:currencies:update')->name('api.v1.currencies.update');
 
     // Tour Categories (admin write)
     Route::post('/tour-categories', [TourCategoryController::class, 'store'])->middleware('permission:tour-categories:store')->name('api.v1.tour_categories.store');

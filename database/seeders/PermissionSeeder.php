@@ -44,11 +44,13 @@ class PermissionSeeder extends Seeder
             'tours:store',
             'tours:update',
             'tours:media',
+            'tours:delete',
 
             // ── Travel: transporte ──
             'transport-vehicles:store',
             'transport-vehicles:update',
             'transport-vehicles:media',
+            'transport-vehicles:delete',
 
             // ── Travel: categorías de tour ──
             'tour-categories:store',
@@ -57,6 +59,7 @@ class PermissionSeeder extends Seeder
 
             // ── Travel: monedas ──
             'currencies:store',
+            'currencies:update',
 
             // ── Travel: testimonios (reviews) ──
             'reviews:store',

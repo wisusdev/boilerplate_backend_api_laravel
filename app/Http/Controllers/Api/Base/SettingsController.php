@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Base;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SettingRequest;
 use App\Models\Setting;
 use App\Traits\EncryptsCredentials;
 use Illuminate\Http\JsonResponse;
@@ -114,8 +115,13 @@ class SettingsController extends Controller
      * PATCH /api/v1/settings
      * Accepts a flat attributes object and merges into the correct DB rows.
      */
-    public function update(Request $request): JsonResponse
+    public function update(SettingRequest $request): JsonResponse
     {
+        // Los ajustes se escribían sin una sola regla: un número en un campo de
+        // texto o una hora en blanco se casteaban a 0 al leerlos y cambiaban el
+        // comportamiento del sitio sin que nadie se enterase.
+        $request->validated();
+
         $attrs = $request->input('data.attributes', []);
 
         // Load all current rows

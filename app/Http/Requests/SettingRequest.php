@@ -2,45 +2,143 @@
 
 namespace App\Http\Requests;
 
+use App\Support\InvoiceDocument;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
+/**
+ * Validación de los ajustes del sitio.
+ *
+ * Todas las reglas son `sometimes`: el panel envía solo la pestaña que se está
+ * guardando, así que un PATCH parcial debe seguir funcionando. Lo que se busca
+ * es que un número, una hora o un correo mal formados no se persistan y acaben
+ * casteados a 0 o a cadena vacía al leerlos.
+ */
 class SettingRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
-        $rules = [
+        $texto = ['sometimes', 'nullable', 'string', 'max:255'];
+        $bool = ['sometimes', 'boolean'];
+        $url = ['sometimes', 'nullable', 'string', 'url', 'max:500'];
+
+        return [
             'data' => ['required', 'array'],
-            'data.type' => ['required', 'string', 'exists:settings,key'],
             'data.attributes' => ['required', 'array'],
+
+            // ── Identidad y contacto ──
+            'data.attributes.app_name' => ['sometimes', 'string', 'min:1', 'max:120'],
+            'data.attributes.app_tagline' => $texto,
+            'data.attributes.app_logo_url' => $url,
+            'data.attributes.app_logo_dark_url' => $url,
+            'data.attributes.contact_email' => ['sometimes', 'nullable', 'email', 'max:255'],
+            'data.attributes.contact_phone' => ['sometimes', 'nullable', 'string', 'max:40'],
+            'data.attributes.contact_whatsapp' => ['sometimes', 'nullable', 'string', 'max:40'],
+            'data.attributes.contact_address' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'data.attributes.contact_city' => $texto,
+            'data.attributes.contact_country' => $texto,
+            // Lista de correos separada por comas.
+            'data.attributes.inquiry_notification_emails' => ['sometimes', 'nullable', 'string', 'max:500', 'regex:/^\s*$|^[^,@\s]+@[^,@\s]+(\s*,\s*[^,@\s]+@[^,@\s]+)*\s*$/'],
+
+            'data.attributes.social_facebook' => $texto,
+            'data.attributes.social_instagram' => $texto,
+            'data.attributes.social_twitter' => $texto,
+            'data.attributes.social_youtube' => $texto,
+            'data.attributes.social_tiktok' => $texto,
+
+            // ── Política de reserva: son enteros y se leen como tales ──
+            'data.attributes.timezone' => ['sometimes', 'nullable', 'timezone'],
+            'data.attributes.max_daily_bookings' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100000'],
+            'data.attributes.booking_min_advance_days' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:365'],
+            'data.attributes.booking_cancellation_hours' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:8760'],
+            'data.attributes.offers_subscription_enabled' => $bool,
+
+            // ── Sección "Nosotros" ──
+            'data.attributes.about_team_image_url' => $url,
+            'data.attributes.about_eyebrow' => $texto,
+            'data.attributes.about_title' => $texto,
+            'data.attributes.about_p1' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'data.attributes.about_p2' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'data.attributes.about_cta' => $texto,
+            'data.attributes.about_guides_count' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:10000'],
+            'data.attributes.about_guides_label' => $texto,
+            'data.attributes.about_guides_national' => $texto,
+            'data.attributes.about_stats' => ['sometimes', 'nullable', 'array'],
+
+            // ── Documentos ──
+            'data.attributes.invoice_template' => ['sometimes', 'string', Rule::in(array_keys(InvoiceDocument::TEMPLATES))],
+
+            // ── Métodos de pago ──
+            'data.attributes.payment_cash_enabled' => $bool,
+            'data.attributes.payment_bank_transfer_enabled' => $bool,
+            'data.attributes.payment_paypal_enabled' => $bool,
+            'data.attributes.payment_stripe_enabled' => $bool,
+            'data.attributes.payment_wompi_enabled' => $bool,
+            'data.attributes.payment_whatsapp_enabled' => $bool,
+            'data.attributes.payment_whatsapp_number' => ['sometimes', 'nullable', 'string', 'max:40'],
+            'data.attributes.payment_bank_name' => $texto,
+            'data.attributes.payment_bank_account' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'data.attributes.payment_bank_routing' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'data.attributes.payment_bank_swift' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'data.attributes.default_currency' => ['sometimes', 'nullable', 'string', 'size:3'],
+
+            // Credenciales: el contenido lo fija cada pasarela, solo se acota
+            // el tipo y la longitud. Un valor vacío conserva el guardado.
+            'data.attributes.paypal_mode' => ['sometimes', 'nullable', Rule::in(['sandbox', 'live'])],
+            'data.attributes.stripe_mode' => ['sometimes', 'nullable', Rule::in(['sandbox', 'live'])],
+            'data.attributes.wompi_mode' => ['sometimes', 'nullable', Rule::in(['sandbox', 'live'])],
+            'data.attributes.paypal_client_id' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'data.attributes.paypal_client_secret' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'data.attributes.stripe_public_key' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'data.attributes.stripe_secret_key' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'data.attributes.wompi_public_key' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'data.attributes.wompi_private_key' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'data.attributes.wompi_audience' => ['sometimes', 'nullable', 'string', 'max:255'],
+
+            // ── Login social ──
+            'data.attributes.google_login_enabled' => $bool,
+            'data.attributes.google_client_id' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'data.attributes.facebook_login_enabled' => $bool,
+            'data.attributes.facebook_app_id' => ['sometimes', 'nullable', 'string', 'max:255'],
+
+            // ── Facturación electrónica (DTE) ──
+            'data.attributes.dte_enabled' => $bool,
+            'data.attributes.dte_auto_generate' => $bool,
+            'data.attributes.dte_environment' => ['sometimes', 'nullable', Rule::in(['00', '01'])],
+            'data.attributes.dte_nit' => ['sometimes', 'nullable', 'string', 'max:25'],
+            'data.attributes.dte_nrc' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'data.attributes.dte_nombre' => ['sometimes', 'nullable', 'string', 'max:250'],
+            'data.attributes.dte_nombre_comercial' => ['sometimes', 'nullable', 'string', 'max:250'],
+            'data.attributes.dte_cod_actividad' => ['sometimes', 'nullable', 'string', 'max:10'],
+            'data.attributes.dte_desc_actividad' => ['sometimes', 'nullable', 'string', 'max:250'],
+            'data.attributes.dte_departamento' => ['sometimes', 'nullable', 'string', 'max:5'],
+            'data.attributes.dte_municipio' => ['sometimes', 'nullable', 'string', 'max:5'],
+            'data.attributes.dte_direccion' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'data.attributes.dte_telefono' => ['sometimes', 'nullable', 'string', 'max:40'],
+            'data.attributes.dte_correo' => ['sometimes', 'nullable', 'email', 'max:150'],
+            'data.attributes.dte_cod_establec' => ['sometimes', 'nullable', 'string', 'max:10'],
+            'data.attributes.dte_cod_punto_venta' => ['sometimes', 'nullable', 'string', 'max:10'],
+            'data.attributes.dte_mh_user' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'data.attributes.dte_mh_password' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'data.attributes.dte_cert_path' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'data.attributes.dte_cert_password' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
+    }
 
-        if ($this->input('data.type') === 'app') {
-            $rules['data.attributes.name'] = ['required', 'string'];
-            $rules['data.attributes.url_api'] = ['required', 'url'];
-            $rules['data.attributes.url_frontend'] = ['required', 'url'];
-            $rules['data.attributes.description'] = ['string'];
-            $rules['data.attributes.logo'] = ['nullable', 'string', 'not_in:'];
-            $rules['data.attributes.favicon'] = ['nullable', 'string', 'not_in:'];
-            $rules['data.attributes.email'] = ['email'];
-            $rules['data.attributes.phone'] = ['string'];
-            $rules['data.attributes.address'] = ['required', 'string'];
-            $rules['data.attributes.timezone'] = ['required', 'string'];
-        }
-
-        return $rules;
+    public function messages(): array
+    {
+        return [
+            'data.attributes.inquiry_notification_emails.regex' => 'Escribe correos válidos separados por comas.',
+            'data.attributes.timezone.timezone' => 'La zona horaria no es válida.',
+        ];
     }
 }

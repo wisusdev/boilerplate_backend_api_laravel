@@ -180,4 +180,27 @@ class TransportVehicleController extends Controller
 
         return response()->json(null, 204);
     }
+
+    /**
+     * DELETE /api/transport-vehicles/{transportVehicle}
+     *
+     * Igual que en tours: un vehículo con reservas no se borra, se desactiva.
+     * La guarda vive en BookableObserver.
+     */
+    public function destroy(TransportVehicle $transportVehicle): JsonResponse
+    {
+        try {
+            $transportVehicle->delete();
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'errors' => [[
+                    'status' => '409',
+                    'title' => 'vehicle.hasBookings',
+                    'detail' => $e->getMessage(),
+                ]],
+            ], 409);
+        }
+
+        return response()->json(null, 204);
+    }
 }

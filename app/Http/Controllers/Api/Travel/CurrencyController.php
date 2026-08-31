@@ -44,4 +44,24 @@ class CurrencyController extends Controller
 
         return CurrencyResource::make($currency);
     }
+
+    /**
+     * PATCH /api/currencies/{currency}
+     *
+     * El panel ya ofrecía este formulario, pero la ruta no existía y guardar
+     * fallaba en silencio.
+     */
+    public function update(CurrencyRequest $request, Currency $currency): CurrencyResource
+    {
+        $attrs = $request->validated()['data']['attributes'];
+
+        $currency->update($attrs);
+
+        // Solo puede haber una moneda por defecto.
+        if (! empty($attrs['is_default'])) {
+            Currency::where('id', '!=', $currency->id)->update(['is_default' => false]);
+        }
+
+        return CurrencyResource::make($currency->fresh());
+    }
 }
