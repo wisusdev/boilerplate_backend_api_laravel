@@ -18,6 +18,7 @@ class SettingSeeder extends Seeder
 
         $settings = [
             ['key' => 'app', 'value' => json_encode([
+                'app_name' => 'Cusgo Adventures',
                 'name' => config('app.name'),
                 'url_api' => config('app.url'),
                 'url_frontend' => config('app.frontend_url'),
