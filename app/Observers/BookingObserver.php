@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Booking;
 use App\Models\Invoice;
+use App\Models\PaymentLink;
 use App\Models\Setting;
 use App\Services\BookingService;
 use App\Services\DteService;
@@ -33,6 +34,16 @@ class BookingObserver
      */
     public function deleting(Booking $booking): void
     {
+        // Los enlaces cascadean por FK al borrar el pago, pero una cascada de la
+        // base de datos no dispara eventos de Eloquent y dejaría los comprobantes
+        // subidos por el cliente huérfanos en disco. Se borran uno a uno para que
+        // MediaLibrary se lleve también los ficheros.
+        PaymentLink::query()
+            ->whereIn('payment_id', $booking->payments()->select('id'))
+            ->get()
+            ->each
+            ->delete();
+
         $booking->payments()->delete();
     }
 

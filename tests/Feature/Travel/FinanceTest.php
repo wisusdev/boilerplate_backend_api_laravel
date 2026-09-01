@@ -8,6 +8,8 @@ use App\Models\ExpenseCategory;
 use App\Models\Role;
 use App\Models\Tour;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -48,7 +50,7 @@ class FinanceTest extends TestCase
 
     private function admin(): User
     {
-        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
         $admin = $this->user('admin');
         $admin->assignRole('admin');
 

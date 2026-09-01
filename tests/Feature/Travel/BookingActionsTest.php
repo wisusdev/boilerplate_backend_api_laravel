@@ -9,6 +9,8 @@ use App\Models\TransportVehicle;
 use App\Models\User;
 use App\Notifications\AdminAlertNotification;
 use App\Notifications\BookingNotification;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
@@ -23,7 +25,7 @@ class BookingActionsTest extends TestCase
     {
         parent::setUp();
         // Siembra el catálogo real de permisos y roles (admin recibe todos).
-        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
     }
 
     private function makeUser(string $email): User

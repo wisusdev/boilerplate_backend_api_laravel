@@ -7,15 +7,14 @@ use App\Http\Requests\BookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Models\BookingMessage;
-use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TransportVehicle;
 use App\Models\User;
-use App\Notifications\AdminAlertNotification;
 use App\Notifications\BookingNotification;
 use App\Notifications\BookingReceiptNotification;
 use App\Services\BookingService;
 use App\Services\TourAvailabilityService;
+use App\Support\AdminAlerts;
 use App\Support\SiteSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -23,7 +22,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -494,21 +492,7 @@ class BookingController extends Controller
 
     private function notifyAdmins(string $title, string $body, array $details = []): void
     {
-        // Solo roles que existen: el scope role() de Spatie lanza excepción con un rol inexistente.
-        $roleNames = Role::query()
-            ->where('guard_name', 'api')
-            ->whereIn('name', ['admin', 'superadmin'])
-            ->pluck('name')
-            ->all();
-
-        if (empty($roleNames)) {
-            return;
-        }
-
-        $emails = User::role($roleNames, 'api')->pluck('email')->filter()->unique();
-        foreach ($emails as $email) {
-            Notification::route('mail', $email)->notify(new AdminAlertNotification($title, $body, $details));
-        }
+        AdminAlerts::send($title, $body, $details);
     }
 
     /**

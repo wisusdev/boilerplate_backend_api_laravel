@@ -5,9 +5,10 @@ namespace Tests\Feature\Travel;
 use App\Models\Booking;
 use App\Models\Currency;
 use App\Models\Payment;
-use App\Models\Role;
 use App\Models\Tour;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
@@ -29,7 +30,7 @@ class AuthorizationTest extends TestCase
         parent::setUp();
 
         // Siembra el catálogo real de permisos y roles (admin recibe todos).
-        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
     }
 
     private function makeUser(?string $role = null): User

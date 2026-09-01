@@ -44,6 +44,13 @@ class SettingSeeder extends Seeder
                 // recién instalado, sin pasarela configurada, pueda vender igual.
                 'payment_whatsapp_enabled' => true,
                 'payment_whatsapp_number' => '',
+                // Enlaces de pago del banco: apagado hasta que haya un enlace
+                // real que emitir. Ver PAGO-ENLACE-BAC.md.
+                'payment_bac_link_enabled' => false,
+                'payment_bac_link_hosts' => 'baccredomatic.com, credomatic.com',
+                'payment_bac_link_ttl_hours' => 24,
+                'payment_bac_dual_control' => false,
+                'payment_bac_instructions' => '',
                 'currency' => 'USD',
                 'currency_symbol' => '$',
                 'decimal_separator' => '.',

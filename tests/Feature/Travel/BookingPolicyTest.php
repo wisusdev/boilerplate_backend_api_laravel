@@ -3,11 +3,12 @@
 namespace Tests\Feature\Travel;
 
 use App\Models\Booking;
-use App\Models\Role;
 use App\Models\Setting;
 use App\Models\Tour;
 use App\Models\User;
 use App\Support\SiteSettings;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
@@ -30,7 +31,7 @@ class BookingPolicyTest extends TestCase
 
     private function admin(): User
     {
-        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
         $a = $this->user();
         $a->assignRole('admin');
 

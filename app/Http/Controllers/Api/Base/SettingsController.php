@@ -70,6 +70,11 @@ class SettingsController extends Controller
         'payment_bank_routing',
         'payment_bank_swift',
         'payment_whatsapp_number',
+        // El checkout necesita saber si se ofrece el enlace del banco y qué
+        // decirle al cliente. La lista de dominios y el doble control son
+        // decisiones internas y no salen de aquí.
+        'payment_bac_link_enabled',
+        'payment_bac_instructions',
         'default_currency',
         // Estructura heredada del seeder: más abajo se aplana exponiendo solo
         // los flags y el modo; las credenciales siguen siendo de admin.
@@ -140,6 +145,9 @@ class SettingsController extends Controller
             // Pago asistido por WhatsApp: un agente acompaña al cliente. El número
             // es opcional; si se deja vacío se usa el de contacto del sitio.
             'payment_whatsapp_enabled', 'payment_whatsapp_number',
+            // Enlaces de pago del banco: ver PAGO-ENLACE-BAC.md.
+            'payment_bac_link_enabled', 'payment_bac_link_hosts', 'payment_bac_link_ttl_hours',
+            'payment_bac_dual_control', 'payment_bac_instructions',
             // credentials
             'paypal_mode', 'paypal_client_id', 'paypal_client_secret',
             'stripe_mode', 'stripe_public_key', 'stripe_secret_key',

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Notifications\BookingReceiptNotification;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
@@ -41,13 +42,24 @@ class PaymentService
      * back-office), así que también es donde se avisa al cliente: antes, quien
      * pagaba con tarjeta no recibía ningún correo nuestro.
      */
-    public function markPaid(Payment $payment, ?string $transactionReference = null, ?array $payload = null): Payment
-    {
+    public function markPaid(
+        Payment $payment,
+        ?string $transactionReference = null,
+        ?array $payload = null,
+        ?CarbonInterface $paidAt = null,
+        array $audit = [],
+    ): Payment {
         $payment->update([
             'status' => 'paid',
             'transaction_reference' => $transactionReference ?? $payment->transaction_reference,
             'payload' => $payload !== null ? $this->redact($payload) : $payment->payload,
-            'paid_at' => now(),
+            // En un cobro confirmado a mano, `now()` es la fecha en que alguien
+            // miró el portal, no la del cargo. Cuadrar el mes y fechar el DTE
+            // necesitan la del banco.
+            'paid_at' => $paidAt ?? now(),
+            'confirmed_by' => $audit['confirmed_by'] ?? null,
+            'confirmed_at' => array_key_exists('confirmed_by', $audit) ? now() : null,
+            'confirmation_note' => $audit['confirmation_note'] ?? null,
         ]);
 
         $payment->refresh();
@@ -79,6 +91,26 @@ class PaymentService
         }
     }
 
+    /**
+     * Anula un cobro ya confirmado: confirmación equivocada o contracargo.
+     *
+     * Se revierte el estado y se deja constancia; el registro NO se borra. Al
+     * volver a 'failed' el saldo reaparece en `outstandingFor()`, que es lo que
+     * hace que la reserva vuelva a deber dinero.
+     */
+    public function voidPayment(Payment $payment, string $reason, ?Model $actor = null): Payment
+    {
+        $payment->update([
+            'status' => 'failed',
+            'paid_at' => null,
+            'voided_at' => now(),
+            'voided_by' => $actor?->getKey(),
+            'void_reason' => $reason,
+        ]);
+
+        return $payment->refresh();
+    }
+
     public function markFailed(Payment $payment, ?array $payload = null): Payment
     {
         $payment->update([
@@ -99,6 +131,8 @@ class PaymentService
             ->where('payable_type', $payable::class)
             ->where('payable_id', $payable->getKey())
             ->where('status', 'paid')
+            // Un pago anulado conserva su fila por auditoría pero ya no es dinero.
+            ->whereNull('voided_at')
             ->sum('amount');
 
         $total = (float) ($payable->total_price ?? 0);

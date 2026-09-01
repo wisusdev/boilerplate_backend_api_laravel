@@ -131,6 +131,11 @@ class PermissionSeeder extends Seeder
             'payments:view-all',
             // Dar por cobrado un pago manual (efectivo / transferencia ya recibidos).
             'payments:mark-paid',
+            // Enlaces de pago del banco. Emitir y confirmar se separan a
+            // propósito: emitir es logística, confirmar mueve dinero sobre la
+            // palabra de una persona.
+            'payments:issue-link',
+            'payments:confirm-link',
         ];
     }
 

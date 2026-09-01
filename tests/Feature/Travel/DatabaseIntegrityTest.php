@@ -5,10 +5,11 @@ namespace Tests\Feature\Travel;
 use App\Models\Booking;
 use App\Models\Currency;
 use App\Models\Invoice;
-use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TourCategory;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
@@ -30,7 +31,7 @@ class DatabaseIntegrityTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
     }
 
     private function apiJson(string $method, string $uri, array $payload = []): TestResponse

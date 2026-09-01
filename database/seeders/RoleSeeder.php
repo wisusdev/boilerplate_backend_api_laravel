@@ -31,6 +31,7 @@ class RoleSeeder extends Seeder
                 'invoices:index', 'invoices:show', 'invoices:store', 'invoices:update',
                 'invoices:delete', 'invoices:generate-dte',
                 'payments:view-all', 'payments:mark-paid',
+                'payments:issue-link', 'payments:confirm-link',
             ],
 
             // Editor de contenido: catálogo público (tours, transporte, categorías,

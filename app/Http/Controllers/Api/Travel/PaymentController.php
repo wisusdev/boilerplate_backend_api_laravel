@@ -7,10 +7,12 @@ use App\Http\Requests\PaymentRequest;
 use App\Http\Resources\PaymentResource;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Services\PaymentLinkService;
 use App\Services\PaymentService;
 use App\Services\PaypalService;
 use App\Services\StripeService;
 use App\Services\WompiService;
+use App\Support\SiteSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -19,8 +21,12 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentController extends Controller
 {
+    /** Cobro con enlace emitido a mano en el portal del banco. */
+    private const BAC_LINK = PaymentLinkService::GATEWAY;
+
     public function __construct(
         private readonly PaymentService $paymentService,
+        private readonly PaymentLinkService $paymentLinkService,
         private readonly PaypalService $paypalService,
         private readonly StripeService $stripeService,
         private readonly WompiService $wompiService,
@@ -122,7 +128,7 @@ class PaymentController extends Controller
     public function checkout(Request $request): JsonResponse
     {
         $request->validate([
-            'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'wompi'])],
+            'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'wompi', 'bac_link'])],
             'data.attributes.payable_type' => ['sometimes', 'string', Rule::in(['booking'])],
             'data.attributes.payable_id' => ['required', 'integer'],
         ]);
@@ -155,6 +161,7 @@ class PaymentController extends Controller
             'paypal' => $this->initPaypal($amount, $currency, $returnUrl, $cancelUrl, $payable),
             'stripe' => $this->initStripe($amount, $currency, $payable),
             'wompi' => $this->initWompi($amount, $currency, $returnUrl, $payable),
+            'bac_link' => $this->initBacLink($payable, $request->user()),
             default => throw new \InvalidArgumentException("Unsupported gateway: {$gateway}"),
         };
 
@@ -180,7 +187,7 @@ class PaymentController extends Controller
     public function verify(Request $request): JsonResponse
     {
         $request->validate([
-            'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'wompi'])],
+            'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'wompi', 'bac_link'])],
             'data.attributes.payment_id' => ['required', 'integer'],
         ]);
 
@@ -201,6 +208,13 @@ class PaymentController extends Controller
             throw ValidationException::withMessages([
                 'data.attributes.gateway' => ['message.paymentGatewayMismatch'],
             ]);
+        }
+
+        // El enlace del banco no se puede consultar: no hay API. Esta llamada solo
+        // devuelve lo que sabemos, para que la pantalla del cliente refleje el
+        // estado real en vez de fingir que está comprobando algo.
+        if ($gateway === self::BAC_LINK) {
+            return $this->verifyResponse($payment, $payment->status === 'paid' ? 'paid' : 'pending');
         }
 
         try {
@@ -470,6 +484,33 @@ class PaymentController extends Controller
             'gateway' => 'wompi',
             'redirect_url' => $link['url'],
             'qr_url' => $link['qr_url'],
+        ];
+    }
+
+    /**
+     * Enlace de pago del banco: aquí no se crea nada en el banco, porque no hay
+     * API. Se reserva el cobro y se pone en cola para que un agente genere el
+     * enlace en el portal y lo pegue en el panel.
+     */
+    private function initBacLink($payable, $actor): array
+    {
+        if (! SiteSettings::bacLinkEnabled()) {
+            throw ValidationException::withMessages([
+                'data.attributes.gateway' => ['message.bacLinkDisabled'],
+            ]);
+        }
+
+        $link = $this->paymentLinkService->issueFor($payable, $actor);
+
+        return [
+            'payment_id' => $link->payment_id,
+            'gateway' => self::BAC_LINK,
+            // No hay redirect_url: el enlace todavía no existe. El frontend
+            // distingue este caso por el estado, no por la ausencia de URL.
+            'status' => $link->url ? 'ready' : 'awaiting_link',
+            'reference' => $link->reference,
+            'redirect_url' => $link->url,
+            'expires_at' => $link->expires_at,
         ];
     }
 

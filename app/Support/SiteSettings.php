@@ -77,6 +77,69 @@ class SiteSettings
         return preg_replace('/\D/', '', $number) ?? '';
     }
 
+    // ── Enlaces de pago del banco (BAC) ───────────────────────────────────────
+
+    /** ¿Se ofrece el cobro con enlace de pago del banco? */
+    public static function bacLinkEnabled(): bool
+    {
+        return filter_var(self::paymentGateway()['payment_bac_link_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Dominios a los que se permite apuntar un enlace pegado en el panel.
+     *
+     * No es paranoia: ese enlace se le envía al cliente por correo con nuestra
+     * marca detrás, así que un error de copiado —o una cuenta de panel
+     * comprometida— nos convierte en el aval de una web de phishing.
+     *
+     * Los valores por defecto son los dominios conocidos de BAC Credomatic. Si
+     * el banco emite desde otro, se añade en Ajustes; el error de validación
+     * dice cuál fue el host rechazado para que no haya que adivinarlo.
+     *
+     * @return array<int, string>
+     */
+    public static function bacLinkHosts(): array
+    {
+        $raw = self::paymentGateway()['payment_bac_link_hosts'] ?? null;
+
+        $hosts = is_array($raw)
+            ? $raw
+            : preg_split('/[\s,;]+/', (string) $raw, -1, PREG_SPLIT_NO_EMPTY);
+
+        $hosts = array_values(array_filter(array_map(
+            static fn ($h) => strtolower(trim((string) $h)),
+            $hosts ?: []
+        )));
+
+        return $hosts !== [] ? $hosts : ['baccredomatic.com', 'credomatic.com'];
+    }
+
+    /** Horas de validez por defecto de un enlace recién emitido (0 = sin caducidad). */
+    public static function bacLinkTtlHours(): int
+    {
+        $ttl = self::paymentGateway()['payment_bac_link_ttl_hours'] ?? 24;
+
+        return max((int) $ttl, 0);
+    }
+
+    /**
+     * ¿Quien emite el enlace tiene prohibido confirmarlo?
+     *
+     * Desactivado por defecto: un equipo de dos personas no siempre puede
+     * permitirse el doble control, y bloquearlo de fábrica dejaría cobros sin
+     * confirmar, que es peor que el riesgo que evita.
+     */
+    public static function bacDualControl(): bool
+    {
+        return filter_var(self::paymentGateway()['payment_bac_dual_control'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /** Texto que acompaña al enlace en la pantalla del cliente. */
+    public static function bacInstructions(): string
+    {
+        return trim((string) (self::paymentGateway()['payment_bac_instructions'] ?? ''));
+    }
+
     /** Limpia la caché (útil en tests o tras actualizar settings). */
     public static function flush(): void
     {

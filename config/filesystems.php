@@ -36,6 +36,16 @@ return [
             'throw' => false,
         ],
 
+        // Fuera de la raíz servible: aquí van los comprobantes que suben los
+        // clientes, que pueden llevar una tarjeta a la vista. Se sirven solo a
+        // través de una ruta con permisos, nunca por URL directa.
+        'private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private'),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

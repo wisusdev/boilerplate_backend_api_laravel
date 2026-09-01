@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Travel\GalleryController;
 use App\Http\Controllers\Api\Travel\GuideController;
 use App\Http\Controllers\Api\Travel\InvoiceController;
 use App\Http\Controllers\Api\Travel\PaymentController;
+use App\Http\Controllers\Api\Travel\PaymentLinkController;
 use App\Http\Controllers\Api\Travel\ProductReviewController;
 use App\Http\Controllers\Api\Travel\ReportController;
 use App\Http\Controllers\Api\Travel\ReviewController;
@@ -214,6 +215,9 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/{booking}/receipt', [BookingController::class, 'receipt'])
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('receipt');
         // Pago asistido: enlace de WhatsApp con el detalle de la reserva ya compuesto.
+        // Enlace de pago vivo de la reserva, si lo hay.
+        Route::get('/{booking}/payment-link', [PaymentLinkController::class, 'forBooking'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('payment-link');
         Route::post('/{booking}/whatsapp-link', [BookingController::class, 'whatsappLink'])
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])->name('whatsapp-link');
     });
@@ -248,6 +252,37 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/checkout', [PaymentController::class, 'checkout'])->name('checkout');
         Route::post('/verify', [PaymentController::class, 'verify'])->name('verify');
         Route::get('/{payment}', [PaymentController::class, 'show'])->name('show');
+    });
+
+    // ── Enlaces de pago del banco (BAC) ───────────────────────────────────────
+    // Sin API del banco, el cobro lo confirma una persona. Cada acción va con su
+    // permiso: emitir, confirmar y consultar son decisiones distintas.
+    Route::prefix('payment-links')->name('api.v1.payment-links.')->group(function () {
+        Route::get('/', [PaymentLinkController::class, 'index'])
+            ->middleware('permission:payments:view-all')->name('index');
+
+        // El cliente llega por la referencia desde el correo; el back-office, desde la cola.
+        Route::get('/{paymentLink:reference}', [PaymentLinkController::class, 'show'])->name('show');
+
+        Route::post('/{paymentLink:reference}/attach', [PaymentLinkController::class, 'attach'])
+            ->middleware('permission:payments:issue-link')->name('attach');
+        Route::post('/{paymentLink:reference}/send', [PaymentLinkController::class, 'send'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:payments:issue-link')->name('send');
+
+        // Autorreporte del cliente: multipart (puede traer el comprobante), así
+        // que fuera de JSON:API. Limitado para que no se pueda usar como ruido.
+        Route::post('/{paymentLink:reference}/report', [PaymentLinkController::class, 'report'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('throttle:10,1')->name('report');
+        Route::get('/{paymentLink:reference}/proof', [PaymentLinkController::class, 'proof'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->name('proof');
+
+        Route::post('/{paymentLink:reference}/confirm', [PaymentLinkController::class, 'confirm'])
+            ->middleware('permission:payments:confirm-link')->name('confirm');
+        Route::post('/{paymentLink:reference}/void', [PaymentLinkController::class, 'void'])
+            ->middleware('permission:payments:confirm-link')->name('void');
     });
 
     // Invoices + DTE, Settings, Reports, Gallery — cada ruta gateada por permiso.
