@@ -9,8 +9,6 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Services\PaymentLinkService;
 use App\Services\PaymentService;
-use App\Services\PaypalService;
-use App\Services\StripeService;
 use App\Services\WompiService;
 use App\Support\SiteSettings;
 use Illuminate\Http\JsonResponse;
@@ -27,8 +25,6 @@ class PaymentController extends Controller
     public function __construct(
         private readonly PaymentService $paymentService,
         private readonly PaymentLinkService $paymentLinkService,
-        private readonly PaypalService $paypalService,
-        private readonly StripeService $stripeService,
         private readonly WompiService $wompiService,
     ) {}
 
@@ -119,7 +115,7 @@ class PaymentController extends Controller
      *
      * Inicia un pago en línea.
      *
-     * Atributos: gateway (paypal|stripe|wompi), payable_type, payable_id. El
+     * Atributos: gateway (wompi|bac_link), payable_type, payable_id. El
      * importe y la moneda NO se aceptan del cliente: salen del saldo de la reserva.
      *
      * Wompi devuelve `redirect_url`: el enlace alojado donde el cliente introduce
@@ -128,7 +124,7 @@ class PaymentController extends Controller
     public function checkout(Request $request): JsonResponse
     {
         $request->validate([
-            'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'wompi', 'bac_link'])],
+            'data.attributes.gateway' => ['required', 'string', Rule::in(['wompi', 'bac_link'])],
             'data.attributes.payable_type' => ['sometimes', 'string', Rule::in(['booking'])],
             'data.attributes.payable_id' => ['required', 'integer'],
         ]);
@@ -155,11 +151,7 @@ class PaymentController extends Controller
 
         $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
         $returnUrl = "{$frontendUrl}/payment/result?gateway={$gateway}&payable_type={$payableType}&payable_id={$payableId}";
-        $cancelUrl = "{$frontendUrl}/payment/result?gateway={$gateway}&status=cancelled";
-
         $result = match ($gateway) {
-            'paypal' => $this->initPaypal($amount, $currency, $returnUrl, $cancelUrl, $payable),
-            'stripe' => $this->initStripe($amount, $currency, $payable),
             'wompi' => $this->initWompi($amount, $currency, $returnUrl, $payable),
             'bac_link' => $this->initBacLink($payable, $request->user()),
             default => throw new \InvalidArgumentException("Unsupported gateway: {$gateway}"),
@@ -180,14 +172,14 @@ class PaymentController extends Controller
      * Called after the user returns from a gateway redirect or JS confirmation.
      *
      * Attributes:
-     *   gateway     paypal | stripe | wompi
+     *   gateway     wompi | bac_link
      *   payment_id  local Payment UUID
-     *   token       PayPal order_id | Stripe paymentIntentId | Wompi transactionId
+     *   token       Wompi transactionId (bac_link no lo usa: no hay nada que consultar)
      */
     public function verify(Request $request): JsonResponse
     {
         $request->validate([
-            'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'wompi', 'bac_link'])],
+            'data.attributes.gateway' => ['required', 'string', Rule::in(['wompi', 'bac_link'])],
             'data.attributes.payment_id' => ['required', 'integer'],
         ]);
 
@@ -219,8 +211,6 @@ class PaymentController extends Controller
 
         try {
             [$success, $transactionRef, $payload] = match ($gateway) {
-                'paypal' => $this->verifyPaypal($payment),
-                'stripe' => $this->verifyStripe($payment),
                 'wompi' => $this->verifyWompi($payment),
             };
         } catch (\Throwable $e) {
@@ -240,76 +230,6 @@ class PaymentController extends Controller
         }
 
         return $this->verifyResponse($payment, 'failed');
-    }
-
-    /**
-     * Captura el pedido de PayPal referenciado por el propio pago (no por el
-     * cliente) y comprueba que el importe y la moneda coinciden.
-     *
-     * @return array{0: bool, 1: string, 2: array<string,mixed>}
-     */
-    private function verifyPaypal(Payment $payment): array
-    {
-        $orderId = (string) $payment->transaction_reference;
-
-        if ($orderId === '') {
-            throw new \RuntimeException('El pago no tiene una orden de PayPal asociada.');
-        }
-
-        $capture = $this->paypalService->captureOrder($orderId);
-
-        if (($capture['status'] ?? '') !== 'COMPLETED') {
-            return [false, $orderId, $capture];
-        }
-
-        // El pedido capturado debe ser exactamente el que se creó para este pago.
-        if ((string) ($capture['id'] ?? '') !== $orderId) {
-            throw new \RuntimeException('La orden capturada no corresponde a este pago.');
-        }
-
-        $unit = $capture['purchase_units'][0] ?? [];
-        $captured = $unit['payments']['captures'][0]['amount']
-            ?? $unit['amount']
-            ?? [];
-
-        $this->assertAmountMatches(
-            $payment,
-            (float) ($captured['value'] ?? 0),
-            strtoupper((string) ($captured['currency_code'] ?? ''))
-        );
-
-        return [true, $orderId, $capture];
-    }
-
-    /**
-     * Recupera el PaymentIntent en el servidor. La confirmación de Stripe.js
-     * ocurre en el navegador y por sí sola no prueba nada.
-     *
-     * @return array{0: bool, 1: string, 2: array<string,mixed>}
-     */
-    private function verifyStripe(Payment $payment): array
-    {
-        $intentId = (string) $payment->transaction_reference;
-
-        if ($intentId === '') {
-            throw new \RuntimeException('El pago no tiene un PaymentIntent asociado.');
-        }
-
-        $intent = $this->stripeService->retrievePaymentIntent($intentId);
-
-        if ($intent['status'] !== 'succeeded') {
-            return [false, $intentId, $intent];
-        }
-
-        $expectedCents = $this->stripeService->toCents((float) $payment->amount);
-
-        if ($intent['amount_received'] < $expectedCents) {
-            throw new \RuntimeException('El importe cobrado no coincide con el pago.');
-        }
-
-        $this->assertCurrencyMatches($payment, $intent['currency']);
-
-        return [true, $intentId, $intent];
     }
 
     /**
@@ -374,49 +294,6 @@ class PaymentController extends Controller
     }
 
     // ── private helpers ───────────────────────────────────────────────────────
-
-    private function initPaypal(float $amount, string $currency, string $returnUrl, string $cancelUrl, $payable): array
-    {
-        $order = $this->paypalService->createOrder($amount, $currency, $returnUrl, $cancelUrl);
-
-        $payment = $this->paymentService->create($payable, [
-            'gateway' => 'paypal',
-            'method' => 'paypal',
-            'amount' => $amount,
-            'currency_code' => $currency,
-            'status' => 'pending',
-            'transaction_reference' => $order['order_id'],
-        ]);
-
-        return [
-            'payment_id' => $payment->id,
-            'gateway' => 'paypal',
-            'order_id' => $order['order_id'],
-            'approve_url' => $order['approve_url'],
-        ];
-    }
-
-    private function initStripe(float $amount, string $currency, $payable): array
-    {
-        $intent = $this->stripeService->createPaymentIntent($amount, $currency);
-
-        $payment = $this->paymentService->create($payable, [
-            'gateway' => 'stripe',
-            'method' => 'card',
-            'amount' => $amount,
-            'currency_code' => $currency,
-            'status' => 'pending',
-            'transaction_reference' => $intent['payment_intent_id'],
-        ]);
-
-        return [
-            'payment_id' => $payment->id,
-            'gateway' => 'stripe',
-            'client_secret' => $intent['client_secret'],
-            'payment_intent_id' => $intent['payment_intent_id'],
-            'public_key' => $this->stripeService->getPublicKey(),
-        ];
-    }
 
     /**
      * Wompi El Salvador — enlace de pago alojado.

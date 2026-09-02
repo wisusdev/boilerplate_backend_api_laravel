@@ -17,8 +17,6 @@ class SettingsController extends Controller
 
     /** Campos que se almacenan cifrados en la DB. */
     private const CREDENTIAL_KEYS = [
-        'paypal_client_id', 'paypal_client_secret',
-        'stripe_public_key', 'stripe_secret_key',
         'wompi_public_key', 'wompi_private_key', 'wompi_audience',
         'dte_mh_password', 'dte_cert_password',
     ];
@@ -30,8 +28,6 @@ class SettingsController extends Controller
      * enmascarados y solo se escriben cuando llega un valor nuevo.
      */
     private const SECRET_KEYS = [
-        'paypal_client_secret',
-        'stripe_secret_key',
         'wompi_private_key',
         'dte_mh_password',
         'dte_cert_password',
@@ -60,15 +56,8 @@ class SettingsController extends Controller
      */
     private const PUBLIC_PAYMENT_KEYS = [
         'payment_cash_enabled',
-        'payment_bank_transfer_enabled',
-        'payment_paypal_enabled',
-        'payment_stripe_enabled',
         'payment_wompi_enabled',
         'payment_whatsapp_enabled',
-        'payment_bank_name',
-        'payment_bank_account',
-        'payment_bank_routing',
-        'payment_bank_swift',
         'payment_whatsapp_number',
         // El checkout necesita saber si se ofrece el enlace del banco y qué
         // decirle al cliente. La lista de dominios y el doble control son
@@ -138,10 +127,9 @@ class SettingsController extends Controller
 
         // ── payment_gateway fields ─────────────────────────────────────────
         $pmFields = [
-            'payment_cash_enabled', 'payment_bank_transfer_enabled',
-            'payment_bank_name', 'payment_bank_account', 'payment_bank_routing', 'payment_bank_swift',
-            // enabled flags per gateway
-            'payment_paypal_enabled', 'payment_stripe_enabled', 'payment_wompi_enabled',
+            'payment_cash_enabled',
+            // enabled flag por pasarela
+            'payment_wompi_enabled',
             // Pago asistido por WhatsApp: un agente acompaña al cliente. El número
             // es opcional; si se deja vacío se usa el de contacto del sitio.
             'payment_whatsapp_enabled', 'payment_whatsapp_number',
@@ -149,8 +137,6 @@ class SettingsController extends Controller
             'payment_bac_link_enabled', 'payment_bac_link_hosts', 'payment_bac_link_ttl_hours',
             'payment_bac_dual_control', 'payment_bac_instructions', 'payment_bac_link_auto_release',
             // credentials
-            'paypal_mode', 'paypal_client_id', 'paypal_client_secret',
-            'stripe_mode', 'stripe_public_key', 'stripe_secret_key',
             'wompi_mode', 'wompi_public_key', 'wompi_private_key', 'wompi_audience',
             'default_currency',
         ];
@@ -392,24 +378,6 @@ class SettingsController extends Controller
             $pm = $flat['payment_methods'];
             unset($flat['payment_methods']);
 
-            if (isset($pm['paypal'])) {
-                $flat['payment_paypal_enabled'] = $pm['paypal']['enabled'] ?? false;
-                $flat['paypal_mode'] = $pm['paypal']['mode'] ?? 'sandbox';
-                if ($isAdmin) {
-                    $flat['paypal_client_id'] = $pm['paypal']['client_id'] ?? '';
-                    $flat['paypal_client_secret_configured'] = ($pm['paypal']['client_secret'] ?? '') !== '';
-                    $flat['paypal_client_secret'] = $this->maskSecret((string) ($pm['paypal']['client_secret'] ?? ''));
-                }
-            }
-            if (isset($pm['stripe'])) {
-                $flat['payment_stripe_enabled'] = $pm['stripe']['enabled'] ?? false;
-                $flat['stripe_mode'] = $pm['stripe']['mode'] ?? 'sandbox';
-                if ($isAdmin) {
-                    $flat['stripe_public_key'] = $pm['stripe']['key'] ?? '';
-                    $flat['stripe_secret_key_configured'] = ($pm['stripe']['secret'] ?? '') !== '';
-                    $flat['stripe_secret_key'] = $this->maskSecret((string) ($pm['stripe']['secret'] ?? ''));
-                }
-            }
             if (isset($pm['wompi'])) {
                 $flat['payment_wompi_enabled'] = $pm['wompi']['enabled'] ?? false;
                 $flat['wompi_mode'] = $pm['wompi']['mode'] ?? 'sandbox';
@@ -424,7 +392,7 @@ class SettingsController extends Controller
         // Strip credentials from non-admins
         if (! $isAdmin) {
             $sensitiveKeys = [
-                'paypal_client_secret', 'stripe_secret_key', 'wompi_private_key',
+                'wompi_private_key',
                 'mail', 'password',
                 'inquiry_notification_emails', // destinatarios internos, no públicos
             ];

@@ -60,18 +60,6 @@ class SettingSeeder extends Seeder
                 'decimal_separator' => '.',
                 'thousands_separator' => ',',
                 'payment_methods' => [
-                    'paypal' => [
-                        'enabled' => true,
-                        'mode' => 'sandbox',
-                        'client_id' => '',
-                        'client_secret' => '',
-                    ],
-                    'stripe' => [
-                        'enabled' => true,
-                        'mode' => 'sandbox',
-                        'key' => '',
-                        'secret' => '',
-                    ],
                     'wompi' => [
                         'enabled' => true,
                         'mode' => 'sandbox',

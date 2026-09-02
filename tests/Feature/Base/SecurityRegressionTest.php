@@ -213,9 +213,11 @@ class SecurityRegressionTest extends TestCase
 
     public function test_los_secretos_de_pasarela_no_salen_en_claro_para_un_admin(): void
     {
+        // PayPal y Stripe se retiraron del producto; Wompi es la única pasarela
+        // en línea que queda y ejerce el mismo mecanismo de enmascarado.
         Setting::create(['key' => 'payment_gateway', 'value' => json_encode([
-            'stripe_secret_key' => 'sk_live_supersecreto1234',
-            'stripe_public_key' => 'pk_live_publica',
+            'wompi_private_key' => 'priv_live_supersecreto1234',
+            'wompi_public_key' => 'pub_live_publica',
         ])]);
 
         Passport::actingAs($this->makeUser('admin', 'admin')->fresh());
@@ -224,16 +226,16 @@ class SecurityRegressionTest extends TestCase
             ->assertOk()
             ->json('data.attributes');
 
-        $this->assertStringNotContainsString('sk_live_supersecreto1234', json_encode($attributes));
-        $this->assertTrue($attributes['stripe_secret_key_configured']);
+        $this->assertStringNotContainsString('priv_live_supersecreto1234', json_encode($attributes));
+        $this->assertTrue($attributes['wompi_private_key_configured']);
         // La clave publicable sí es visible: la necesita el checkout.
-        $this->assertSame('pk_live_publica', $attributes['stripe_public_key']);
+        $this->assertSame('pub_live_publica', $attributes['wompi_public_key']);
     }
 
     public function test_guardar_ajustes_sin_tocar_el_secreto_lo_conserva(): void
     {
         Setting::create(['key' => 'payment_gateway', 'value' => json_encode([
-            'stripe_secret_key' => 'sk_live_supersecreto1234',
+            'wompi_private_key' => 'priv_live_supersecreto1234',
         ])]);
 
         Passport::actingAs($this->makeUser('admin', 'admin')->fresh());
@@ -241,14 +243,14 @@ class SecurityRegressionTest extends TestCase
         // El formulario reenvía el valor enmascarado (o vacío) cuando no se edita.
         $this->apiJson('PATCH', '/api/v1/settings', [
             'data' => ['type' => 'settings', 'attributes' => [
-                'stripe_secret_key' => '',
-                'stripe_mode' => 'live',
+                'wompi_private_key' => '',
+                'wompi_mode' => 'live',
             ]],
         ])->assertOk();
 
         $stored = json_decode(Setting::where('key', 'payment_gateway')->first()->value, true);
-        $this->assertSame('sk_live_supersecreto1234', $stored['stripe_secret_key']);
-        $this->assertSame('live', $stored['stripe_mode']);
+        $this->assertSame('priv_live_supersecreto1234', $stored['wompi_private_key']);
+        $this->assertSame('live', $stored['wompi_mode']);
     }
 
     // ─── M-7: tamaño de página acotado ────────────────────────────────────────

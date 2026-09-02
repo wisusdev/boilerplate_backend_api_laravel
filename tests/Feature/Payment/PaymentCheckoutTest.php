@@ -6,8 +6,6 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Tour;
 use App\Models\User;
-use App\Services\PaypalService;
-use App\Services\StripeService;
 use App\Services\WompiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -69,91 +67,6 @@ class PaymentCheckoutTest extends TestCase
                 ], $extra),
             ],
         ];
-    }
-
-    // ─── PayPal ───────────────────────────────────────────────────────────────
-
-    public function test_checkout_paypal_crea_pago_pendiente_y_retorna_approve_url(): void
-    {
-        $user = $this->createAuthenticatedUser();
-        $booking = $this->createBooking($user);
-
-        $this->mock(PaypalService::class, function ($mock) {
-            $mock->shouldReceive('createOrder')
-                ->once()
-                ->with(200.00, 'USD', \Mockery::any(), \Mockery::any())
-                ->andReturn([
-                    'order_id' => 'PAYPAL_ORDER_TEST123',
-                    'approve_url' => 'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL_ORDER_TEST123',
-                ]);
-        });
-
-        $response = $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'paypal'));
-
-        $response->assertOk();
-        $attrs = $response->json('data.attributes');
-        $this->assertEquals('paypal', $attrs['gateway']);
-        $this->assertEquals('PAYPAL_ORDER_TEST123', $attrs['order_id']);
-        $this->assertStringContainsString('sandbox.paypal.com', $attrs['approve_url']);
-
-        $this->assertDatabaseHas('payments', [
-            'gateway' => 'paypal',
-            'status' => 'pending',
-            'transaction_reference' => 'PAYPAL_ORDER_TEST123',
-        ]);
-    }
-
-    public function test_checkout_paypal_falla_si_el_servicio_lanza_excepcion(): void
-    {
-        $user = $this->createAuthenticatedUser();
-        $booking = $this->createBooking($user);
-
-        $this->mock(PaypalService::class, function ($mock) {
-            $mock->shouldReceive('createOrder')
-                ->once()
-                ->andThrow(new \RuntimeException('PayPal: invalid_client'));
-        });
-
-        $this->withoutExceptionHandling();
-        $this->expectException(\RuntimeException::class);
-
-        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'paypal'));
-    }
-
-    // ─── Stripe ───────────────────────────────────────────────────────────────
-
-    public function test_checkout_stripe_crea_pago_pendiente_y_retorna_client_secret(): void
-    {
-        $user = $this->createAuthenticatedUser();
-        $booking = $this->createBooking($user);
-
-        $this->mock(StripeService::class, function ($mock) {
-            $mock->shouldReceive('createPaymentIntent')
-                ->once()
-                ->with(200.00, 'USD')
-                ->andReturn([
-                    'client_secret' => 'pi_test_secret_abc123',
-                    'payment_intent_id' => 'pi_test_abc123',
-                ]);
-            $mock->shouldReceive('getPublicKey')
-                ->once()
-                ->andReturn('pk_test_public_key');
-        });
-
-        $response = $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'stripe'));
-
-        $response->assertOk();
-        $attrs = $response->json('data.attributes');
-        $this->assertEquals('stripe', $attrs['gateway']);
-        $this->assertEquals('pi_test_secret_abc123', $attrs['client_secret']);
-        $this->assertEquals('pi_test_abc123', $attrs['payment_intent_id']);
-        $this->assertEquals('pk_test_public_key', $attrs['public_key']);
-
-        $this->assertDatabaseHas('payments', [
-            'gateway' => 'stripe',
-            'status' => 'pending',
-            'transaction_reference' => 'pi_test_abc123',
-        ]);
     }
 
     // ─── Wompi ────────────────────────────────────────────────────────────────
@@ -234,12 +147,38 @@ class PaymentCheckoutTest extends TestCase
         $this->assertDatabaseHas('payments', ['gateway' => 'wompi', 'status' => 'failed']);
     }
 
+    public function test_checkout_wompi_ignora_el_importe_enviado_por_el_cliente(): void
+    {
+        $user = $this->createAuthenticatedUser();
+        $booking = $this->createBooking($user); // total_price = 200
+
+        $this->mock(WompiService::class, function ($mock) {
+            $mock->shouldReceive('createPaymentLink')
+                ->once()
+                // El importe cobrado sale de la reserva, no del payload.
+                ->withArgs(fn (array $data) => $data['amount'] === 200.0)
+                ->andReturn(['link_id' => 'x', 'url' => 'https://link.wompi.sv/x', 'qr_url' => '']);
+        });
+
+        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'wompi', [
+            'amount' => 0.01,
+            'currency_code' => 'EUR',
+        ]))->assertOk();
+
+        $this->assertDatabaseHas('payments', [
+            'gateway' => 'wompi',
+            'amount' => 200.00,
+            'currency_code' => 'USD',
+            'status' => 'pending',
+        ]);
+    }
+
     // ─── Casos generales ──────────────────────────────────────────────────────
 
     public function test_checkout_requiere_autenticacion(): void
     {
         $response = $this->postJsonApi('/api/v1/payments/checkout', [
-            'data' => ['type' => 'payment-checkout', 'attributes' => ['gateway' => 'paypal']],
+            'data' => ['type' => 'payment-checkout', 'attributes' => ['gateway' => 'wompi']],
         ]);
 
         $response->assertUnauthorized();
@@ -253,7 +192,7 @@ class PaymentCheckoutTest extends TestCase
             'data' => [
                 'type' => 'payment-checkout',
                 'attributes' => [
-                    'gateway' => 'paypal',
+                    'gateway' => 'wompi',
                     'payable_type' => 'booking',
                     'payable_id' => 99999,
                     'amount' => 100,
@@ -270,35 +209,11 @@ class PaymentCheckoutTest extends TestCase
         $user = $this->createAuthenticatedUser();
         $booking = $this->createBooking($user);
 
-        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'bitcoin'))
-            ->assertStatus(422);
-    }
-
-    public function test_checkout_ignora_el_importe_enviado_por_el_cliente(): void
-    {
-        $user = $this->createAuthenticatedUser();
-        $booking = $this->createBooking($user); // total_price = 200
-
-        $this->mock(StripeService::class, function ($mock) {
-            $mock->shouldReceive('createPaymentIntent')
-                ->once()
-                // El importe cobrado sale de la reserva, no del payload.
-                ->with(200.0, 'USD')
-                ->andReturn(['client_secret' => 'cs_test', 'payment_intent_id' => 'pi_test']);
-            $mock->shouldReceive('getPublicKey')->andReturn('pk_test');
-        });
-
-        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'stripe', [
-            'amount' => 0.01,
-            'currency_code' => 'EUR',
-        ]))->assertOk();
-
-        $this->assertDatabaseHas('payments', [
-            'gateway' => 'stripe',
-            'amount' => 200.00,
-            'currency_code' => 'USD',
-            'status' => 'pending',
-        ]);
+        // paypal/stripe se retiraron del producto: ya no son gateways válidos.
+        foreach (['bitcoin', 'paypal', 'stripe'] as $gateway) {
+            $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, $gateway))
+                ->assertStatus(422);
+        }
     }
 
     public function test_checkout_rechaza_una_reserva_ajena(): void
@@ -314,7 +229,7 @@ class PaymentCheckoutTest extends TestCase
 
         $this->createAuthenticatedUser();
 
-        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'stripe'))
+        $this->postJsonApi('/api/v1/payments/checkout', $this->checkoutPayload($booking, 'wompi'))
             ->assertForbidden();
     }
 }

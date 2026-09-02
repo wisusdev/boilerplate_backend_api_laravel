@@ -78,10 +78,10 @@ class SettingRequest extends FormRequest
             'data.attributes.invoice_template' => ['sometimes', 'string', Rule::in(array_keys(InvoiceDocument::TEMPLATES))],
 
             // ── Métodos de pago ──
+            // PayPal, Stripe y transferencia bancaria se retiraron del producto
+            // (ver PAGO-ENLACE-BAC.md): quedan efectivo, WhatsApp asistido,
+            // Wompi y el enlace de pago del banco.
             'data.attributes.payment_cash_enabled' => $bool,
-            'data.attributes.payment_bank_transfer_enabled' => $bool,
-            'data.attributes.payment_paypal_enabled' => $bool,
-            'data.attributes.payment_stripe_enabled' => $bool,
             'data.attributes.payment_wompi_enabled' => $bool,
             'data.attributes.payment_whatsapp_enabled' => $bool,
             'data.attributes.payment_whatsapp_number' => ['sometimes', 'nullable', 'string', 'max:40'],
@@ -93,21 +93,11 @@ class SettingRequest extends FormRequest
             'data.attributes.payment_bac_dual_control' => $bool,
             'data.attributes.payment_bac_instructions' => ['sometimes', 'nullable', 'string', 'max:500'],
             'data.attributes.payment_bac_link_auto_release' => $bool,
-            'data.attributes.payment_bank_name' => $texto,
-            'data.attributes.payment_bank_account' => ['sometimes', 'nullable', 'string', 'max:60'],
-            'data.attributes.payment_bank_routing' => ['sometimes', 'nullable', 'string', 'max:60'],
-            'data.attributes.payment_bank_swift' => ['sometimes', 'nullable', 'string', 'max:30'],
             'data.attributes.default_currency' => ['sometimes', 'nullable', 'string', 'size:3'],
 
             // Credenciales: el contenido lo fija cada pasarela, solo se acota
             // el tipo y la longitud. Un valor vacío conserva el guardado.
-            'data.attributes.paypal_mode' => ['sometimes', 'nullable', Rule::in(['sandbox', 'live'])],
-            'data.attributes.stripe_mode' => ['sometimes', 'nullable', Rule::in(['sandbox', 'live'])],
             'data.attributes.wompi_mode' => ['sometimes', 'nullable', Rule::in(['sandbox', 'live'])],
-            'data.attributes.paypal_client_id' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'data.attributes.paypal_client_secret' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'data.attributes.stripe_public_key' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'data.attributes.stripe_secret_key' => ['sometimes', 'nullable', 'string', 'max:255'],
             'data.attributes.wompi_public_key' => ['sometimes', 'nullable', 'string', 'max:255'],
             'data.attributes.wompi_private_key' => ['sometimes', 'nullable', 'string', 'max:255'],
             'data.attributes.wompi_audience' => ['sometimes', 'nullable', 'string', 'max:255'],

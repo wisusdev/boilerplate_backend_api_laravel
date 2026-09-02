@@ -60,20 +60,6 @@ return [
         'redirect' => config('app.frontend_url').'/oauth/github/callback',
     ],
 
-    'paypal' => [
-        'base_uri' => env('PAYPAL_BASE_URI'),
-        'client_id' => env('PAYPAL_CLIENT_ID'),
-        'client_secret' => env('PAYPAL_CLIENT_SECRET'),
-        'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
-    ],
-
-    'stripe' => [
-        'base_uri' => env('STRIPE_BASE_URI'),
-        'key' => env('STRIPE_KEY'),
-        'secret' => env('STRIPE_SECRET'),
-        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
-    ],
-
     'wompi' => [
         'base_auth_uri' => env('WOMPI_BASE_AUTH_URI'),
         'base_uri' => env('WOMPI_BASE_URI'),

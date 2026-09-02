@@ -23,8 +23,6 @@ class WebhookController extends Controller
     {
         try {
             $result = match ($gateway) {
-                'stripe' => $this->service->handleStripe($request),
-                'paypal' => $this->service->handlePaypal($request),
                 'wompi' => $this->service->handleWompi($request),
                 default => abort(404),
             };

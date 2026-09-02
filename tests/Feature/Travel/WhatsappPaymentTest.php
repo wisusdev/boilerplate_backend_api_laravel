@@ -47,7 +47,7 @@ class WhatsappPaymentTest extends TestCase
             'default_currency' => 'USD',
             'payment_whatsapp_enabled' => true,
             'payment_whatsapp_number' => '+503 7000 1234',
-            'stripe_secret_key' => 'sk_live_no_debe_salir',
+            'wompi_private_key' => 'priv_live_no_debe_salir',
         ], $overrides))]);
 
         SiteSettings::flush();
@@ -97,7 +97,7 @@ class WhatsappPaymentTest extends TestCase
 
     public function test_un_cliente_ve_los_metodos_de_pago_disponibles(): void
     {
-        $this->paymentSettings(['payment_bank_transfer_enabled' => true, 'payment_bank_name' => 'Banco Agrícola']);
+        $this->paymentSettings(['payment_cash_enabled' => true]);
         Passport::actingAs($this->user());
 
         $attrs = $this->apiJson('GET', '/api/v1/settings')->assertOk()->json('data.attributes');
@@ -105,8 +105,7 @@ class WhatsappPaymentTest extends TestCase
         // Antes, las claves payment_* solo llegaban a los administradores y el
         // paso de pago quedaba vacío para todos los clientes.
         $this->assertTrue($attrs['payment_whatsapp_enabled']);
-        $this->assertTrue($attrs['payment_bank_transfer_enabled']);
-        $this->assertSame('Banco Agrícola', $attrs['payment_bank_name']);
+        $this->assertTrue($attrs['payment_cash_enabled']);
     }
 
     public function test_los_ajustes_publicos_no_exponen_credenciales_de_pasarela(): void
@@ -116,8 +115,8 @@ class WhatsappPaymentTest extends TestCase
 
         $attrs = $this->apiJson('GET', '/api/v1/settings')->assertOk()->json('data.attributes');
 
-        $this->assertArrayNotHasKey('stripe_secret_key', $attrs);
-        $this->assertStringNotContainsString('sk_live_no_debe_salir', json_encode($attrs));
+        $this->assertArrayNotHasKey('wompi_private_key', $attrs);
+        $this->assertStringNotContainsString('priv_live_no_debe_salir', json_encode($attrs));
     }
 
     public function test_un_visitante_sin_sesion_tambien_ve_los_metodos(): void
@@ -128,15 +127,16 @@ class WhatsappPaymentTest extends TestCase
             ->get('/api/v1/settings')->assertOk()->json('data.attributes');
 
         $this->assertTrue($attrs['payment_whatsapp_enabled']);
-        $this->assertArrayNotHasKey('stripe_secret_key', $attrs);
+        $this->assertArrayNotHasKey('wompi_private_key', $attrs);
     }
 
     public function test_la_estructura_heredada_del_seeder_tambien_es_visible(): void
     {
         // Lo que hay en producción: payment_methods anidado, no claves planas.
+        // PayPal y Stripe se retiraron; Wompi sigue usando esta forma legada.
         Setting::updateOrCreate(['key' => 'payment_gateway'], ['value' => json_encode([
             'payment_methods' => [
-                'stripe' => ['enabled' => true, 'mode' => 'sandbox', 'key' => 'pk_x', 'secret' => 'sk_secreto'],
+                'wompi' => ['enabled' => true, 'mode' => 'sandbox', 'key' => 'pub_x', 'secret' => 'sk_secreto'],
             ],
             'payment_whatsapp_enabled' => true,
         ])]);
@@ -145,7 +145,7 @@ class WhatsappPaymentTest extends TestCase
         $attrs = $this->withHeaders(['Accept' => 'application/vnd.api+json'])
             ->get('/api/v1/settings')->assertOk()->json('data.attributes');
 
-        $this->assertTrue($attrs['payment_stripe_enabled']);
+        $this->assertTrue($attrs['payment_wompi_enabled']);
         $this->assertTrue($attrs['payment_whatsapp_enabled']);
         $this->assertStringNotContainsString('sk_secreto', json_encode($attrs));
     }

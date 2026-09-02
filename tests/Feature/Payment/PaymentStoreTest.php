@@ -139,17 +139,17 @@ class PaymentStoreTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_store_crea_pago_manual_por_transferencia(): void
+    public function test_store_crea_pago_manual_en_efectivo(): void
     {
         $user = $this->createAuthenticatedUser();
         $booking = $this->createBookingForUser($user);
 
         $response = $this->postJsonApi('/api/v1/payments', $this->storePayload($booking->id, [
-            'data' => ['attributes' => ['method' => 'bank_transfer']],
+            'data' => ['attributes' => ['method' => 'cash']],
         ]));
 
         $response->assertCreated();
-        $this->assertDatabaseHas('payments', ['method' => 'bank_transfer']);
+        $this->assertDatabaseHas('payments', ['method' => 'cash']);
     }
 
     public function test_store_requiere_autenticacion(): void

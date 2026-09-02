@@ -337,7 +337,7 @@ Route::middleware(['auth:api'])->group(function () {
 Route::post('/payments/webhook/{gateway}', [WebhookController::class, 'handle'])
     ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
     ->middleware('throttle:120,1')
-    ->where('gateway', 'stripe|paypal|wompi')
+    ->where('gateway', 'wompi')
     ->name('api.v1.payments.webhook');
 
 // Public tours

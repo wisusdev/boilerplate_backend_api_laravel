@@ -367,7 +367,7 @@ class PaymentLinkService
     /**
      * Con la reserva pagada del todo, se confirma sola.
      *
-     * Nota: los webhooks de Stripe/PayPal/Wompi NO hacen esto todavía; una
+     * Nota: el webhook de Wompi NO hace esto todavía; una
      * reserva pagada con tarjeta se queda en 'pending' hasta que alguien la
      * mueve a mano. Aquí sí, porque el cobro asistido ya exige un humano y
      * dejarlo a medias sería pedirle dos pasos para una sola decisión.

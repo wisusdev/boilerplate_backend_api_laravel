@@ -25,7 +25,7 @@ class SettingsPublicTest extends TestCase
 
         Setting::create(['key' => 'payment_gateway', 'value' => json_encode([
             'payment_methods' => [
-                'stripe' => ['enabled' => true, 'mode' => 'sandbox', 'key' => 'pk_live', 'secret' => 'sk_secret_value'],
+                'wompi' => ['enabled' => true, 'mode' => 'sandbox', 'key' => 'pub_live', 'secret' => 'sk_secret_value'],
             ],
         ])]);
     }
@@ -46,7 +46,7 @@ class SettingsPublicTest extends TestCase
 
         $attributes = $response->json('data.attributes');
 
-        $this->assertArrayNotHasKey('stripe_secret_key', $attributes);
+        $this->assertArrayNotHasKey('wompi_private_key', $attributes);
         $this->assertStringNotContainsString('sk_secret_value', json_encode($attributes));
     }
 }

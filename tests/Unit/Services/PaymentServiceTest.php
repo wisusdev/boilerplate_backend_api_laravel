@@ -64,20 +64,20 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
 
         $payment = $this->service->create($booking, [
-            'gateway' => 'paypal',
-            'method' => 'paypal',
+            'gateway' => 'wompi',
+            'method' => 'card',
             'amount' => 160.00,
             'currency_code' => 'USD',
             'status' => 'pending',
         ]);
 
         $this->assertInstanceOf(Payment::class, $payment);
-        $this->assertEquals('paypal', $payment->gateway);
+        $this->assertEquals('wompi', $payment->gateway);
         $this->assertEquals('pending', $payment->status);
         $this->assertEquals(160.00, (float) $payment->amount);
         $this->assertNull($payment->paid_at);
         $this->assertDatabaseHas('payments', [
-            'gateway' => 'paypal',
+            'gateway' => 'wompi',
             'status' => 'pending',
         ]);
     }
@@ -103,7 +103,7 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
 
         $payment = $this->service->create($booking, [
-            'gateway' => 'stripe',
+            'gateway' => 'wompi',
             'method' => 'card',
             'amount' => 50.00,
             'currency_code' => 'USD',
@@ -118,14 +118,14 @@ class PaymentServiceTest extends TestCase
         $booking = $this->createBooking();
 
         $payment = $this->service->create($booking, [
-            'gateway' => 'paypal',
+            'gateway' => 'wompi',
             'amount' => 100.00,
             'currency_code' => 'USD',
             'status' => 'pending',
-            'transaction_reference' => 'PAYPAL_ORDER_XYZ123',
+            'transaction_reference' => 'WOMPI_LINK_XYZ123',
         ]);
 
-        $this->assertEquals('PAYPAL_ORDER_XYZ123', $payment->transaction_reference);
+        $this->assertEquals('WOMPI_LINK_XYZ123', $payment->transaction_reference);
     }
 
     public function test_create_establece_relacion_polimorfca_con_booking(): void
@@ -162,7 +162,7 @@ class PaymentServiceTest extends TestCase
     {
         $booking = $this->createBooking();
         $payment = $this->service->create($booking, [
-            'gateway' => 'paypal',
+            'gateway' => 'wompi',
             'amount' => 160.00,
             'status' => 'pending',
         ]);
@@ -177,7 +177,7 @@ class PaymentServiceTest extends TestCase
         Carbon::setTestNow('2026-09-10 15:00:00');
         $booking = $this->createBooking();
         $payment = $this->service->create($booking, [
-            'gateway' => 'stripe',
+            'gateway' => 'wompi',
             'amount' => 100.00,
             'status' => 'pending',
         ]);
@@ -192,7 +192,7 @@ class PaymentServiceTest extends TestCase
     {
         $booking = $this->createBooking();
         $payment = $this->service->create($booking, [
-            'gateway' => 'paypal',
+            'gateway' => 'wompi',
             'amount' => 160.00,
             'status' => 'pending',
             'transaction_reference' => 'OLD_ORDER_ID',
@@ -207,7 +207,7 @@ class PaymentServiceTest extends TestCase
     {
         $booking = $this->createBooking();
         $payment = $this->service->create($booking, [
-            'gateway' => 'paypal',
+            'gateway' => 'wompi',
             'amount' => 160.00,
             'status' => 'pending',
         ]);

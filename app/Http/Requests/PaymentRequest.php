@@ -28,7 +28,10 @@ class PaymentRequest extends FormRequest
 
             'data.attributes.payable_type' => ['required', 'string', Rule::in(['booking'])],
             'data.attributes.payable_id' => ['required', 'integer'],
-            'data.attributes.gateway' => ['required', 'string', Rule::in(['paypal', 'stripe', 'manual', 'whatsapp'])],
+            // 'manual' cubre efectivo (único método manual que queda) y lo que
+            // registra el back-office a mano; wompi/bac_link nunca pasan por
+            // aquí, nacen en /payments/checkout.
+            'data.attributes.gateway' => ['required', 'string', Rule::in(['manual', 'whatsapp'])],
             'data.attributes.method' => ['sometimes', 'nullable', 'string', 'max:50'],
             // `status` solo lo honra el controlador si el usuario tiene
             // 'payments:mark-paid'; para el resto el pago nace en 'pending'.
