@@ -92,6 +92,7 @@ class SettingRequest extends FormRequest
             'data.attributes.payment_bac_link_ttl_hours' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:8760'],
             'data.attributes.payment_bac_dual_control' => $bool,
             'data.attributes.payment_bac_instructions' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'data.attributes.payment_bac_link_auto_release' => $bool,
             'data.attributes.payment_bank_name' => $texto,
             'data.attributes.payment_bank_account' => ['sometimes', 'nullable', 'string', 'max:60'],
             'data.attributes.payment_bank_routing' => ['sometimes', 'nullable', 'string', 'max:60'],

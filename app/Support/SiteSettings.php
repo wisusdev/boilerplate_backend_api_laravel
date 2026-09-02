@@ -140,6 +140,20 @@ class SiteSettings
         return trim((string) (self::paymentGateway()['payment_bac_instructions'] ?? ''));
     }
 
+    /**
+     * ¿Cancelar automáticamente la reserva cuando su enlace caduca sin uso?
+     *
+     * Apagado por defecto a propósito: cancelar una reserva en firme sin que
+     * nadie lo revise es una acción de cara al cliente y difícil de deshacer si
+     * el asiento ya se volvió a vender. Un sitio nuevo empieza solo con el aviso
+     * (el enlace caduca, se notifica, un humano decide); activar esto es una
+     * decisión explícita del operador, no un efecto colateral de instalar la fase.
+     */
+    public static function bacLinkAutoRelease(): bool
+    {
+        return filter_var(self::paymentGateway()['payment_bac_link_auto_release'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }
+
     /** Limpia la caché (útil en tests o tras actualizar settings). */
     public static function flush(): void
     {

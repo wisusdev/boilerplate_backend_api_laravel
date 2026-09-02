@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\PaymentLink;
 use App\Models\User;
+use App\Notifications\BookingNotification;
 use App\Notifications\PaymentLinkIssuedNotification;
 use App\Support\AdminAlerts;
 use App\Support\SiteSettings;
@@ -373,7 +374,23 @@ class PaymentLinkService
      */
     private function confirmBookingIfFullyPaid(?Booking $booking): void
     {
-        if (! $booking || $booking->status !== Booking::STATUS_PENDING) {
+        if (! $booking) {
+            return;
+        }
+
+        // El caso que la Fase 3 hizo posible: el enlace caducó sin uso, la
+        // reserva se canceló para liberar el asiento (§6 de PAGO-ENLACE-BAC.md),
+        // y AHORA llega el cobro. El dinero es real, pero reactivar la reserva a
+        // ciegas podría estar chocando con un asiento que ya se vendió a otro
+        // cliente. Se avisa fuerte y se deja la decisión a una persona: no se
+        // toca el estado de la reserva ni para bien ni para mal.
+        if ($booking->status === Booking::STATUS_CANCELLED) {
+            $this->alertPaidAfterCancellation($booking);
+
+            return;
+        }
+
+        if ($booking->status !== Booking::STATUS_PENDING) {
             return;
         }
 
@@ -383,6 +400,187 @@ class PaymentLinkService
 
         // El observador de Booking se encarga de la factura, el DTE y el aviso.
         $booking->update(['status' => Booking::STATUS_CONFIRMED]);
+    }
+
+    private function alertPaidAfterCancellation(Booking $booking): void
+    {
+        AdminAlerts::send(
+            '⚠ Cobro confirmado sobre una reserva ya cancelada',
+            'Un enlace de pago se confirmó después de que la reserva se cancelara '
+            .'(probablemente por caducidad sin uso). El dinero es real, pero antes de '
+            .'reactivar la reserva hay que comprobar que el cupo siga disponible: pudo '
+            .'haberse vuelto a vender.',
+            array_filter([
+                'reserva' => '#'.$booking->id,
+                'detalle' => $booking->bookable?->title,
+                'fecha del servicio' => $booking->starts_at?->format('d/m/Y H:i'),
+                'cliente' => $booking->user?->email,
+            ])
+        );
+    }
+
+    /**
+     * Datos para el resumen diario: cuántos enlaces hay por estado, cuáles
+     * esperan que alguien revise lo que dijo el cliente, y cuáles vencen pronto
+     * (para poder avisar al cliente antes de perder la venta, no después).
+     *
+     * @return array{
+     *   counts: array<string, int>,
+     *   reported: array<int, array<string, mixed>>,
+     *   expiring_soon: array<int, array<string, mixed>>,
+     * }
+     */
+    public function digestData(): array
+    {
+        $abiertos = PaymentLink::query()
+            ->whereIn('status', PaymentLink::OPEN_STATUSES)
+            ->with(['payment.payable.bookable', 'payment.payable.user'])
+            ->get();
+
+        $conteos = $abiertos->countBy('status')->all();
+
+        $fila = function (PaymentLink $link): array {
+            $booking = $link->booking();
+
+            return [
+                'reference' => $link->reference,
+                'booking_id' => $booking?->id,
+                'amount' => $link->amount,
+                'currency_code' => $link->currency_code,
+                'customer_email' => $booking?->user?->email,
+                'reported_ref' => $link->reported_ref,
+            ];
+        };
+
+        $reportados = $abiertos->where('status', PaymentLink::STATUS_REPORTED)
+            ->sortBy('reported_at')->map($fila)->values()->all();
+
+        $porVencer = $abiertos->whereIn('status', [PaymentLink::STATUS_DRAFT, PaymentLink::STATUS_ACTIVE])
+            ->filter(fn (PaymentLink $l) => $l->expires_at && $l->expires_at->isFuture() && $l->expires_at->diffInHours(now()) < 24)
+            ->sortBy('expires_at')->map($fila)->values()->all();
+
+        return ['counts' => $conteos, 'reported' => $reportados, 'expiring_soon' => $porVencer];
+    }
+
+    /**
+     * Enlaces que caducaron sin que nadie los use: dejamos de esperar el pago.
+     *
+     * "Caducar" NO significa que el enlace ya no cobre — no podemos anularlo en
+     * el banco, así que un cobro tardío sigue siendo posible (`confirm()` lo
+     * admite igual). Significa que el sistema deja de contar con ese dinero.
+     *
+     * Nunca toca un enlace en `reported`: el cliente ya dijo que pagó y esa
+     * evidencia necesita que una persona la revise, no que el reloj decida.
+     *
+     * Cuando `payment_bac_link_auto_release` está activo, además libera el
+     * asiento cancelando la reserva — pero SOLO si este es el único intento de
+     * pago que tiene la reserva. Si hay otro pago en curso (efectivo, WhatsApp,
+     * otro enlace), tocar la reserva por un enlace abandonado sería cancelar una
+     * venta que el cliente pretende cerrar por otra vía.
+     *
+     * @return array{expired: array<int, array<string, mixed>>, released: int}
+     */
+    public function expireDueLinks(): array
+    {
+        $autoLibera = SiteSettings::bacLinkAutoRelease();
+        $vencidos = PaymentLink::query()
+            ->whereIn('status', [PaymentLink::STATUS_DRAFT, PaymentLink::STATUS_ACTIVE])
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->with(['payment.payable.bookable', 'payment.payable.user'])
+            ->get();
+
+        $resumen = [];
+        $liberadas = 0;
+
+        foreach ($vencidos as $link) {
+            DB::transaction(function () use ($link, $autoLibera, &$resumen, &$liberadas) {
+                /** @var PaymentLink $link */
+                $link = PaymentLink::query()->lockForUpdate()->find($link->id);
+
+                if (! $link || ! in_array($link->status, [PaymentLink::STATUS_DRAFT, PaymentLink::STATUS_ACTIVE], true)) {
+                    return; // Ya lo movió otra ejecución solapada.
+                }
+
+                $payment = $link->payment;
+                $link->update(['status' => PaymentLink::STATUS_EXPIRED]);
+
+                if ($payment && $payment->status === 'pending') {
+                    $this->payments->markFailed($payment);
+                }
+
+                $booking = $link->booking();
+                $liberoAsiento = false;
+
+                if ($autoLibera && $booking && $booking->status === Booking::STATUS_PENDING
+                    && Payment::query()->where('payable_type', $booking::class)
+                        ->where('payable_id', $booking->getKey())->count() === 1) {
+                    $this->releaseAbandonedBooking($booking);
+                    $liberoAsiento = true;
+                    $liberadas++;
+                }
+
+                $resumen[] = [
+                    'reference' => $link->reference,
+                    'booking_id' => $booking?->id,
+                    'booking_title' => $booking?->bookable?->title,
+                    'customer_email' => $booking?->user?->email,
+                    'amount' => $link->amount,
+                    'currency_code' => $link->currency_code,
+                    'seat_released' => $liberoAsiento,
+                ];
+            });
+        }
+
+        if ($resumen !== []) {
+            $this->alertLinksExpired($resumen, $liberadas);
+        }
+
+        return ['expired' => $resumen, 'released' => $liberadas];
+    }
+
+    /**
+     * Un correo por ejecución (no uno por enlace): un turno con varios enlaces
+     * vencidos a la vez no debe llenar la bandeja del back-office.
+     */
+    private function alertLinksExpired(array $resumen, int $liberadas): void
+    {
+        $detalles = [];
+        foreach ($resumen as $fila) {
+            $detalles[$fila['reference']] = 'reserva #'.($fila['booking_id'] ?? '?')
+                .' · '.$this->money($fila['amount'], $fila['currency_code'])
+                .($fila['seat_released'] ? ' · asiento liberado' : ' · reserva sin tocar (revisar)');
+        }
+
+        AdminAlerts::send(
+            count($resumen).' enlace(s) de pago caducado(s) sin usar',
+            $liberadas > 0
+                ? "Se liberaron {$liberadas} reserva(s). El enlace sigue aceptando un pago tardío si el cliente insiste: "
+                    .'confírmalo igual y revisa disponibilidad antes de reactivarla.'
+                : 'Ninguna reserva se tocó automáticamente (revisión manual activada o hay otros pagos en curso).',
+            $detalles
+        );
+    }
+
+    /**
+     * Cancela una reserva cuyo único intento de pago quedó abandonado, y avisa
+     * al cliente. No es silencioso a propósito: cancelar una reserva en firme
+     * sin decírselo a quien la hizo es exactamente el tipo de sorpresa que este
+     * proyecto se propuso evitar (ver feedback sobre mensajes que asustan).
+     */
+    private function releaseAbandonedBooking(Booking $booking): void
+    {
+        $booking->update(['status' => Booking::STATUS_CANCELLED]);
+
+        $titulo = $booking->bookable?->title ?? 'tu reserva';
+
+        $booking->user?->notify(new BookingNotification(
+            'Liberamos tu reserva por falta de pago',
+            "No completaste el pago de \"{$titulo}\" dentro del plazo del enlace, así que liberamos "
+            .'el cupo para otros clientes. Si todavía quieres viajar, puedes reservar de nuevo cuando '
+            .'quieras — y si ya pagaste, escríbenos con tu comprobante y lo revisamos enseguida.',
+            ['reserva' => '#'.$booking->id]
+        ));
     }
 
     /**

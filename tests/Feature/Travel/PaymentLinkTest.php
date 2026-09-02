@@ -15,6 +15,7 @@ use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
@@ -38,8 +39,21 @@ class PaymentLinkTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Fijo: sin esto, cualquier aserción de fecha relativa (`now()->subHours(3)`
+        // frente a la fecha de creación del enlace) se vuelve dependiente de la
+        // hora del día en que corran los tests — falla justo al cruzar la
+        // medianoche UTC, que es donde vive `now()` en esta app (app.timezone).
+        $this->travelTo(Carbon::parse('2026-06-15 12:00:00', 'UTC'));
+
         $this->seed([PermissionSeeder::class, RoleSeeder::class]);
         $this->habilitarEnlaces();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->travelBack();
+        parent::tearDown();
     }
 
     // ─── Utilidades ───────────────────────────────────────────────────────────

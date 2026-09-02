@@ -147,7 +147,7 @@ class SettingsController extends Controller
             'payment_whatsapp_enabled', 'payment_whatsapp_number',
             // Enlaces de pago del banco: ver PAGO-ENLACE-BAC.md.
             'payment_bac_link_enabled', 'payment_bac_link_hosts', 'payment_bac_link_ttl_hours',
-            'payment_bac_dual_control', 'payment_bac_instructions',
+            'payment_bac_dual_control', 'payment_bac_instructions', 'payment_bac_link_auto_release',
             // credentials
             'paypal_mode', 'paypal_client_id', 'paypal_client_secret',
             'stripe_mode', 'stripe_public_key', 'stripe_secret_key',

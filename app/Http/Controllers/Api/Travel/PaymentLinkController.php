@@ -9,6 +9,8 @@ use App\Http\Resources\PaymentLinkResource;
 use App\Models\Booking;
 use App\Models\PaymentLink;
 use App\Services\PaymentLinkService;
+use App\Services\PaymentReconciliationService;
+use App\Support\BankStatementCsv;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -158,6 +160,38 @@ class PaymentLinkController extends Controller
         );
 
         return PaymentLinkResource::make($link->load(['payment.payable.bookable', 'payment.payable.user']));
+    }
+
+    /**
+     * POST /payment-links/reconcile
+     *
+     * Cruza el CSV exportado del portal del banco contra lo que tenemos
+     * registrado. De solo lectura: no confirma nada por sí solo, solo informa
+     * qué convendría revisar. Confirmar sigue pasando por `confirm()`, uno por
+     * uno, con la autorización y el importe que el agente vio en el portal.
+     */
+    public function reconcile(Request $request): JsonResponse
+    {
+        $request->validate([
+            // .csv o .txt (algunos portales exportan con esa extensión pero
+            // contenido separado por comas o punto y coma igualmente).
+            'statement' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        try {
+            $filas = BankStatementCsv::parse($request->file('statement')->get());
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['errors' => [['title' => 'reconciliation.unreadable', 'detail' => $e->getMessage()]]], 422);
+        }
+
+        $reporte = app(PaymentReconciliationService::class)->reconcile($filas);
+
+        return response()->json([
+            'data' => [
+                'type' => 'payment-reconciliation',
+                'attributes' => $reporte,
+            ],
+        ]);
     }
 
     /**

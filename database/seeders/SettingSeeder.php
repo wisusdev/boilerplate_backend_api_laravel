@@ -51,6 +51,10 @@ class SettingSeeder extends Seeder
                 'payment_bac_link_ttl_hours' => 24,
                 'payment_bac_dual_control' => false,
                 'payment_bac_instructions' => '',
+                // Apagado por defecto: cancelar una reserva sin que nadie lo
+                // revise es una decisión que debe tomar el operador, no un
+                // efecto colateral de instalar la fase. Ver SiteSettings.
+                'payment_bac_link_auto_release' => false,
                 'currency' => 'USD',
                 'currency_symbol' => '$',
                 'decimal_separator' => '.',

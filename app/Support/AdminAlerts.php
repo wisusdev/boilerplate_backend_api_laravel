@@ -4,25 +4,50 @@ namespace App\Support;
 
 use App\Models\User;
 use App\Notifications\AdminAlertNotification;
+use Illuminate\Notifications\Notification as NotificationBase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Role;
 
 /**
  * Aviso por correo a quien administra el sitio.
  *
- * Estaba dentro de BookingController; los enlaces de pago también necesitan
- * avisar, y duplicar la consulta de roles era pedir que las dos copias se
- * separasen con el tiempo.
+ * Un único punto para resolver "quién es admin" evita que cada sitio nuevo que
+ * necesite avisar al back-office (pagos, enlaces del banco, reservas) repita la
+ * consulta de roles y acabe divergiendo con el tiempo.
  */
 class AdminAlerts
 {
     /**
+     * Aviso simple de una línea por dato (título + cuerpo + detalles planos).
+     *
      * @param  array<string, string|null>  $details
      */
     public static function send(string $title, string $body, array $details = []): void
     {
-        // Solo roles que existan: el scope role() de Spatie lanza excepción con
-        // un rol inexistente.
+        self::notifyAll(new AdminAlertNotification($title, $body, $details));
+    }
+
+    /**
+     * Envía cualquier notificación (estructura propia, no solo texto plano) a
+     * todo el back-office. Para avisos que necesitan más forma que "etiqueta:
+     * valor" — un resumen con varias secciones, una tabla, etc.
+     */
+    public static function notifyAll(NotificationBase $notification): void
+    {
+        foreach (self::recipients() as $email) {
+            Notification::route('mail', $email)->notify($notification);
+        }
+    }
+
+    /**
+     * Correos de admin/superadmin. Solo roles que existan: el scope role() de
+     * Spatie lanza excepción con un rol inexistente.
+     *
+     * @return Collection<int, string>
+     */
+    public static function recipients(): Collection
+    {
         $roleNames = Role::query()
             ->where('guard_name', 'api')
             ->whereIn('name', ['admin', 'superadmin'])
@@ -30,14 +55,9 @@ class AdminAlerts
             ->all();
 
         if ($roleNames === []) {
-            return;
+            return collect();
         }
 
-        $emails = User::role($roleNames, 'api')->pluck('email')->filter()->unique();
-
-        foreach ($emails as $email) {
-            Notification::route('mail', $email)
-                ->notify(new AdminAlertNotification($title, $body, $details));
-        }
+        return User::role($roleNames, 'api')->pluck('email')->filter()->unique()->values();
     }
 }

@@ -261,6 +261,12 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/', [PaymentLinkController::class, 'index'])
             ->middleware('permission:payments:view-all')->name('index');
 
+        // Conciliación contra el extracto del banco (Fase 3). Multipart y de
+        // solo lectura: no confirma nada, solo dice qué convendría revisar.
+        Route::post('/reconcile', [PaymentLinkController::class, 'reconcile'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:payments:confirm-link')->name('reconcile');
+
         // El cliente llega por la referencia desde el correo; el back-office, desde la cola.
         Route::get('/{paymentLink:reference}', [PaymentLinkController::class, 'show'])->name('show');
 
