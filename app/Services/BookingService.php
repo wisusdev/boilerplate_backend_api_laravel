@@ -7,15 +7,20 @@ use App\Models\User;
 use App\Notifications\AdminAlertNotification;
 use App\Notifications\ReservationConfirmedNotification;
 use App\Services\Booking\BookingHandlerInterface;
+use App\Support\AdminAlerts;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 class BookingService
 {
     private array $handlers = [];
 
-    public function __construct(private readonly CouponService $couponService) {}
+    public function __construct(
+        private readonly CouponService $couponService,
+        private readonly PaymentService $paymentService,
+    ) {}
 
     public function registerHandler(string $type, BookingHandlerInterface $handler): void
     {
@@ -66,9 +71,14 @@ class BookingService
         });
     }
 
-    public function changeStatus(Booking $booking, string $status): Booking
+    /**
+     * @param  ?User  $actor  Quién pide el cambio. Se usa solo para dejar constancia
+     *                        de quién confirmó una reserva sin haberse cobrado del todo;
+     *                        el cambio de estado en sí no depende de él.
+     */
+    public function changeStatus(Booking $booking, string $status, ?User $actor = null): Booking
     {
-        return DB::transaction(function () use ($booking, $status): Booking {
+        $booking = DB::transaction(function () use ($booking, $status): Booking {
             $wasCancelled = $booking->status === Booking::STATUS_CANCELLED;
             $booking->update(['status' => $status]);
 
@@ -86,6 +96,45 @@ class BookingService
 
             return $booking->refresh();
         });
+
+        if ($status === Booking::STATUS_CONFIRMED) {
+            $this->warnIfConfirmedUnpaid($booking, $actor);
+        }
+
+        return $booking;
+    }
+
+    /**
+     * Confirmar sin haber cobrado puede ser una decisión legítima (cobro en
+     * efectivo el día del servicio), pero antes no quedaba ni rastro de que
+     * alguien la hubiera tomado a sabiendas. No bloquea — solo dice quién fue y
+     * cuánto queda pendiente, igual que se hace con un cobro tardío de un
+     * enlace de pago del banco (ver PaymentLinkService).
+     */
+    private function warnIfConfirmedUnpaid(Booking $booking, ?User $actor): void
+    {
+        $pendiente = $this->paymentService->outstandingFor($booking);
+
+        if ($pendiente <= 0) {
+            return;
+        }
+
+        Log::warning('Reserva confirmada con saldo pendiente.', [
+            'booking_id' => $booking->id,
+            'outstanding' => $pendiente,
+            'currency' => $booking->currency_code,
+            'confirmed_by' => $actor?->id,
+        ]);
+
+        AdminAlerts::send(
+            'Reserva confirmada con saldo pendiente',
+            'Puede ser intencional (cobro en efectivo el día del servicio), pero conviene revisarlo.',
+            array_filter([
+                'reserva' => '#'.$booking->id,
+                'saldo pendiente' => number_format($pendiente, 2).' '.($booking->currency_code ?: 'USD'),
+                'confirmada por' => $actor?->email,
+            ])
+        );
     }
 
     public function notifyConfirmation(Booking $booking): void

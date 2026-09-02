@@ -59,7 +59,7 @@ class TransportVehicleController extends Controller
         ]);
     }
 
-    public function store(TransportVehicleRequest $request): TransportVehicleResource
+    public function store(TransportVehicleRequest $request): JsonResponse
     {
         $data = $request->validated()['data']['attributes'];
 
@@ -79,7 +79,11 @@ class TransportVehicleController extends Controller
             'meta_description' => $data['meta_description'] ?? null,
         ]);
 
-        return TransportVehicleResource::make($vehicle->fresh());
+        // TourController ya devuelve 201 al crear; este endpoint devolvía 200,
+        // que llevó a escribir un test que asumía lo incorrecto hasta que falló.
+        return TransportVehicleResource::make($vehicle->fresh())
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function update(TransportVehicleRequest $request, TransportVehicle $transportVehicle): TransportVehicleResource

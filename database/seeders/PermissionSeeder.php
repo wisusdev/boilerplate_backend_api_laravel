@@ -19,11 +19,14 @@ class PermissionSeeder extends Seeder
     {
         return [
             // ── Base: roles ──
+            // 'roles:create' y 'roles:edit' NO existen a propósito: son el
+            // patrón de una app web ("permiso para ver el formulario"), que en
+            // una API no protege nada — el control real ya lo hacen 'store' y
+            // 'update'. Tenerlos sin uso solo confundía a quien configurara un
+            // rol. Ver migración 2026_09_01_000003.
             'roles:index',
-            'roles:create',
             'roles:store',
             'roles:show',
-            'roles:edit',
             'roles:update',
             'roles:delete',
 
@@ -33,10 +36,8 @@ class PermissionSeeder extends Seeder
 
             // ── Base: users ──
             'users:index',
-            'users:create',
             'users:store',
             'users:show',
-            'users:edit',
             'users:update',
             'users:delete',
 

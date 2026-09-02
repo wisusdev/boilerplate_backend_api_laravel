@@ -76,7 +76,7 @@ class BookingController extends Controller
 
         // Presencial: el admin puede confirmar de una vez (dispara la notificación de confirmación).
         if ($this->isAdmin($request) && $request->input('data.attributes.status') === Booking::STATUS_CONFIRMED) {
-            $booking = $this->bookingService->changeStatus($booking, Booking::STATUS_CONFIRMED);
+            $booking = $this->bookingService->changeStatus($booking, Booking::STATUS_CONFIRMED, $request->user());
         }
 
         return BookingResource::make($this->loadRelations($booking));
@@ -172,7 +172,7 @@ class BookingController extends Controller
             abort(403);
         }
 
-        $booking = $this->bookingService->changeStatus($booking, $status);
+        $booking = $this->bookingService->changeStatus($booking, $status, $request->user());
 
         return BookingResource::make($booking);
     }

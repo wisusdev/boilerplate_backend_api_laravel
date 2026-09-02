@@ -99,9 +99,15 @@ trait JsonApiResource
             $collection->additional(['included' => $included]);
         }
 
-        $collection->with['links'] = [
-            'self' => $resources->path(),
-        ];
+        // `Resource::collection()` a veces envuelve una colección normal, no
+        // paginada (p. ej. el alta múltiple de la galería devuelve varios
+        // recién creados de golpe): `path()` solo existe en los paginadores, y
+        // llamarlo sin comprobar tumbaba esos endpoints con un 500.
+        if (method_exists($resources, 'path')) {
+            $collection->with['links'] = [
+                'self' => $resources->path(),
+            ];
+        }
 
         return $collection;
     }

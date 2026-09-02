@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Travel;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\GalleryReorderRequest;
 use App\Http\Resources\GalleryItemResource;
 use App\Models\GalleryItem;
 use Illuminate\Http\JsonResponse;
@@ -81,9 +82,9 @@ class GalleryController extends Controller
         return response()->json(null, 204);
     }
 
-    public function reorder(Request $request): JsonResponse
+    public function reorder(GalleryReorderRequest $request): JsonResponse
     {
-        $ids = $request->input('data.attributes.ids', $request->input('ids', []));
+        $ids = $request->validated()['data']['attributes']['ids'];
 
         foreach ($ids as $order => $id) {
             GalleryItem::where('id', $id)->update(['sort_order' => $order]);
