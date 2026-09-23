@@ -163,6 +163,39 @@ class BookingActionsTest extends TestCase
         ])->assertStatus(422);
     }
 
+    /**
+     * Regresión: antes, reagendar una reserva de transporte solo tocaba
+     * starts_at/ends_at sin recalcular total_price, así que el dueño podía
+     * alargar el alquiler (p. ej. de 1 hora a 3 días) pagando el precio de la
+     * ventana original y mucho más corta.
+     */
+    public function test_reagendar_transporte_recalcula_el_precio_con_la_nueva_duracion(): void
+    {
+        $vehicle = TransportVehicle::create([
+            'title' => 'Van Precio', 'vehicle_type' => 'van', 'location' => 'SV',
+            'hourly_rate' => 10, 'daily_rate' => 80, 'capacity' => 6, 'currency_code' => 'USD', 'is_active' => true,
+        ]);
+
+        $user = $this->makeUser('owner-precio@example.com');
+        $booking = Booking::create([
+            'bookable_type' => TransportVehicle::class, 'bookable_id' => $vehicle->id, 'user_id' => $user->id,
+            'starts_at' => now()->addDays(2)->setTime(8, 0), 'ends_at' => now()->addDays(2)->setTime(9, 0),
+            'party_size' => 1, 'total_price' => 10, 'currency_code' => 'USD', 'status' => Booking::STATUS_PENDING,
+        ]);
+        $booking->transportDetail()->create(['pickup_location' => 'A', 'dropoff_location' => 'B', 'rental_type' => 'hourly']);
+        Passport::actingAs($user);
+
+        // 1 hora (10 USD) -> 5 horas: debe cobrar por las 5, no seguir en 10.
+        $pickup = now()->addDays(2)->setTime(8, 0);
+        $dropoff = now()->addDays(2)->setTime(13, 0);
+        $this->postJson("/api/v1/bookings/{$booking->id}/reschedule", [
+            'pickup_at' => $pickup->toDateTimeString(),
+            'dropoff_at' => $dropoff->toDateTimeString(),
+        ])->assertOk();
+
+        $this->assertSame(50.0, (float) $booking->fresh()->total_price);
+    }
+
     public function test_enviar_mensaje_guarda_y_notifica_admins(): void
     {
         Notification::fake();

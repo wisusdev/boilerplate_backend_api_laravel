@@ -78,7 +78,33 @@ class LoginTest extends TestCase
         $response = $this->postJson('/api/v1/auth/login', $this->loginPayload('nobody@example.com', 'password123'));
 
         $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['data.attributes.email']);
+        $response->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_login_no_permite_enumerar_cuentas_por_la_forma_del_error(): void
+    {
+        // Regresión: antes, un email no registrado fallaba en la validación
+        // (campo data.attributes.email, mensaje emailExists) mientras que una
+        // contraseña incorrecta para un email registrado fallaba en el
+        // controlador (campo email, mensaje invalidCredentials) — dos formas
+        // de error distinguibles que permitían enumerar cuentas. Ahora ambos
+        // casos deben producir exactamente el mismo campo y mensaje de error.
+        $this->createUser('user@example.com', 'correct_pass');
+
+        $responseInexistente = $this->postJson('/api/v1/auth/login', $this->loginPayload('nobody@example.com', 'whatever'));
+        $responseContrasenaMala = $this->postJson('/api/v1/auth/login', $this->loginPayload('user@example.com', 'wrong_pass'));
+
+        $responseInexistente->assertStatus(422);
+        $responseContrasenaMala->assertStatus(422);
+
+        $this->assertSame(
+            array_keys($responseInexistente->json('errors')),
+            array_keys($responseContrasenaMala->json('errors')),
+        );
+        $this->assertSame(
+            $responseInexistente->json('errors.email'),
+            $responseContrasenaMala->json('errors.email'),
+        );
     }
 
     public function test_login_sin_email_retorna_validacion_422(): void
@@ -122,5 +148,20 @@ class LoginTest extends TestCase
         $response = $this->postJson('/api/v1/auth/login', []);
 
         $response->assertStatus(422);
+    }
+
+    public function test_login_respeta_el_limite_de_dispositivos_concurrentes(): void
+    {
+        config(['auth.limit_auth_devices' => 2]);
+        $this->createUser('user@example.com', 'password123');
+
+        $primero = $this->postJson('/api/v1/auth/login', $this->loginPayload('user@example.com', 'password123'));
+        $segundo = $this->postJson('/api/v1/auth/login', $this->loginPayload('user@example.com', 'password123'));
+        $tercero = $this->postJson('/api/v1/auth/login', $this->loginPayload('user@example.com', 'password123'));
+
+        $primero->assertOk();
+        $segundo->assertOk();
+        $tercero->assertStatus(422);
+        $tercero->assertJsonValidationErrors(['email']);
     }
 }

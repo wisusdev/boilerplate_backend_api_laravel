@@ -143,6 +143,30 @@ class PaymentWebhookTest extends TestCase
         $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
     }
 
+    /**
+     * Regresión: un evento firmado que dice "aprobada" pero no trae ningún id
+     * de transacción no se puede reconfirmar contra la API — antes ese caso
+     * saltaba por completo la reconfirmación y marcaba el pago pagado
+     * confiando solo en la firma HMAC y el campo esAprobada del propio evento.
+     */
+    public function test_wompi_webhook_ignora_un_evento_aprobado_sin_id_de_transaccion(): void
+    {
+        $payment = $this->makePayment('wompi', '55200');
+
+        $payload = json_encode([
+            'idExterno' => 'pago-'.$payment->id,
+            'esAprobada' => true,
+        ]);
+        $signature = hash_hmac('sha256', $payload, self::WOMPI_SECRET);
+
+        $this->call('POST', '/api/v1/payments/webhook/wompi', [], [], [], [
+            'HTTP_X_EVENT_SIGNATURE' => $signature,
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)->assertOk()->assertJson(['status' => 'ignored', 'reason' => 'missing transaction id']);
+
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'status' => 'pending']);
+    }
+
     public function test_wompi_webhook_marca_fallido_cuando_no_fue_aprobada(): void
     {
         $payment = $this->makePayment('wompi', '55124');

@@ -175,6 +175,80 @@ class FinanceTest extends TestCase
         $this->assertSame(1, $expense->fresh()->getMedia('receipt')->count());
     }
 
+    /**
+     * Regresión: un rol personalizado con expenses:update/expenses:delete pero
+     * SIN expenses:view-all (una combinación distinta de la del preset
+     * 'finanzas', pero válida vía RolesController) no debía poder tocar el
+     * gasto de otro usuario. Antes update()/destroy() no comprobaban
+     * ownership, solo el permiso de ruta.
+     */
+    private function customExpenseEditor(): User
+    {
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
+        $user = $this->user('editor-gastos');
+        $user->givePermissionTo(['expenses:index', 'expenses:update', 'expenses:delete']);
+
+        return $user;
+    }
+
+    public function test_expense_update_bloquea_a_quien_no_ve_todo_y_no_es_el_dueno(): void
+    {
+        $cat = $this->category();
+        $ajeno = $this->user('ajeno');
+        $expense = Expense::create(['expense_category_id' => $cat->id, 'guide_id' => $ajeno->id, 'amount' => 5, 'spent_at' => now()]);
+
+        Passport::actingAs($this->customExpenseEditor());
+
+        $this->apiJson('PATCH', "/api/v1/expenses/{$expense->id}", [
+            'data' => ['id' => (string) $expense->id, 'type' => 'expenses', 'attributes' => ['amount' => 9999]],
+        ])->assertForbidden();
+
+        $this->assertSame('5.00', $expense->fresh()->amount);
+    }
+
+    public function test_expense_destroy_bloquea_a_quien_no_ve_todo_y_no_es_el_dueno(): void
+    {
+        $cat = $this->category();
+        $ajeno = $this->user('ajeno');
+        $expense = Expense::create(['expense_category_id' => $cat->id, 'guide_id' => $ajeno->id, 'amount' => 5, 'spent_at' => now()]);
+
+        Passport::actingAs($this->customExpenseEditor());
+
+        $this->apiJson('DELETE', "/api/v1/expenses/{$expense->id}")->assertForbidden();
+
+        $this->assertDatabaseHas('expenses', ['id' => $expense->id]);
+    }
+
+    public function test_expense_update_permite_al_dueno_editar_su_propio_gasto_sin_reasignarlo(): void
+    {
+        $cat = $this->category();
+        $editor = $this->customExpenseEditor();
+        $otro = $this->user('otro-guia');
+        $expense = Expense::create(['expense_category_id' => $cat->id, 'guide_id' => $editor->id, 'amount' => 5, 'spent_at' => now()]);
+
+        Passport::actingAs($editor);
+
+        $response = $this->apiJson('PATCH', "/api/v1/expenses/{$expense->id}", [
+            'data' => ['id' => (string) $expense->id, 'type' => 'expenses', 'attributes' => ['amount' => 12.34, 'guide_id' => $otro->id]],
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.attributes.amount', '12.34');
+        // guide_id enviado se ignora: no puede reasignar su propio gasto a otro guía.
+        $this->assertSame($editor->id, $expense->fresh()->guide_id);
+    }
+
+    public function test_expense_destroy_permite_al_dueno_borrar_su_propio_gasto(): void
+    {
+        $cat = $this->category();
+        $editor = $this->customExpenseEditor();
+        $expense = Expense::create(['expense_category_id' => $cat->id, 'guide_id' => $editor->id, 'amount' => 5, 'spent_at' => now()]);
+
+        Passport::actingAs($editor);
+
+        $this->apiJson('DELETE', "/api/v1/expenses/{$expense->id}")->assertNoContent();
+        $this->assertDatabaseMissing('expenses', ['id' => $expense->id]);
+    }
+
     public function test_admin_can_grant_and_revoke_guide_role(): void
     {
         Role::findOrCreate('guia', 'api');
@@ -194,6 +268,60 @@ class FinanceTest extends TestCase
         // Revocar.
         $this->plainJson('DELETE', "/api/v1/guides/{$person->id}")->assertNoContent();
         $this->assertFalse($person->fresh()->hasRole('guia'));
+    }
+
+    /**
+     * Regresión: 'guia' otorga expenses:index/expenses:store (ver RoleSeeder).
+     * Un rol personalizado con solo 'guides:store' (posible vía
+     * RolesController) no debía poder usarse para auto-otorgarse esos
+     * permisos, ni para otorgárselos a otro usuario. Antes GuideController no
+     * comprobaba nada más allá del permiso de ruta.
+     */
+    public function test_guides_store_no_permite_auto_otorgarse_permisos_no_poseidos(): void
+    {
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
+        Role::findOrCreate('guia', 'api');
+        $actor = $this->user('coordinador');
+        $actor->givePermissionTo('guides:store');
+
+        Passport::actingAs($actor);
+
+        $this->plainJson('POST', '/api/v1/guides', ['data' => ['attributes' => ['user_id' => $actor->id]]])
+            ->assertForbidden();
+
+        $this->assertFalse($actor->fresh()->hasRole('guia'));
+    }
+
+    public function test_guides_store_no_permite_otorgar_guia_a_otro_sin_los_permisos_que_conlleva(): void
+    {
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
+        Role::findOrCreate('guia', 'api');
+        $actor = $this->user('coordinador');
+        $actor->givePermissionTo('guides:store');
+        $victima = $this->user('victima');
+
+        Passport::actingAs($actor);
+
+        $this->plainJson('POST', '/api/v1/guides', ['data' => ['attributes' => ['user_id' => $victima->id]]])
+            ->assertForbidden();
+
+        $this->assertFalse($victima->fresh()->hasRole('guia'));
+    }
+
+    public function test_guides_store_permite_otorgar_guia_si_el_actor_ya_tiene_esos_permisos(): void
+    {
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
+        Role::findOrCreate('guia', 'api');
+        $actor = $this->user('coordinador-completo');
+        $actor->givePermissionTo(['guides:store', 'expenses:index', 'expenses:store']);
+        $victima = $this->user('nuevo-guia');
+
+        Passport::actingAs($actor);
+
+        $this->plainJson('POST', '/api/v1/guides', ['data' => ['attributes' => ['user_id' => $victima->id]]])
+            ->assertCreated();
+
+        $this->assertTrue($victima->fresh()->hasRole('guia'));
     }
 
     public function test_finance_summary_computes_margin_and_ranking(): void

@@ -93,4 +93,19 @@ class CouponServiceTest extends TestCase
         $this->service->redeem($coupon);
         $this->assertSame(1, (int) $coupon->fresh()->used_count);
     }
+
+    public function test_redeem_no_supera_el_usage_limit_aunque_se_llame_sin_pasar_por_validate(): void
+    {
+        // Simula el desenlace de la condición de carrera que este fix cierra:
+        // dos solicitudes pasan validate() con used_count aún por debajo del
+        // límite y ambas intentan canjear. redeem() debe fallar cerrado en la
+        // segunda en vez de dejar used_count por encima de usage_limit.
+        $coupon = $this->coupon(['code' => 'RACE', 'usage_limit' => 1, 'used_count' => 0]);
+
+        $this->service->redeem($coupon);
+        $this->assertSame(1, (int) $coupon->fresh()->used_count);
+
+        $this->expectException(ValidationException::class);
+        $this->service->redeem($coupon);
+    }
 }

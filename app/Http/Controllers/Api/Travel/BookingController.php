@@ -12,6 +12,7 @@ use App\Models\TransportVehicle;
 use App\Models\User;
 use App\Notifications\BookingNotification;
 use App\Notifications\BookingReceiptNotification;
+use App\Services\Booking\TransportBookingHandler;
 use App\Services\BookingService;
 use App\Services\TourAvailabilityService;
 use App\Support\AdminAlerts;
@@ -29,7 +30,8 @@ class BookingController extends Controller
 {
     public function __construct(
         private readonly BookingService $bookingService,
-        private readonly TourAvailabilityService $availabilityService
+        private readonly TourAvailabilityService $availabilityService,
+        private readonly TransportBookingHandler $transportBookingHandler,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -259,7 +261,26 @@ class BookingController extends Controller
                 throw ValidationException::withMessages(['pickup_at' => ['message.vehicleUnavailableForDates']]);
             }
 
-            $booking->update(['starts_at' => $data['pickup_at'], 'ends_at' => $data['dropoff_at']]);
+            // El precio se calculó una sola vez, a la fecha de creación
+            // (TransportBookingHandler::prepare). Si solo se actualizaran las
+            // fechas, el total_price quedaba anclado a la duración original:
+            // el dueño podía alargar el alquiler (p. ej. de 1 hora a 30 días)
+            // sin que se le cobrara más. Se recalcula con la misma fórmula que
+            // se usó al crear la reserva.
+            $booking->loadMissing('transportDetail');
+            $totalPrice = $this->transportBookingHandler->calculatePrice(
+                $booking->bookable,
+                $booking->transportDetail?->rental_type ?? 'hourly',
+                $data['pickup_at'],
+                $data['dropoff_at'],
+                (int) $booking->party_size
+            );
+
+            $booking->update([
+                'starts_at' => $data['pickup_at'],
+                'ends_at' => $data['dropoff_at'],
+                'total_price' => $totalPrice,
+            ]);
         }
 
         $booking->refresh();

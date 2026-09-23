@@ -112,12 +112,19 @@ class InvoiceDocument
     }
 
     /**
-     * El logo solo se embebe si es un fichero local: descargarlo durante la
-     * generación del PDF la haría lenta y frágil.
+     * El logo solo se embebe si es un fichero local dentro de storage/app/public:
+     * descargarlo durante la generación del PDF la haría lenta y frágil, y
+     * confiar en la ruta sin verificar que sigue dentro de ese directorio
+     * permitiría a quien edita los ajustes (permiso settings:update) usar
+     * secuencias "../" para hacer que se embeba cualquier fichero dentro del
+     * chroot de DomPDF (config('dompdf.options.chroot'), todo el proyecto).
+     *
+     * Público porque las plantillas Blade (p. ej. booking-receipt) lo
+     * reutilizan en vez de duplicar esta lógica.
      *
      * @param  array<string,mixed>  $ajustes
      */
-    private static function logoPath(array $ajustes): ?string
+    public static function logoPath(array $ajustes): ?string
     {
         $url = $ajustes['app_logo_dark_url'] ?? $ajustes['app_logo_url'] ?? null;
 
@@ -125,7 +132,12 @@ class InvoiceDocument
             return null;
         }
 
-        $ruta = storage_path('app/public/'.ltrim(substr($url, $pos + 9), '/'));
+        $base = realpath(storage_path('app/public'));
+        $ruta = realpath($base === false ? '' : $base.'/'.ltrim(substr($url, $pos + 9), '/'));
+
+        if ($base === false || $ruta === false || ! str_starts_with($ruta, $base.DIRECTORY_SEPARATOR)) {
+            return null;
+        }
 
         return is_file($ruta) ? $ruta : null;
     }

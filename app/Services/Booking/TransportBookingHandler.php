@@ -62,7 +62,12 @@ class TransportBookingHandler implements BookingHandlerInterface
         ];
     }
 
-    private function calculatePrice(TransportVehicle $vehicle, string $rentalType, string $pickupAt, string $dropoffAt, int $quantity): float
+    /**
+     * Pública porque BookingController::reschedule() la reutiliza para
+     * recalcular total_price cuando cambian las fechas de una reserva de
+     * transporte ya creada, en vez de duplicar la fórmula.
+     */
+    public function calculatePrice(TransportVehicle $vehicle, string $rentalType, string $pickupAt, string $dropoffAt, int $quantity): float
     {
         $pickup = Carbon::parse($pickupAt);
         $dropoff = Carbon::parse($dropoffAt);

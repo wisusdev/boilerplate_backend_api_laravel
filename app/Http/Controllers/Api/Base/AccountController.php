@@ -8,6 +8,7 @@ use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Resources\ProfileResource;
 use App\Models\User;
 use App\Notifications\DeleteAccountConfirmationNotification;
+use App\Notifications\EmailChangeNotification;
 use App\Notifications\PasswordChangeNotification;
 use App\Notifications\VerifyDeleteAccountNotification;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -31,6 +33,18 @@ class AccountController extends Controller
         // Se captura ANTES del update: comparándolo después la condición era
         // siempre falsa, el correo cambiaba y la cuenta seguía "verificada".
         $originalEmail = $user->email;
+        $emailChanging = $request->input('data.attributes.email') !== $originalEmail;
+
+        // El correo es el destino de la recuperación de cuenta: cambiarlo con
+        // solo un bearer token (sin volver a pedir la contraseña) permitía que
+        // un token robado se convirtiera en secuestro permanente de la cuenta
+        // vía "cambiar correo" + "olvidé mi contraseña". AccountUpdateRequest
+        // ya exige current_password cuando el correo cambia; aquí se verifica.
+        if ($emailChanging && ! Hash::check((string) $request->input('data.attributes.current_password'), $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['validation.passwordIncorrect'],
+            ]);
+        }
 
         if ($request->has('data.attributes.avatar') && $request->input('data.attributes.avatar')) {
             // El avatar anterior lo retira UserObserver::updated() al detectar el
@@ -52,6 +66,16 @@ class AccountController extends Controller
             $user->email_verified_at = null;
             $user->save(['timestamps' => false]);
             $user->sendEmailVerificationNotification();
+
+            // Igual que un cambio de contraseña: cierra el resto de sesiones
+            // (se conserva la actual) y avisa a la dirección ANTERIOR, no solo
+            // a la nueva, para que el titular real note un cambio que no hizo.
+            $currentTokenId = $user->token()?->id;
+            $user->tokens()
+                ->when($currentTokenId, fn ($q) => $q->where('id', '!=', $currentTokenId))
+                ->update(['revoked' => true]);
+
+            Notification::route('mail', $originalEmail)->notify(new EmailChangeNotification($user->email));
         }
 
         return ProfileResource::make($user);

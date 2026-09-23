@@ -83,6 +83,11 @@ php artisan event:cache
   php artisan db:seed --force   # Setting + Permission + Role
   ```
 - `StockImageSeeder`, `TravelModuleSeeder` y `UserSeeder` generan **datos de demo** (usuarios de prueba, 50+ tours, imágenes descargadas de internet). Son para entornos de **prueba**, no para producción.
+- Esto ya no depende solo de que nadie los llame a mano: `DatabaseSeeder` (y
+  `UserSeeder` por su cuenta, como segunda barrera) comprueban
+  `app()->environment('production')` y se saltan esos tres seeders si es
+  cierto — así que un `db:seed --force` en producción es seguro por
+  construcción, aunque alguien lo ejecute sin haber leído este documento.
 
 ### 1.3.1 Crear el primer administrador (instalador)
 

@@ -170,6 +170,65 @@ class SecurityRegressionTest extends TestCase
         $this->assertTrue($target->fresh()->hasRole('editor'));
     }
 
+    public function test_no_se_puede_degradar_a_un_admin_con_solo_el_permiso_users_update(): void
+    {
+        // 'editor' no tiene permisos de admin; se le da solo users:update
+        // (sin roles:*, sin ninguno de los permisos que carga 'admin') para
+        // reproducir el escenario del hallazgo: antes solo se comprobaban los
+        // roles NUEVOS que se otorgaban, nunca los roles ACTUALES del
+        // objetivo, así que bastaba ese único permiso para vaciar el rol de
+        // cualquier admin enviando roles: [].
+        $editorRole = Role::where('name', 'editor')->where('guard_name', 'api')->first();
+        $editorRole->givePermissionTo(['users:index', 'users:update', 'users:show']);
+
+        $editor = $this->makeUser('editor', 'editor');
+        $admin = $this->makeUser('admin', 'admin-victima');
+        Passport::actingAs($editor->fresh());
+
+        $response = $this->apiJson('PATCH', '/api/v1/users/'.$admin->id, [
+            'data' => [
+                'id' => (string) $admin->id,
+                'type' => 'users',
+                'attributes' => [
+                    'username' => $admin->username,
+                    'first_name' => 'Test',
+                    'last_name' => 'User',
+                    'email' => $admin->email,
+                    'roles' => [],
+                ],
+            ],
+        ]);
+
+        $response->assertForbidden();
+        $this->assertTrue($admin->fresh()->hasRole('admin'));
+    }
+
+    public function test_un_admin_si_puede_quitar_el_rol_editor_de_otro_usuario(): void
+    {
+        // Confirma que el chequeo nuevo no rompe el caso legítimo: un admin
+        // (superset de permisos de cualquier rol) sí puede degradar/quitar
+        // roles de otros usuarios.
+        $admin = $this->makeUser('admin', 'admin');
+        $target = $this->makeUser('editor', 'target-editor');
+        Passport::actingAs($admin->fresh());
+
+        $this->apiJson('PATCH', '/api/v1/users/'.$target->id, [
+            'data' => [
+                'id' => (string) $target->id,
+                'type' => 'users',
+                'attributes' => [
+                    'username' => $target->username,
+                    'first_name' => 'Test',
+                    'last_name' => 'User',
+                    'email' => $target->email,
+                    'roles' => [],
+                ],
+            ],
+        ])->assertOk();
+
+        $this->assertFalse($target->fresh()->hasRole('editor'));
+    }
+
     // ─── M-5: validación del update de usuarios ───────────────────────────────
 
     public function test_el_update_de_usuario_valida_el_correo(): void

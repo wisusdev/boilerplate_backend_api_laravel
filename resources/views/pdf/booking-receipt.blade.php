@@ -105,16 +105,10 @@
             !empty($fiscal['dte_nrc']) ? 'NRC: '.$fiscal['dte_nrc'] : null,
         ]));
 
-        // El logo solo se embebe si es un fichero local: una descarga remota
-        // durante la generación del PDF lo haría lento y frágil.
-        $logo = null;
-        $logoUrl = $ajustes['app_logo_dark_url'] ?? $ajustes['app_logo_url'] ?? null;
-        if ($logoUrl && ($pos = strpos($logoUrl, '/storage/')) !== false) {
-            $ruta = storage_path('app/public/'.ltrim(substr($logoUrl, $pos + 9), '/'));
-            if (is_file($ruta)) {
-                $logo = $ruta;
-            }
-        }
+        // Misma lógica (y misma validación de que la ruta no se escapa de
+        // storage/app/public) que usan las facturas: se reutiliza en vez de
+        // duplicarla aquí.
+        $logo = \App\Support\InvoiceDocument::logoPath($ajustes);
 
         // ── Conceptos: se reconstruye el desglose que originó el total ──
         $extras = is_array($attrs['service_fees'] ?? null) ? $attrs['service_fees'] : [];

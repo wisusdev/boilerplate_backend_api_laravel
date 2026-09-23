@@ -23,11 +23,19 @@ class AccountUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Cambiar el correo es tan sensible como cambiar la contraseña (es el
+        // destino de la recuperación de cuenta): exige la contraseña actual,
+        // igual que ChangePasswordRequest, para que un bearer token robado no
+        // baste para secuestrar la cuenta reasignando el correo.
+        $emailChanging = $this->filled('data.attributes.email')
+            && $this->input('data.attributes.email') !== $this->user()->email;
+
         return [
             'data.type' => ['required', 'string', 'in:profile'],
             'data.attributes.first_name' => ['required', 'string'],
             'data.attributes.last_name' => ['required', 'string'],
             'data.attributes.email' => ['required', 'email', 'unique:users,email,'.$this->user()->id],
+            'data.attributes.current_password' => [$emailChanging ? 'required' : 'sometimes', 'string'],
             'data.attributes.avatar' => ['nullable', 'string', new Base64FileValidationRule(['image/jpeg', 'image/png', 'image/gif', 'image/webp'], 2048)],
             'data.attributes.language' => ['required', 'string', 'in:en,es'],
             'data.attributes.phone' => ['nullable', 'string', 'max:30'],
@@ -46,6 +54,7 @@ class AccountUpdateRequest extends FormRequest
             'data.attributes.email.required' => 'validation.emailRequired',
             'data.attributes.email.email' => 'validation.emailEmail',
             'data.attributes.email.unique' => 'validation.emailUnique',
+            'data.attributes.current_password.required' => 'validation.currentPasswordRequired',
             'data.attributes.avatar.string' => 'validation.avatarString',
             'data.attributes.language.required' => 'validation.languageRequired',
             'data.attributes.language.in' => 'validation.languageIn',

@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class LoginRequest extends FormRequest
 {
@@ -27,7 +26,7 @@ class LoginRequest extends FormRequest
             'data' => ['required', 'array'],
             'data.attributes' => ['required', 'array'],
             'data.type' => ['required', 'string', 'in:users'],
-            'data.attributes.email' => ['required', 'email', Rule::exists('users', 'email')],
+            'data.attributes.email' => ['required', 'email'],
             'data.attributes.password' => ['required'],
         ];
     }
@@ -44,7 +43,6 @@ class LoginRequest extends FormRequest
             'data.type.in' => 'validation.dataTypeIn',
             'data.attributes.email.required' => 'validation.emailRequired',
             'data.attributes.email.email' => 'validation.emailEmail',
-            'data.attributes.email.exists' => 'validation.emailExists',
             'data.attributes.password.required' => 'validation.passwordRequired',
         ];
     }

@@ -89,7 +89,17 @@ php artisan passport:keys
 
 # Base de datos
 php artisan migrate --force
+
+# Solo infraestructura base (settings, permisos, roles) — NO crea ningún
+# administrador. Ver docs/deployment/production-checklist.md §1.3.
 php artisan db:seed --force
+
+# Primer administrador (el seed no crea uno): instalador estilo WordPress.
+php artisan app:install \
+  --first-name="Nombre" --last-name="Apellido" \
+  --email="admin@midominio.com" --password="una-password-segura" \
+  --site-name="Cusgo Adventures" --contact-email="info@midominio.com" \
+  --currency=USD --timezone=America/El_Salvador
 
 # Optimizar
 php artisan config:cache
@@ -231,6 +241,22 @@ Agregar un Job de tipo "Before Deploy":
 Name: migrate
 Command: php artisan migrate --force && php artisan db:seed --force
 ```
+
+`db:seed` aquí solo siembra infraestructura base (settings, permisos, roles) —
+NO crea ningún administrador, así que es seguro que este Job corra en cada
+deploy. El primer administrador es un paso **aparte y de una sola vez** (no
+lo metas en este Job, correr `app:install` en cada deploy no tiene sentido):
+abre una shell del componente (**App Platform → Console**) y ejecuta
+
+```bash
+php artisan app:install \
+  --first-name="Nombre" --last-name="Apellido" \
+  --email="admin@midominio.com" --password="una-password-segura" \
+  --site-name="Cusgo Adventures" --contact-email="info@midominio.com" \
+  --currency=USD --timezone=America/El_Salvador
+```
+
+o completa el wizard web en `/install`.
 
 ---
 

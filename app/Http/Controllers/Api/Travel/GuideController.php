@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Travel;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,6 +38,8 @@ class GuideController extends Controller
             'user_id' => ['required', 'uuid', 'exists:users,id'],
         ])->validate();
 
+        $this->assertCanGrantGuideRole($request, $data['user_id']);
+
         $user = User::findOrFail($data['user_id']);
         $user->assignRole('guia');
 
@@ -51,6 +54,35 @@ class GuideController extends Controller
         $user->removeRole('guia');
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Otorgar el rol 'guia' concede sus permisos (expenses:index,
+     * expenses:store — ver RoleSeeder). Sin este chequeo, un rol personalizado
+     * con solo 'guides:store' (posible vía RolesController) podía usarse para
+     * auto-otorgarse esos permisos sin haberlos tenido nunca, saltándose el
+     * mismo guardia que UserController::assertCanAssignRoles aplica a
+     * cualquier otra asignación de rol.
+     */
+    private function assertCanGrantGuideRole(Request $request, string $targetUserId): void
+    {
+        $actor = $request->user();
+
+        if ($actor?->hasRole('superadmin')) {
+            return;
+        }
+
+        if ($actor && $actor->getKey() === $targetUserId) {
+            abort(403, 'No puedes otorgarte el rol guia a ti mismo.');
+        }
+
+        $role = Role::where('name', 'guia')->with('permissions')->first();
+        $held = $actor?->getAllPermissions()->pluck('name') ?? collect();
+        $excess = $role?->permissions->pluck('name')->diff($held) ?? collect();
+
+        if ($excess->isNotEmpty()) {
+            abort(403, "No puedes otorgar el rol 'guia': incluye permisos que no posees.");
+        }
     }
 
     private function payload(User $user): array

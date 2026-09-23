@@ -59,13 +59,34 @@ class ExpenseController extends Controller
 
     public function update(ExpenseRequest $request, Expense $expense): ExpenseResource
     {
-        $expense->update($request->validated()['data']['attributes']);
+        // Igual que en index/store/uploadReceipt: sin 'expenses:view-all' solo
+        // se puede tocar el propio gasto. Antes update()/destroy() confiaban
+        // solo en el permiso de ruta (expenses:update/expenses:delete), que no
+        // implica expenses:view-all — un rol personalizado que otorgara el
+        // primero sin el segundo podía editar/borrar el gasto de cualquiera.
+        $user = $request->user();
+        $seesAll = $user?->can('expenses:view-all') ?? false;
+        abort_unless($seesAll || $expense->guide_id === $user?->id, 403);
+
+        $attributes = $request->validated()['data']['attributes'];
+        if (! $seesAll) {
+            // No puede reasignar su propio gasto a otro guía.
+            unset($attributes['guide_id']);
+        }
+
+        $expense->update($attributes);
 
         return ExpenseResource::make($expense->fresh()->load(['tour', 'category', 'guide']));
     }
 
-    public function destroy(Expense $expense): JsonResponse
+    public function destroy(Request $request, Expense $expense): JsonResponse
     {
+        $user = $request->user();
+        abort_unless(
+            ($user?->can('expenses:view-all') ?? false) || $expense->guide_id === $user?->id,
+            403
+        );
+
         $expense->delete();
 
         return response()->json(null, 204);

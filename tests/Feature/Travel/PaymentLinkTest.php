@@ -13,6 +13,7 @@ use App\Services\PaymentService;
 use App\Support\SiteSettings;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -366,6 +367,60 @@ class PaymentLinkTest extends TestCase
             ->assertStatus(422);
 
         $this->assertSame('pending', $linkB->fresh()->payment->status);
+    }
+
+    /**
+     * Regresión: la consulta de aplicación que evita reutilizar una
+     * autorización (exists() sin bloqueo) no protege contra dos
+     * confirmaciones CONCURRENTES sobre dos enlaces distintos — ambas podían
+     * leer "no repetida" antes de que ninguna terminara de escribir. El índice
+     * único de la migración es lo que de verdad cierra esa carrera a nivel de
+     * base de datos; esto lo prueba directamente sin depender de lograr una
+     * carrera real en un test de un solo hilo.
+     */
+    public function test_el_indice_unico_impide_dos_pagos_activos_con_la_misma_autorizacion(): void
+    {
+        $bookingA = $this->reserva($this->usuario('user'));
+        $bookingB = $this->reserva($this->usuario('user'));
+
+        $paymentA = Payment::create([
+            'payable_type' => Booking::class, 'payable_id' => $bookingA->id,
+            'gateway' => 'bac_link', 'method' => 'card', 'amount' => 50, 'currency_code' => 'USD',
+            'status' => 'paid', 'transaction_reference' => 'AUTH-RACE-1',
+        ]);
+        $this->assertNotNull($paymentA->id);
+
+        $paymentB = Payment::create([
+            'payable_type' => Booking::class, 'payable_id' => $bookingB->id,
+            'gateway' => 'bac_link', 'method' => 'card', 'amount' => 50, 'currency_code' => 'USD',
+            'status' => 'pending',
+        ]);
+
+        $this->expectException(QueryException::class);
+        $paymentB->update(['status' => 'paid', 'transaction_reference' => 'AUTH-RACE-1']);
+    }
+
+    public function test_anular_un_pago_libera_su_autorizacion_para_otro(): void
+    {
+        $bookingA = $this->reserva($this->usuario('user'));
+        $bookingB = $this->reserva($this->usuario('user'));
+
+        $paymentA = Payment::create([
+            'payable_type' => Booking::class, 'payable_id' => $bookingA->id,
+            'gateway' => 'bac_link', 'method' => 'card', 'amount' => 50, 'currency_code' => 'USD',
+            'status' => 'paid', 'transaction_reference' => 'AUTH-VOID-1', 'voided_at' => now(),
+        ]);
+        $this->assertNotNull($paymentA->id);
+
+        $paymentB = Payment::create([
+            'payable_type' => Booking::class, 'payable_id' => $bookingB->id,
+            'gateway' => 'bac_link', 'method' => 'card', 'amount' => 50, 'currency_code' => 'USD',
+            'status' => 'pending',
+        ]);
+
+        // No lanza: el pago A está anulado, así que su autorización ya no cuenta.
+        $paymentB->update(['status' => 'paid', 'transaction_reference' => 'AUTH-VOID-1']);
+        $this->assertSame('paid', $paymentB->fresh()->status);
     }
 
     public function test_no_se_puede_confirmar_mas_de_lo_que_pedia_el_enlace(): void

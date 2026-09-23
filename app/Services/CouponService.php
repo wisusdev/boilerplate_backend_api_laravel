@@ -16,8 +16,15 @@ class CouponService
      */
     public function validate(string $code, array $context = []): Coupon
     {
+        // lockForUpdate() para que, dentro de la transacción de creación de la
+        // reserva, dos solicitudes concurrentes con el mismo cupón no lean el
+        // mismo used_count "de sobra" antes de que ninguna lo incremente
+        // (condición de carrera que permitía superar usage_limit/per_user_limit).
+        // Fuera de una transacción explícita (p. ej. la previsualización en
+        // CouponController::validate) el bloqueo no tiene efecto adicional.
         $coupon = Coupon::query()
             ->where('code', strtoupper(trim($code)))
+            ->lockForUpdate()
             ->first();
 
         if (! $coupon) {
@@ -52,6 +59,7 @@ class CouponService
                 ->where('coupon_id', $coupon->id)
                 ->where('user_id', $context['user_id'])
                 ->where('status', '!=', Booking::STATUS_CANCELLED)
+                ->lockForUpdate()
                 ->count();
 
             if ($userUses >= $coupon->per_user_limit) {
@@ -64,10 +72,26 @@ class CouponService
 
     /**
      * Incrementa el contador de usos de forma atómica al canjear el cupón.
+     *
+     * Repite la condición de usage_limit en el propio UPDATE (no solo en
+     * validate()) como segunda barrera: si por lo que sea se llega aquí sin el
+     * lockForUpdate() de validate() (p. ej. una llamada futura fuera de esa
+     * transacción), un incremento que dejaría used_count por encima del
+     * límite simplemente no afecta ninguna fila, y eso se trata como cupón
+     * agotado en lugar de superarlo en silencio.
      */
     public function redeem(Coupon $coupon): void
     {
-        Coupon::query()->whereKey($coupon->id)->increment('used_count');
+        $affected = Coupon::query()
+            ->whereKey($coupon->id)
+            ->where(function ($query) {
+                $query->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit');
+            })
+            ->increment('used_count');
+
+        if ($affected === 0) {
+            $this->fail('El cupón alcanzó su límite de usos.');
+        }
     }
 
     /**

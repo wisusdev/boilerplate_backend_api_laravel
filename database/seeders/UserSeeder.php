@@ -16,9 +16,25 @@ class UserSeeder extends Seeder
      *
      * En producción NO se usa este seeder: el primer administrador se crea con el
      * instalador (wizard web /install o `php artisan app:install`).
+     *
+     * El guardia de abajo no es solo el comentario: DatabaseSeeder ya evita
+     * llamar a este seeder en producción, pero un `db:seed --class=UserSeeder`
+     * ejecutado a mano (o un futuro cambio en DatabaseSeeder) lo saltaría. Sin
+     * este guardia, ese comando crea en producción una cuenta admin con
+     * permisos totales y contraseña fija y pública (está en el historial de
+     * git de este repo).
      */
     public function run(): void
     {
+        if (app()->environment('production')) {
+            $this->command?->warn(
+                'UserSeeder: omitido en production — crea un admin de demostración con contraseña fija. '
+                .'El primer administrador se crea con el instalador (/install o `php artisan app:install`).'
+            );
+
+            return;
+        }
+
         User::factory(10)->create();
 
         // Admin de demostración (solo desarrollo).

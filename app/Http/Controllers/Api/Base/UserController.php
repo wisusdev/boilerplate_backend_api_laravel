@@ -102,6 +102,13 @@ class UserController extends Controller
      * Nadie puede otorgar un rol cuyos permisos no posee, ni tocar sus propios
      * roles. Sin esto, cualquiera con 'users:update' se ascendía a admin.
      *
+     * Tampoco puede QUITAR un rol cuyos permisos no posee: antes solo se
+     * comprobaban los roles nuevos, así que alguien con solo 'users:update'
+     * podía degradar a un 'admin' enviando roles:[] sin tener ninguno de los
+     * permisos de 'admin' — quitar privilegios ajenos exige la misma
+     * autoridad que otorgarlos, si no cualquiera con ese único permiso podía
+     * inhabilitar a otros administradores.
+     *
      * @param  array<int, string>  $roles
      */
     private function assertCanAssignRoles(array $roles, ?User $target = null): void
@@ -123,11 +130,19 @@ class UserController extends Controller
 
         $held = $actor->getAllPermissions()->pluck('name');
 
-        foreach (Role::whereIn('name', $roles)->with('permissions')->get() as $role) {
+        // Roles nuevos que se otorgan Y roles actuales del objetivo que se
+        // tocan (mantienen o quitan): ambos exigen que el actor ya posea sus
+        // permisos.
+        $rolesATocar = collect($roles)
+            ->merge($target?->getRoleNames() ?? [])
+            ->unique()
+            ->values();
+
+        foreach (Role::whereIn('name', $rolesATocar)->with('permissions')->get() as $role) {
             $excess = $role->permissions->pluck('name')->diff($held);
 
             if ($excess->isNotEmpty()) {
-                abort(403, "No puedes otorgar el rol '{$role->name}': incluye permisos que no posees.");
+                abort(403, "No puedes otorgar ni quitar el rol '{$role->name}': incluye permisos que no posees.");
             }
         }
     }

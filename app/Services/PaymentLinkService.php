@@ -11,6 +11,7 @@ use App\Notifications\PaymentLinkIssuedNotification;
 use App\Support\AdminAlerts;
 use App\Support\SiteSettings;
 use Carbon\CarbonInterface;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -255,7 +256,15 @@ class PaymentLinkService
             $autorizacion = trim($datos['authorization']);
 
             // La equivocación más probable del turno de noche es confirmar la
-            // reserva A con el comprobante de la B. Aquí se corta.
+            // reserva A con el comprobante de la B. Esta consulta la detecta en
+            // el caso normal (secuencial), pero no basta sola: dos
+            // confirmaciones concurrentes sobre DOS enlaces distintos con la
+            // misma autorización podían leer "no repetida" las dos antes de que
+            // ninguna terminara de escribir (el lockForUpdate() de arriba solo
+            // bloquea el enlace de ESTA petición, no el de la otra). El índice
+            // único de la migración 2026_09_22_000001 es el que de verdad cierra
+            // esa carrera a nivel de base de datos; el catch de más abajo
+            // traduce su violación al mismo mensaje que ya da esta consulta.
             $repetida = Payment::query()
                 ->where('gateway', self::GATEWAY)
                 ->where('transaction_reference', $autorizacion)
@@ -299,21 +308,33 @@ class PaymentLinkService
                 $payment->update(['amount' => $cobrado]);
             }
 
-            $this->payments->markPaid(
-                $payment,
-                $autorizacion,
-                [
-                    'provider' => $link->provider,
-                    'reference' => $link->reference,
-                    'reported_ref' => $link->reported_ref,
-                    'partial' => $parcial,
-                ],
-                $datos['paid_at'],
-                [
-                    'confirmed_by' => $actor->getKey(),
-                    'confirmation_note' => $datos['note'] ?? null,
-                ],
-            );
+            try {
+                $this->payments->markPaid(
+                    $payment,
+                    $autorizacion,
+                    [
+                        'provider' => $link->provider,
+                        'reference' => $link->reference,
+                        'reported_ref' => $link->reported_ref,
+                        'partial' => $parcial,
+                    ],
+                    $datos['paid_at'],
+                    [
+                        'confirmed_by' => $actor->getKey(),
+                        'confirmation_note' => $datos['note'] ?? null,
+                    ],
+                );
+            } catch (QueryException $e) {
+                if (! str_contains($e->getMessage(), 'payments_gateway_active_reference_unique')) {
+                    throw $e;
+                }
+
+                throw ValidationException::withMessages([
+                    'data.attributes.authorization' => [
+                        'Esa autorización ya se usó para confirmar otro cobro. Revísala antes de continuar.',
+                    ],
+                ]);
+            }
 
             $link->update([
                 'status' => PaymentLink::STATUS_CONFIRMED,

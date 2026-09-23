@@ -125,8 +125,17 @@ railway up
 ### 8. Ejecutar seeders (primera vez)
 
 ```bash
+# Solo infraestructura base (settings, permisos, roles) — NO crea ningún
+# administrador. Ver docs/deployment/production-checklist.md §1.3.
 railway run php artisan db:seed --force
 railway run php artisan passport:keys
+
+# Primer administrador (el seed no crea uno): instalador estilo WordPress.
+railway run php artisan app:install \
+  --first-name="Nombre" --last-name="Apellido" \
+  --email="admin@midominio.com" --password="una-password-segura" \
+  --site-name="Cusgo Adventures" --contact-email="info@midominio.com" \
+  --currency=USD --timezone=America/El_Salvador
 ```
 
 ### 9. Dominio personalizado
@@ -222,8 +231,17 @@ AWS_SECRET_ACCESS_KEY = ...
 
 ```bash
 # En Render → Service → Shell
+# db:seed solo siembra infraestructura base (settings, permisos, roles) — NO
+# crea ningún administrador. Ver docs/deployment/production-checklist.md §1.3.
 php artisan db:seed --force
 php artisan passport:keys
+
+# Primer administrador (el seed no crea uno): instalador estilo WordPress.
+php artisan app:install \
+  --first-name="Nombre" --last-name="Apellido" \
+  --email="admin@midominio.com" --password="una-password-segura" \
+  --site-name="Cusgo Adventures" --contact-email="info@midominio.com" \
+  --currency=USD --timezone=America/El_Salvador
 ```
 
 ### 5. Dominio personalizado

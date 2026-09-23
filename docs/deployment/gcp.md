@@ -88,7 +88,18 @@ cp .env.example .env
 php artisan key:generate
 php artisan passport:keys
 php artisan migrate --force
+
+# Solo infraestructura base (settings, permisos, roles) — NO crea ningún
+# administrador. Ver docs/deployment/production-checklist.md §1.3.
 php artisan db:seed --force
+
+# Primer administrador (el seed no crea uno): instalador estilo WordPress.
+php artisan app:install \
+  --first-name="Nombre" --last-name="Apellido" \
+  --email="admin@midominio.com" --password="una-password-segura" \
+  --site-name="Cusgo Adventures" --contact-email="info@midominio.com" \
+  --currency=USD --timezone=America/El_Salvador
+
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 php artisan storage:link
 

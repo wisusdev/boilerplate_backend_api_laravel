@@ -220,8 +220,16 @@ php artisan passport:keys
 # Ejecutar migraciones
 php artisan migrate --force
 
-# Ejecutar seeders
+# Ejecutar seeders (solo infraestructura base: settings, permisos, roles —
+# NO crea ningún administrador. Ver production-checklist.md §1.3).
 php artisan db:seed --force
+
+# Primer administrador (el seed no crea uno): instalador estilo WordPress.
+php artisan app:install \
+  --first-name="Nombre" --last-name="Apellido" \
+  --email="admin@midominio.com" --password="una-password-segura" \
+  --site-name="Cusgo Adventures" --contact-email="info@midominio.com" \
+  --currency=USD --timezone=America/El_Salvador
 
 # Optimizar
 php artisan config:cache

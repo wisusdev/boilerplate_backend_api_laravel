@@ -80,8 +80,22 @@ class PaymentWebhookService
 
         // El webhook está firmado, pero el importe del evento no es autoritativo:
         // antes de dar por cobrado se confirma contra la API, que es la que sabe
-        // cuánto se cobró de verdad y si la transacción fue real.
-        if ($outcome === 'paid' && $transactionId) {
+        // cuánto se cobró de verdad y si la transacción fue real. Esto es
+        // incondicional para 'paid': un evento aprobado que no trae ningún id de
+        // transacción no se puede reconfirmar, así que no se confía en él en vez
+        // de marcarlo pagado sin más (antes ese caso se saltaba por completo
+        // esta verificación).
+        if ($outcome === 'paid') {
+            if (! $transactionId) {
+                Log::warning('Webhook wompi: evento aprobado sin id de transacción; no se puede reconfirmar.', [
+                    'idExterno' => $externalId,
+                    'idEnlace' => $linkId,
+                    'pago' => $payment->id,
+                ]);
+
+                return ['status' => 'ignored', 'reason' => 'missing transaction id'];
+            }
+
             try {
                 $result = $this->wompi->getTransaction((string) $transactionId);
             } catch (\Throwable $e) {

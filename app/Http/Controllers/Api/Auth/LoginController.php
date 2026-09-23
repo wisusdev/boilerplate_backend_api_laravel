@@ -8,6 +8,7 @@ use App\Http\Resources\LoginResource;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -27,16 +28,25 @@ class LoginController extends Controller
         }
 
         $limitAuthDevices = intval(config('auth.limit_auth_devices'));
+        $lock = null;
 
         if ($limitAuthDevices > 0) {
-            $validTokens = $user->tokens()
+            // Sin este candado, dos logins concurrentes del mismo usuario podían
+            // leer el mismo conteo de tokens válidos antes de que ninguno creara
+            // el suyo, y ambos pasaban el límite (condición de carrera). El
+            // candado se mantiene desde el conteo hasta crear el token, no solo
+            // durante el conteo.
+            $lock = Cache::lock("login-device-limit:{$user->id}", 10);
+            $lock->block(5);
+
+            $tokenCount = $user->tokens()
                 ->where('revoked', 0)
                 ->where('expires_at', '>', Carbon::now())
-                ->get();
-
-            $tokenCount = $validTokens->count();
+                ->count();
 
             if ($tokenCount >= $limitAuthDevices) {
+                $lock->release();
+
                 throw ValidationException::withMessages([
                     'email' => ['validation.limitAuthDevices'],
                 ]);
@@ -44,6 +54,9 @@ class LoginController extends Controller
         }
 
         $tokenResult = $user->createToken('Login');
+
+        optional($lock)->release();
+
         $token = $tokenResult->token;
         $token->expires_at = Carbon::now()->addWeeks(1);
         $token->save();
