@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api\Base;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SettingRequest;
 use App\Models\Setting;
+use App\Services\Dte\DteConfig;
 use App\Traits\EncryptsCredentials;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class SettingsController extends Controller
 {
@@ -181,11 +183,12 @@ class SettingsController extends Controller
             'dte_nit', 'dte_nrc',
             'dte_nombre', 'dte_nombre_comercial',
             'dte_cod_actividad', 'dte_desc_actividad',
-            'dte_departamento', 'dte_municipio', 'dte_direccion',
+            'dte_departamento', 'dte_municipio', 'dte_distrito', 'dte_direccion',
             'dte_telefono', 'dte_correo',
-            'dte_cod_establec', 'dte_cod_punto_venta',
+            'dte_tipo_establecimiento', 'dte_cod_establec', 'dte_cod_punto_venta',
             'dte_mh_user', 'dte_mh_password',
-            'dte_cert_path', 'dte_cert_password',
+            // El certificado y su contraseña solo se escriben al subirlo
+            // (POST /settings/dte-certificate), que antes los valida.
             'dte_auto_generate',
         ];
         foreach ($dteFields as $f) {
@@ -194,6 +197,12 @@ class SettingsController extends Controller
                     ? $this->encryptCredential((string) $attrs[$f])
                     : $attrs[$f];
             }
+        }
+        // Activar la facturación exige un emisor completo y válido contra los
+        // catálogos: si no, el MH rechazaría cada documento. Desactivada se
+        // puede guardar a medias.
+        if (! empty($dte['dte_enabled']) && $errores = DteConfig::fromArray($dte)->errors()) {
+            throw ValidationException::withMessages(['data.attributes.dte_enabled' => $errores]);
         }
         Setting::updateOrCreate(['key' => 'dte'], ['value' => json_encode($dte)]);
 

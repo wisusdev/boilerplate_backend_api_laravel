@@ -5,8 +5,8 @@ namespace App\Observers;
 use App\Models\Booking;
 use App\Models\Invoice;
 use App\Models\PaymentLink;
-use App\Models\Setting;
 use App\Services\BookingService;
+use App\Services\Dte\DteConfig;
 use App\Services\DteService;
 use Illuminate\Support\Facades\Log;
 
@@ -92,11 +92,9 @@ class BookingObserver
             return;
         }
 
-        $dteConfig = json_decode(optional(Setting::where('key', 'dte')->first())->value ?? '{}', true);
-        $autoGenerate = (bool) ($dteConfig['dte_auto_generate'] ?? false);
-        $dteEnabled = (bool) ($dteConfig['dte_enabled'] ?? false);
+        $config = DteConfig::load();
 
-        if (! $dteEnabled || ! $autoGenerate) {
+        if (! $config->enabled() || ! $config->autoGenerate()) {
             return;
         }
 

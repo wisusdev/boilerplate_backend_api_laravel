@@ -27,6 +27,8 @@ class InvoiceRequest extends FormRequest
 
             'data.attributes.receptor_name' => [$creando ? 'required' : 'sometimes', 'nullable', 'string', 'max:250'],
             'data.attributes.receptor_document' => ['sometimes', 'nullable', 'string', 'max:50'],
+            // CAT-022: 13 DUI, 36 NIT, 03 pasaporte, 02 carnet de residente, 37 otro.
+            'data.attributes.receptor_document_type' => ['sometimes', 'nullable', 'string', Rule::in(['13', '36', '03', '02', '37'])],
             'data.attributes.receptor_email' => ['sometimes', 'nullable', 'email', 'max:150'],
             'data.attributes.notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'data.attributes.issued_at' => ['sometimes', 'nullable', 'date'],

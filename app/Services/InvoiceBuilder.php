@@ -33,6 +33,7 @@ class InvoiceBuilder
                 'issued_at' => $data['issued_at'] ?? now(),
                 'receptor_name' => $data['receptor_name'] ?? null,
                 'receptor_document' => $data['receptor_document'] ?? null,
+                'receptor_document_type' => $data['receptor_document_type'] ?? null,
                 'receptor_email' => $data['receptor_email'] ?? null,
                 'notes' => $data['notes'] ?? null,
             ]);
@@ -54,6 +55,7 @@ class InvoiceBuilder
                 'issued_at' => $data['issued_at'] ?? null,
                 'receptor_name' => $data['receptor_name'] ?? null,
                 'receptor_document' => $data['receptor_document'] ?? null,
+                'receptor_document_type' => $data['receptor_document_type'] ?? null,
                 'receptor_email' => $data['receptor_email'] ?? null,
                 'notes' => $data['notes'] ?? null,
             ], fn ($v) => $v !== null));

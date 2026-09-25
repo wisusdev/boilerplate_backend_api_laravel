@@ -27,10 +27,10 @@ class Invoice extends Model
 
     public const DTE_ERROR = 'error';
 
-    // DTE type constants (El Salvador MH)
-    public const DTE_TYPE_CONSUMIDOR_FINAL = '03'; // Factura Consumidor Final
+    // DTE type constants (El Salvador MH, CAT-002)
+    public const DTE_TYPE_CONSUMIDOR_FINAL = '01'; // Factura Consumidor Final
 
-    public const DTE_TYPE_CREDITO_FISCAL = '01'; // Comprobante de Crédito Fiscal
+    public const DTE_TYPE_CREDITO_FISCAL = '03'; // Comprobante de Crédito Fiscal
 
     protected $fillable = [
         'booking_id',
@@ -46,9 +46,11 @@ class Invoice extends Model
         'dte_status',
         'receptor_name',
         'receptor_document',
+        'receptor_document_type',
         'receptor_email',
         'notes',
         'dte_json',
+        'dte_jws',
         'mh_response',
         'dte_environment',
         'dte_submitted_at',

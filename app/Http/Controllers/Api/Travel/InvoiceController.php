@@ -7,8 +7,10 @@ use App\Http\Requests\InvoiceRequest;
 use App\Http\Resources\InvoiceResource;
 use App\Models\Booking;
 use App\Models\Invoice;
+use App\Services\Dte\DteException;
 use App\Services\DteService;
 use App\Services\InvoiceBuilder;
+use App\Support\Dte\SvCatalogs;
 use App\Support\InvoiceDocument;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -132,82 +134,96 @@ class InvoiceController extends Controller
     {
         try {
             $invoice = $this->dteService->processDte($invoice);
-
-            return response()->json([
-                'data' => [
-                    'type' => 'dte-result',
-                    'id' => (string) $invoice->id,
-                    'attributes' => [
-                        'dte_status' => $invoice->dte_status,
-                        'dte_number' => $invoice->dte_number,
-                        'dte_generation_code' => $invoice->dte_generation_code,
-                        'dte_seal' => $invoice->dte_seal,
-                        'dte_accepted_at' => $invoice->dte_accepted_at,
-                        'mh_response' => $invoice->mh_response,
-                    ],
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'errors' => [[
-                    'title' => 'Error DTE',
-                    'detail' => $e->getMessage(),
-                ]],
-            ], 422);
+        } catch (DteException $e) {
+            return $this->dteError($e, 'Error DTE', $invoice->fresh());
         }
+
+        return response()->json([
+            'data' => [
+                'type' => 'dte-result',
+                'id' => (string) $invoice->id,
+                'attributes' => [
+                    'dte_status' => $invoice->dte_status,
+                    'dte_number' => $invoice->dte_number,
+                    'dte_generation_code' => $invoice->dte_generation_code,
+                    'dte_seal' => $invoice->dte_seal,
+                    'dte_accepted_at' => $invoice->dte_accepted_at,
+                    'mh_response' => $invoice->mh_response,
+                ],
+            ],
+        ]);
     }
 
     /**
      * GET /api/invoices/{invoice}/preview-dte
-     * Devuelve el JSON del DTE sin enviarlo (para revisión previa).
+     * Devuelve el JSON del DTE sin numerarlo ni enviarlo (para revisión previa).
      */
     public function previewDte(Invoice $invoice): JsonResponse
     {
-        try {
-            $dteJson = $this->dteService->previewDte($invoice);
+        return response()->json([
+            'data' => [
+                'type' => 'dte-preview',
+                'id' => (string) $invoice->id,
+                'attributes' => $this->dteService->previewDte($invoice),
+            ],
+        ]);
+    }
 
-            return response()->json([
-                'data' => [
-                    'type' => 'dte-preview',
-                    'id' => (string) $invoice->id,
-                    'attributes' => $dteJson,
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'errors' => [['title' => 'Error', 'detail' => $e->getMessage()]],
-            ], 422);
-        }
+    /**
+     * GET /api/dte/catalogs
+     * Catálogos del MH para el formulario del emisor.
+     */
+    public function catalogs(): JsonResponse
+    {
+        return response()->json(['data' => [
+            'type' => 'dte-catalogs',
+            'id' => 'sv',
+            'attributes' => SvCatalogs::forForms(),
+        ]]);
     }
 
     /**
      * POST /api/settings/dte-certificate
-     * Sube el certificado .p12 del emisor.
+     * Sube el certificado de firma del emisor: el .crt que emite el MH o un
+     * PKCS#12. Se guarda cifrado junto con su contraseña.
      */
     public function uploadCertificate(Request $request): JsonResponse
     {
         $request->validate([
-            'certificate' => ['required', 'file', 'mimes:p12,pfx', 'max:2048'],
+            'certificate' => ['required', 'file', 'extensions:p12,pfx,crt', 'max:2048'],
             'password' => ['required', 'string'],
         ]);
 
         try {
-            $tempPath = $request->file('certificate')->getRealPath();
-            $storagePath = $this->dteService->uploadCertificate($tempPath, $request->input('password'));
-
-            return response()->json([
-                'data' => [
-                    'type' => 'dte-certificate',
-                    'attributes' => [
-                        'path' => $storagePath,
-                        'message' => 'Certificado cargado y validado correctamente.',
-                    ],
-                ],
-            ]);
-        } catch (\Throwable $e) {
+            $storagePath = $this->dteService->uploadCertificate(
+                $request->file('certificate')->getRealPath(),
+                $request->input('password'),
+            );
+        } catch (\RuntimeException $e) {
             return response()->json([
                 'errors' => [['title' => 'Error de certificado', 'detail' => $e->getMessage()]],
             ], 422);
         }
+
+        return response()->json([
+            'data' => [
+                'type' => 'dte-certificate',
+                'attributes' => [
+                    'path' => $storagePath,
+                    'message' => 'Certificado cargado y validado correctamente.',
+                ],
+            ],
+        ]);
+    }
+
+    /** Un error por causa, para que el back-office pueda listarlas todas. */
+    private function dteError(DteException $e, string $title, ?Invoice $invoice = null): JsonResponse
+    {
+        $details = $e->errors ?: [$e->getMessage()];
+
+        return response()->json([
+            'errors' => array_map(fn ($detail) => ['title' => $title, 'detail' => $detail], $details),
+            'meta' => $invoice ? ['dte_status' => $invoice->dte_status] : [],
+        ], 422);
     }
 }

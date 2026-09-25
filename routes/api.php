@@ -302,13 +302,20 @@ Route::middleware(['auth:api'])->group(function () {
             ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
             ->middleware('permission:invoices:show')->name('pdf');
         Route::patch('/{invoice}', [InvoiceController::class, 'update'])->middleware('permission:invoices:update')->name('update');
-        Route::post('/{invoice}/generate-dte', [InvoiceController::class, 'generateDte'])->middleware('permission:invoices:generate-dte')->name('generate-dte');
+        // Acción sin documento: el frontend la llama sin cuerpo.
+        Route::post('/{invoice}/generate-dte', [InvoiceController::class, 'generateDte'])
+            ->withoutMiddleware([ValidateJsonApiDocument::class])
+            ->middleware('permission:invoices:generate-dte')->name('generate-dte');
         Route::get('/{invoice}/preview-dte', [InvoiceController::class, 'previewDte'])->middleware('permission:invoices:generate-dte')->name('preview-dte');
     });
     Route::post('/settings/dte-certificate', [InvoiceController::class, 'uploadCertificate'])
         ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
         ->middleware('permission:invoices:generate-dte')
         ->name('api.v1.settings.dte-certificate');
+    // Catálogos del MH para el formulario del emisor (ajustes de facturación).
+    Route::get('/dte/catalogs', [InvoiceController::class, 'catalogs'])
+        ->middleware('permission:settings:update')
+        ->name('api.v1.dte.catalogs');
 
     // Settings (admin write)
     Route::patch('/settings', [SettingsController::class, 'update'])->middleware('permission:settings:update')->name('api.v1.settings.update');

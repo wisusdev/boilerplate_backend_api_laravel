@@ -32,6 +32,7 @@ class InvoiceResource extends JsonResource
             // Receptor snapshot
             'receptor_name' => $inv->receptor_name,
             'receptor_document' => $inv->receptor_document,
+            'receptor_document_type' => $inv->receptor_document_type,
             'receptor_email' => $inv->receptor_email,
             'notes' => $inv->notes,
             'number' => $inv->number,

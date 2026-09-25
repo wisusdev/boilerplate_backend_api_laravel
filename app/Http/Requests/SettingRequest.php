@@ -111,7 +111,8 @@ class SettingRequest extends FormRequest
             // ── Facturación electrónica (DTE) ──
             'data.attributes.dte_enabled' => $bool,
             'data.attributes.dte_auto_generate' => $bool,
-            'data.attributes.dte_environment' => ['sometimes', 'nullable', Rule::in(['00', '01'])],
+            // El formulario envía test/production; se aceptan también los códigos del MH.
+            'data.attributes.dte_environment' => ['sometimes', 'nullable', Rule::in(['test', 'production', '00', '01'])],
             'data.attributes.dte_nit' => ['sometimes', 'nullable', 'string', 'max:25'],
             'data.attributes.dte_nrc' => ['sometimes', 'nullable', 'string', 'max:20'],
             'data.attributes.dte_nombre' => ['sometimes', 'nullable', 'string', 'max:250'],
@@ -120,6 +121,8 @@ class SettingRequest extends FormRequest
             'data.attributes.dte_desc_actividad' => ['sometimes', 'nullable', 'string', 'max:250'],
             'data.attributes.dte_departamento' => ['sometimes', 'nullable', 'string', 'max:5'],
             'data.attributes.dte_municipio' => ['sometimes', 'nullable', 'string', 'max:5'],
+            'data.attributes.dte_distrito' => ['sometimes', 'nullable', 'string', 'max:5'],
+            'data.attributes.dte_tipo_establecimiento' => ['sometimes', 'nullable', Rule::in(['01', '02', '04', '07'])],
             'data.attributes.dte_direccion' => ['sometimes', 'nullable', 'string', 'max:500'],
             'data.attributes.dte_telefono' => ['sometimes', 'nullable', 'string', 'max:40'],
             'data.attributes.dte_correo' => ['sometimes', 'nullable', 'email', 'max:150'],
