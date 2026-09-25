@@ -313,6 +313,16 @@ Route::middleware(['auth:api'])->group(function () {
             ->middleware('permission:invoices:invalidate-dte')->name('invalidate-dte');
         Route::get('/{invoice}/dte-replacements', [DteController::class, 'replacements'])
             ->middleware('permission:invoices:invalidate-dte')->name('dte-replacements');
+        // Entrega al receptor: representación gráfica, archivo DTE y envío por correo.
+        Route::get('/{invoice}/dte/pdf', [DteController::class, 'pdf'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:invoices:show')->name('dte.pdf');
+        Route::get('/{invoice}/dte/json', [DteController::class, 'json'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:invoices:show')->name('dte.json');
+        Route::post('/{invoice}/dte/send', [DteController::class, 'send'])
+            ->withoutMiddleware([ValidateJsonApiDocument::class])
+            ->middleware('permission:invoices:generate-dte')->name('dte.send');
     });
     Route::post('/settings/dte-certificate', [InvoiceController::class, 'uploadCertificate'])
         ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])

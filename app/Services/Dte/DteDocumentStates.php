@@ -34,6 +34,9 @@ final class DteDocumentStates
                 'dte_accepted_at' => now(),
             ]);
         });
+
+        // La versión definitiva, con sello, va al receptor.
+        DteDelivery::autoDeliver($doc->fresh());
     }
 
     /** @param  array<string, mixed>  $body */

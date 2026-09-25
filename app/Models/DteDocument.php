@@ -46,6 +46,9 @@ class DteDocument extends Model
         'ultimo_error',
         'intentos',
         'transmitido_at',
+        'entregado_at',
+        'entregado_a',
+        'entregado_con_sello',
     ];
 
     protected $casts = [
@@ -53,6 +56,8 @@ class DteDocument extends Model
         'intentos' => 'integer',
         'mh_response' => 'array',
         'transmitido_at' => 'datetime',
+        'entregado_at' => 'datetime',
+        'entregado_con_sello' => 'boolean',
     ];
 
     public function invoice(): BelongsTo

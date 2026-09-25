@@ -69,6 +69,9 @@ class InvoiceResource extends JsonResource
                     'ultimo_error' => $d->ultimo_error,
                     'transmitido_at' => $d->transmitido_at,
                     'contingencia_id' => $d->contingencia_id,
+                    'entregado_at' => $d->entregado_at,
+                    'entregado_a' => $d->entregado_a,
+                    'entregado_con_sello' => $d->entregado_con_sello,
                     'created_at' => $d->created_at,
                     'invalidacion' => $d->relationLoaded('invalidaciones') && ($i = $d->invalidaciones->sortByDesc('id')->first())
                         ? [

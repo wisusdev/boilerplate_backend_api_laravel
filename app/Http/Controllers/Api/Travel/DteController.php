@@ -8,9 +8,11 @@ use App\Models\DteDocument;
 use App\Models\DteInvalidacion;
 use App\Models\Invoice;
 use App\Services\Dte\DteContingencyService;
+use App\Services\Dte\DteDelivery;
 use App\Services\Dte\DteException;
 use App\Services\Dte\DteInvalidationService;
 use App\Services\Dte\DtePendingException;
+use App\Services\Dte\DteRepresentation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -24,7 +26,73 @@ class DteController extends Controller
     public function __construct(
         private readonly DteInvalidationService $invalidations,
         private readonly DteContingencyService $contingencies,
+        private readonly DteRepresentation $representation,
+        private readonly DteDelivery $delivery,
     ) {}
+
+    /**
+     * GET /invoices/{invoice}/dte/pdf
+     * Representación gráfica del DTE vigente de la factura.
+     */
+    public function pdf(Invoice $invoice)
+    {
+        $doc = $this->currentDocument($invoice);
+
+        return response($this->representation->pdf($doc), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$this->representation->filename($doc, 'pdf').'"',
+        ]);
+    }
+
+    /**
+     * GET /invoices/{invoice}/dte/json
+     * Archivo DTE: el JSON firmado, con la firma y (si lo tiene) el sello.
+     */
+    public function json(Invoice $invoice)
+    {
+        $doc = $this->currentDocument($invoice);
+
+        return response($this->representation->json($doc), 200, [
+            'Content-Type' => 'application/json',
+            'Content-Disposition' => 'attachment; filename="'.$this->representation->filename($doc, 'json').'"',
+        ]);
+    }
+
+    /**
+     * POST /invoices/{invoice}/dte/send
+     * Envía el PDF y el JSON al receptor. `to` (opcional) sustituye al correo
+     * que declara el DTE. También funciona en ambiente de pruebas: es un envío
+     * a mano y deliberado.
+     */
+    public function send(Request $request, Invoice $invoice): JsonResponse
+    {
+        $request->validate(['data.attributes.to' => ['nullable', 'email', 'max:150']]);
+
+        try {
+            $doc = $this->delivery->deliver($this->currentDocument($invoice), $request->input('data.attributes.to'));
+        } catch (DteException $e) {
+            return response()->json(['errors' => [['title' => 'Error de envío', 'detail' => $e->getMessage()]]], 422);
+        }
+
+        return response()->json(['data' => [
+            'type' => 'dte-deliveries',
+            'id' => (string) $doc->id,
+            'attributes' => [
+                'entregado_at' => $doc->entregado_at,
+                'entregado_a' => $doc->entregado_a,
+                'entregado_con_sello' => $doc->entregado_con_sello,
+            ],
+        ]]);
+    }
+
+    /** El DTE vigente de la factura: el último que no fue rechazado. */
+    private function currentDocument(Invoice $invoice): DteDocument
+    {
+        $doc = $invoice->dteDocuments()->where('estado', '!=', DteDocument::REJECTED)->latest('id')->first();
+        abort_if(! $doc, 404, 'La factura no tiene un DTE emitido.');
+
+        return $doc;
+    }
 
     /**
      * POST /invoices/{invoice}/invalidate-dte

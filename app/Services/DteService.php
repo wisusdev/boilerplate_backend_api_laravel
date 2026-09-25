@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Setting;
 use App\Services\Dte\DteConfig;
 use App\Services\Dte\DteContingencyService;
+use App\Services\Dte\DteDelivery;
 use App\Services\Dte\DteDocumentStates;
 use App\Services\Dte\DteException;
 use App\Services\Dte\DtePendingException;
@@ -90,6 +91,8 @@ class DteService
 
         $doc = $this->issue($invoice, $config, $key);
         if ($doc->estado === DteDocument::CONTINGENCY) {
+            DteDelivery::autoDeliver($doc);
+
             throw new DtePendingException('El MH no está disponible: el DTE se emitió en contingencia. Es válido para entregarse y se transmitirá en lote cuando el MH vuelva.');
         }
         $this->transmit($doc, $config);

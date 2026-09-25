@@ -120,6 +120,9 @@ class DteContingencyService
             ]);
         });
 
+        // El manual pide entregar el documento al generarlo, aún sin sello.
+        DteDelivery::autoDeliver($doc->fresh());
+
         return $c;
     }
 
