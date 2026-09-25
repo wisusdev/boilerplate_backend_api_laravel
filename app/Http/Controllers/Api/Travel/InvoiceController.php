@@ -49,7 +49,7 @@ class InvoiceController extends Controller
      */
     public function show(Invoice $invoice): InvoiceResource
     {
-        $invoice->loadMissing(['booking.bookable', 'items', 'dteDocuments']);
+        $invoice->loadMissing(['booking.bookable', 'items', 'dteDocuments.invalidaciones']);
 
         return InvoiceResource::make($invoice);
     }

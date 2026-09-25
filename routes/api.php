@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Travel\BookingController;
 use App\Http\Controllers\Api\Travel\CouponController;
 use App\Http\Controllers\Api\Travel\CurrencyController;
 use App\Http\Controllers\Api\Travel\CustomInquiryController;
+use App\Http\Controllers\Api\Travel\DteController;
 use App\Http\Controllers\Api\Travel\ExpenseCategoryController;
 use App\Http\Controllers\Api\Travel\ExpenseController;
 use App\Http\Controllers\Api\Travel\FinanceController;
@@ -307,11 +308,22 @@ Route::middleware(['auth:api'])->group(function () {
             ->withoutMiddleware([ValidateJsonApiDocument::class])
             ->middleware('permission:invoices:generate-dte')->name('generate-dte');
         Route::get('/{invoice}/preview-dte', [InvoiceController::class, 'previewDte'])->middleware('permission:invoices:generate-dte')->name('preview-dte');
+        // Invalidación de un DTE sellado (Manual Funcional v2, VII).
+        Route::post('/{invoice}/invalidate-dte', [DteController::class, 'invalidate'])
+            ->middleware('permission:invoices:invalidate-dte')->name('invalidate-dte');
+        Route::get('/{invoice}/dte-replacements', [DteController::class, 'replacements'])
+            ->middleware('permission:invoices:invalidate-dte')->name('dte-replacements');
     });
     Route::post('/settings/dte-certificate', [InvoiceController::class, 'uploadCertificate'])
         ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
         ->middleware('permission:invoices:generate-dte')
         ->name('api.v1.settings.dte-certificate');
+    // Contingencias DTE: seguimiento de plazos y avance manual.
+    Route::get('/dte/contingencias', [DteController::class, 'contingencias'])
+        ->middleware('permission:invoices:generate-dte')->name('api.v1.dte.contingencias');
+    Route::post('/dte/contingencias/{contingencia}/process', [DteController::class, 'processContingencia'])
+        ->withoutMiddleware([ValidateJsonApiDocument::class])
+        ->middleware('permission:invoices:generate-dte')->name('api.v1.dte.contingencias.process');
     // Catálogos del MH para el formulario del emisor (ajustes de facturación).
     Route::get('/dte/catalogs', [InvoiceController::class, 'catalogs'])
         ->middleware('permission:settings:update')

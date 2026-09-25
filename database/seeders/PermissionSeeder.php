@@ -101,6 +101,8 @@ class PermissionSeeder extends Seeder
             'invoices:show',
             'invoices:update',
             'invoices:generate-dte',
+            // Anular un DTE sellado ante Hacienda: más delicado que emitirlo.
+            'invoices:invalidate-dte',
 
             // ── Travel: ajustes ──
             'settings:update',

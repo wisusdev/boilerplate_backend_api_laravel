@@ -136,6 +136,52 @@ class DteConfig
         return self::threeDigits($this->raw['dte_cod_punto_venta'] ?? '');
     }
 
+    /** Código interno del establecimiento con su letra: "M001". */
+    public function codEstableCompleto(): string
+    {
+        return SvCatalogs::establecimientoLetter($this->tipoEstablecimiento()).$this->codEstable();
+    }
+
+    /** Código interno del punto de venta: "P001". */
+    public function codPuntoVentaCompleto(): string
+    {
+        return 'P'.$this->codPuntoVenta();
+    }
+
+    /** Código que el MH asignó al establecimiento; si no se registró, el interno. */
+    public function codEstableMH(): string
+    {
+        $mh = strtoupper(trim((string) ($this->raw['dte_cod_estable_mh'] ?? '')));
+
+        return strlen($mh) === 4 ? $mh : $this->codEstableCompleto();
+    }
+
+    public function codPuntoVentaMH(): string
+    {
+        $mh = strtoupper(trim((string) ($this->raw['dte_cod_punto_venta_mh'] ?? '')));
+
+        return strlen($mh) === 4 ? $mh : $this->codPuntoVentaCompleto();
+    }
+
+    /**
+     * Responsable del establecimiento: firma el evento de contingencia y es
+     * quien realiza, por defecto, las invalidaciones.
+     */
+    public function responsableNombre(): string
+    {
+        return trim((string) ($this->raw['dte_responsable_nombre'] ?? ''));
+    }
+
+    public function responsableTipoDoc(): string
+    {
+        return (string) ($this->raw['dte_responsable_tipo_doc'] ?? '');
+    }
+
+    public function responsableNumDoc(): string
+    {
+        return trim((string) ($this->raw['dte_responsable_num_doc'] ?? ''));
+    }
+
     /** Usuario de la API del MH: el NIT del emisor, salvo que se haya indicado otro. */
     public function mhUser(): string
     {
@@ -203,6 +249,17 @@ class DteConfig
         }
         if ($this->codPuntoVenta() === '') {
             $errors[] = 'El código de punto de venta debe tener 3 dígitos.';
+        }
+        foreach (['dte_cod_estable_mh' => 'establecimiento', 'dte_cod_punto_venta_mh' => 'punto de venta'] as $key => $que) {
+            $mh = trim((string) ($this->raw[$key] ?? ''));
+            if ($mh !== '' && strlen($mh) !== 4) {
+                $errors[] = "El código de {$que} asignado por el MH debe tener 4 caracteres.";
+            }
+        }
+        // Lo exige el evento de contingencia, que puede hacer falta en cualquier momento.
+        if ($this->responsableNombre() === '' || ! SvCatalogs::validTipoDocumento($this->responsableTipoDoc())
+            || $this->responsableNumDoc() === '') {
+            $errors[] = 'Faltan el nombre, el tipo o el número de documento del responsable del establecimiento.';
         }
 
         return $errors;

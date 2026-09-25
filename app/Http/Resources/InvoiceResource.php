@@ -68,7 +68,20 @@ class InvoiceResource extends JsonResource
                     'intentos' => $d->intentos,
                     'ultimo_error' => $d->ultimo_error,
                     'transmitido_at' => $d->transmitido_at,
+                    'contingencia_id' => $d->contingencia_id,
                     'created_at' => $d->created_at,
+                    'invalidacion' => $d->relationLoaded('invalidaciones') && ($i = $d->invalidaciones->sortByDesc('id')->first())
+                        ? [
+                            'tipo_anulacion' => $i->tipo_anulacion,
+                            'motivo' => $i->motivo,
+                            'estado' => $i->estado,
+                            'codigo_generacion_r' => $i->codigo_generacion_r,
+                            'solicita_nombre' => $i->solicita_nombre,
+                            'sello_recibido' => $i->sello_recibido,
+                            'ultimo_error' => $i->ultimo_error,
+                            'transmitido_at' => $i->transmitido_at,
+                        ]
+                        : null,
                 ])->all()
                 : [],
             // MH response (admin only or for error debugging)

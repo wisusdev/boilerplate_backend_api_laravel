@@ -8,219 +8,24 @@ use App\Models\DteDocument;
 use App\Models\Invoice;
 use App\Models\Setting;
 use App\Models\Tour;
-use App\Models\User;
 use App\Services\Dte\AmountToWords;
 use App\Services\Dte\DteSigner;
 use App\Services\DteService;
-use Database\Seeders\PermissionSeeder;
-use Database\Seeders\RoleSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Testing\TestResponse;
-use Laravel\Passport\Passport;
-use Opis\JsonSchema\Errors\ErrorFormatter;
-use Opis\JsonSchema\Helper;
-use Opis\JsonSchema\Validator;
-use Tests\TestCase;
 
 /**
  * Factura de consumidor final (DTE 01, esquema v2) contra el esquema oficial
  * del MH y un MH simulado. Sin credenciales de Hacienda, esto verifica casi
  * todo antes de tocar apitest.
  */
-class DteFacturaTest extends TestCase
+class DteFacturaTest extends DteTestCase
 {
-    use RefreshDatabase;
-
-    private const SELLO = '2026A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8';
-
-    private \OpenSSLAsymmetricKey $key;
-
-    /** @var list<array{estado: string, sello?: string}|int> */
-    private array $recepciones = [];
-
-    /** @var list<array<string, mixed>|int> */
-    private array $consultas = [];
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
-        Storage::fake('local');
-        DteService::$retryDelayMs = 0;
-        Carbon::setTestNow('2026-09-25 03:30:00'); // UTC: en El Salvador aún es el 24 a las 21:30
-
-        $this->key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
-        $this->configurar();
-        $this->fakeMh();
-    }
-
-    protected function tearDown(): void
-    {
-        Carbon::setTestNow();
-        parent::tearDown();
-    }
-
-    // ─── Escenario ────────────────────────────────────────────────────────────
-
-    private function configurar(array $extra = []): void
-    {
-        Setting::updateOrCreate(['key' => 'dte'], ['value' => json_encode(array_merge([
-            'dte_enabled' => true,
-            'dte_environment' => 'test',
-            'dte_nit' => '0614-010123-123-4',
-            'dte_nrc' => '123456-7',
-            'dte_nombre' => 'VAMOS PUES, S.A. DE C.V.',
-            'dte_nombre_comercial' => 'Vamos Pues',
-            'dte_cod_actividad' => '79110',
-            'dte_departamento' => '06',
-            'dte_municipio' => '23',
-            'dte_distrito' => '14',
-            'dte_direccion' => 'Calle La Mascota #123, Col. Escalón',
-            'dte_telefono' => '22223333',
-            'dte_correo' => 'facturacion@vamospues.test',
-            'dte_cod_establec' => 'M001',
-            'dte_cod_punto_venta' => 'P001',
-            'dte_mh_password' => Crypt::encryptString('clave-api-mh'),
-        ], $extra))]);
-
-        $this->cargarCertificado();
-    }
-
-    private function cargarCertificado(): void
-    {
-        $csr = openssl_csr_new(['commonName' => 'VAMOS PUES'], $this->key, ['digest_alg' => 'sha256']);
-        $cert = openssl_csr_sign($csr, null, $this->key, 365, ['digest_alg' => 'sha256']);
-        openssl_pkcs12_export($cert, $p12, $this->key, 'clave-cert');
-
-        $tmp = tempnam(sys_get_temp_dir(), 'p12');
-        file_put_contents($tmp, $p12);
-        app(DteService::class)->uploadCertificate($tmp, 'clave-cert');
-        unlink($tmp);
-    }
-
-    /**
-     * MH simulado: responde con lo que haya en $recepciones / $consultas, en
-     * orden (un entero es un código HTTP sin cuerpo útil).
-     */
-    private function fakeMh(): void
-    {
-        Http::fake(function (Request $request) {
-            if (str_ends_with($request->url(), '/seguridad/auth')) {
-                return Http::response(['status' => 'OK', 'body' => ['token' => 'Bearer token-de-prueba']]);
-            }
-            if (str_contains($request->url(), '/fesv/recepcion/consultadte')) {
-                return $this->respuesta(array_shift($this->consultas) ?? 404);
-            }
-            if (str_ends_with($request->url(), '/fesv/recepciondte')) {
-                return $this->respuesta(array_shift($this->recepciones) ?? ['estado' => 'PROCESADO', 'sello' => self::SELLO]);
-            }
-
-            return Http::response('no encontrado', 404);
-        });
-    }
-
-    private function respuesta(array|int $r)
-    {
-        if (is_int($r)) {
-            return Http::response('<html>error</html>', $r);
-        }
-
-        return Http::response([
-            'version' => 2, 'ambiente' => '00', 'estado' => $r['estado'],
-            'selloRecibido' => $r['sello'] ?? null, 'fhProcesamiento' => '24/09/2026 21:30:01',
-            'codigoMsg' => $r['estado'] === 'RECHAZADO' ? '004' : '001',
-            'descripcionMsg' => $r['estado'] === 'RECHAZADO' ? '[identificacion.numeroControl] YA EXISTE' : 'RECIBIDO',
-            'observaciones' => [],
-        ]);
-    }
-
-    private function admin(): User
-    {
-        $user = User::create([
-            'username' => 'dte'.uniqid(), 'first_name' => 'Admin', 'last_name' => 'DTE',
-            'email' => uniqid('dte').'@example.com', 'password' => bcrypt('password123'),
-        ]);
-        $user->assignRole('admin');
-        Passport::actingAs($user->fresh());
-
-        return $user;
-    }
-
-    private function apiJson(string $method, string $uri, array $payload = []): TestResponse
-    {
-        return $this->call($method, $uri, [], [], [], [
-            'HTTP_ACCEPT' => 'application/vnd.api+json',
-            'CONTENT_TYPE' => 'application/vnd.api+json',
-        ], $payload ? json_encode($payload) : null);
-    }
-
-    private function facturaManual(?array $items = null, array $receptor = []): Invoice
-    {
-        $this->admin();
-        $items ??= [
-            ['description' => 'Hamburguesa de tour', 'quantity' => 1, 'unit_price' => 11.30],
-            ['description' => 'Tour Volcán Santa Ana', 'quantity' => 2, 'unit_price' => 65],
-        ];
-
-        $id = $this->apiJson('POST', '/api/v1/invoices', ['data' => ['type' => 'invoices', 'attributes' => array_merge([
-            'receptor_name' => 'María González',
-            'receptor_email' => 'maria@example.com',
-            'items' => $items,
-        ], $receptor)]])->assertCreated()->json('data.id');
-
-        return Invoice::findOrFail($id);
-    }
-
-    private function emitir(Invoice $invoice): TestResponse
-    {
-        return $this->apiJson('POST', "/api/v1/invoices/{$invoice->id}/generate-dte");
-    }
-
-    /** El DTE vigente (el último) de una factura. */
-    private function dte(Invoice $invoice): DteDocument
-    {
-        return $invoice->dteDocuments()->latest('id')->firstOrFail();
-    }
-
-    private function documento(Invoice $invoice): array
-    {
-        return $this->dte($invoice)->document();
-    }
-
-    private function assertCumpleEsquema(array $documento): void
-    {
-        // El MH lee el texto JSON ("141.3") como decimal. Con su escala por
-        // defecto (14) opis compara el binario 141.30000000000001 y falla el
-        // multipleOf 0.01; 8 decimales es el multipleOf más fino del esquema.
-        Helper::$numberScale = 8;
-        $validator = new Validator;
-        $validator->setMaxErrors(20);
-        $result = $validator->validate(
-            json_decode(json_encode($documento)),
-            file_get_contents(base_path('tests/Fixtures/dte-schemas/fe-f-v2.json')),
-        );
-
-        $this->assertTrue(
-            $result->isValid(),
-            $result->isValid() ? '' : json_encode((new ErrorFormatter)->format($result->error()), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
-        );
-    }
-
-    /** @return list<Request> */
-    private function llamadas(string $ruta): array
-    {
-        return Http::recorded(fn (Request $r) => str_contains($r->url(), $ruta))->map(fn ($par) => $par[0])->values()->all();
-    }
-
     // ─── Documento ────────────────────────────────────────────────────────────
 
     public function test_la_factura_cumple_el_esquema_oficial_con_iva_incluido_por_linea(): void
@@ -452,7 +257,7 @@ class DteFacturaTest extends TestCase
     public function test_una_respuesta_sin_sello_no_se_da_por_transmitida(): void
     {
         $invoice = $this->facturaManual();
-        $this->recepciones = [500, 500];
+        $this->recepciones = [self::SIN_SELLO];
 
         // Firmado pero sin sello: no es un error, queda pendiente (202).
         $this->emitir($invoice)->assertStatus(202)
@@ -461,15 +266,14 @@ class DteFacturaTest extends TestCase
         $this->assertSame(Invoice::DTE_PENDING, $invoice->fresh()->dte_status);
         $this->assertNull($invoice->fresh()->dte_seal);
         $this->assertSame(DteDocument::PENDING, $this->dte($invoice)->estado);
-        $this->assertSame(2, $this->dte($invoice)->intentos);
-        // Reintento inmediato: dos envíos antes de rendirse.
-        $this->assertCount(2, $this->llamadas('/fesv/recepciondte'));
+        $this->assertSame(1, $this->dte($invoice)->intentos);
+        $this->assertSame('Respuesta del MH sin sello de recepción.', $this->dte($invoice)->ultimo_error);
     }
 
     public function test_sin_respuesta_se_reenvia_el_mismo_documento_y_antes_se_consulta(): void
     {
         $invoice = $this->facturaManual();
-        $this->recepciones = [500, 500];
+        $this->recepciones = [self::SIN_SELLO];
         $this->emitir($invoice)->assertStatus(202);
         $primero = $this->dte($invoice);
 
@@ -482,14 +286,14 @@ class DteFacturaTest extends TestCase
         $this->assertSame(self::SELLO, $final->dte_seal);
         $this->assertSame($primero->codigo_generacion, $final->dte_generation_code);
         $this->assertSame(1, $invoice->dteDocuments()->count());
-        $this->assertCount(2, $this->llamadas('/fesv/recepciondte'));
+        $this->assertCount(1, $this->llamadas('/fesv/recepciondte'));
         $this->assertSame(1, (int) DB::table('dte_sequences')->value('last_number'));
     }
 
     public function test_si_el_mh_no_lo_tiene_se_reenvia_el_mismo_documento(): void
     {
         $invoice = $this->facturaManual();
-        $this->recepciones = [500, 500];
+        $this->recepciones = [self::SIN_SELLO];
         $this->emitir($invoice)->assertStatus(202);
         $jws = $this->dte($invoice)->firma_electronica;
 
@@ -561,7 +365,7 @@ class DteFacturaTest extends TestCase
     public function test_dte_retry_reenvia_los_pendientes_que_llevan_un_rato_quietos(): void
     {
         $invoice = $this->facturaManual();
-        $this->recepciones = [500, 500];
+        $this->recepciones = [self::SIN_SELLO];
         $this->emitir($invoice)->assertStatus(202);
 
         // Recién tocado: puede haber un envío en curso, no se compite con él.
@@ -575,13 +379,13 @@ class DteFacturaTest extends TestCase
         $this->assertSame(self::SELLO, $invoice->fresh()->dte_seal);
         // Antes de reenviar se preguntó al MH (404: no lo tenía).
         $this->assertCount(1, $this->llamadas('consultadte'));
-        $this->assertCount(3, $this->llamadas('/fesv/recepciondte'));
+        $this->assertCount(2, $this->llamadas('/fesv/recepciondte'));
     }
 
     public function test_un_envio_en_curso_no_se_duplica(): void
     {
         $invoice = $this->facturaManual();
-        $this->recepciones = [500, 500];
+        $this->recepciones = [self::SIN_SELLO];
         $this->emitir($invoice)->assertStatus(202);
 
         // Otro proceso (el comando programado) está enviando este documento.
@@ -590,7 +394,7 @@ class DteFacturaTest extends TestCase
 
         $this->emitir($invoice)->assertStatus(202)
             ->assertJsonPath('meta.message', 'El DTE se está enviando en este momento. Vuelve a consultar en unos segundos.');
-        $this->assertCount(2, $this->llamadas('/fesv/recepciondte'));
+        $this->assertCount(1, $this->llamadas('/fesv/recepciondte'));
 
         $lock->release();
     }
@@ -598,7 +402,7 @@ class DteFacturaTest extends TestCase
     public function test_un_pendiente_se_reenvia_al_ambiente_en_que_se_firmo(): void
     {
         $invoice = $this->facturaManual();
-        $this->recepciones = [500, 500];
+        $this->recepciones = [self::SIN_SELLO];
         $this->emitir($invoice)->assertStatus(202);
 
         $this->configurar(['dte_environment' => 'production']);
@@ -623,7 +427,7 @@ class DteFacturaTest extends TestCase
         $patch()->assertOk();
 
         // Pendiente: puede llegar a sellarse en cualquier momento.
-        $this->recepciones = [500, 500];
+        $this->recepciones = [self::SIN_SELLO];
         $this->emitir($invoice)->assertStatus(202);
         $patch()->assertStatus(409);
 
@@ -671,11 +475,11 @@ class DteFacturaTest extends TestCase
         Bus::assertDispatchedAfterResponse(TransmitInvoiceDte::class);
         Http::assertNothingSent();
 
-        // Y el job emite; un MH caído no lo hace fallar: queda pendiente.
+        // Y el job emite; un MH caído no lo hace fallar: queda en contingencia.
         $invoice = $booking->invoice()->firstOrFail();
         $this->recepciones = [500, 500];
         (new TransmitInvoiceDte($invoice))->handle(app(DteService::class));
-        $this->assertSame(Invoice::DTE_PENDING, $invoice->fresh()->dte_status);
+        $this->assertSame(Invoice::DTE_CONTINGENCY, $invoice->fresh()->dte_status);
     }
 
     // ─── Total en letras ──────────────────────────────────────────────────────

@@ -29,7 +29,7 @@ class RoleSeeder extends Seeder
                 'expenses:index', 'expenses:store', 'expenses:update', 'expenses:delete', 'expenses:view-all',
                 'expense-categories:index', 'expense-categories:store', 'expense-categories:update', 'expense-categories:delete',
                 'invoices:index', 'invoices:show', 'invoices:store', 'invoices:update',
-                'invoices:delete', 'invoices:generate-dte',
+                'invoices:delete', 'invoices:generate-dte', 'invoices:invalidate-dte',
                 'payments:view-all', 'payments:mark-paid',
                 'payments:issue-link', 'payments:confirm-link',
             ],

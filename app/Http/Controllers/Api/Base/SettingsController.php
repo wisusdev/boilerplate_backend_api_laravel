@@ -186,6 +186,8 @@ class SettingsController extends Controller
             'dte_departamento', 'dte_municipio', 'dte_distrito', 'dte_direccion',
             'dte_telefono', 'dte_correo',
             'dte_tipo_establecimiento', 'dte_cod_establec', 'dte_cod_punto_venta',
+            'dte_cod_estable_mh', 'dte_cod_punto_venta_mh',
+            'dte_responsable_nombre', 'dte_responsable_tipo_doc', 'dte_responsable_num_doc',
             'dte_mh_user', 'dte_mh_password',
             // El certificado y su contraseña solo se escriben al subirlo
             // (POST /settings/dte-certificate), que antes los valida.

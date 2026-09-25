@@ -170,8 +170,8 @@ class FacturaBuilder
             ],
             'telefono' => mb_substr($config->telefono(), 0, 30),
             'correo' => mb_substr($config->correo(), 0, 100),
-            'codEstable' => SvCatalogs::establecimientoLetter($config->tipoEstablecimiento()).$config->codEstable(),
-            'codPuntoVenta' => 'P'.$config->codPuntoVenta(),
+            'codEstable' => $config->codEstableCompleto(),
+            'codPuntoVenta' => $config->codPuntoVentaCompleto(),
         ];
     }
 

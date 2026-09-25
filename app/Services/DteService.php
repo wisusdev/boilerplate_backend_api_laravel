@@ -6,6 +6,8 @@ use App\Models\DteDocument;
 use App\Models\Invoice;
 use App\Models\Setting;
 use App\Services\Dte\DteConfig;
+use App\Services\Dte\DteContingencyService;
+use App\Services\Dte\DteDocumentStates;
 use App\Services\Dte\DteException;
 use App\Services\Dte\DtePendingException;
 use App\Services\Dte\DteSigner;
@@ -19,7 +21,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -35,9 +36,12 @@ use Illuminate\Support\Str;
  *  2. Dentro de una transacción que bloquea la factura: si ya tiene un DTE
  *     pendiente se reutiliza; si no, se numera, se construye, se firma (JWS
  *     RS512) y se guarda como `pending` en `dte_documents`.
- *  3. Se envía. Solo cuenta el sello; un rechazo se guarda con su motivo; sin
- *     respuesta el documento sigue `pending` y el comando `dte:retry` lo
- *     reenvía tal cual, preguntando antes al MH si ya lo tiene.
+ *  3. Se envía. Solo cuenta el sello; un rechazo se guarda con su motivo. Si
+ *     el MH no responde (red, timeout, 5xx) ni al reintento inmediato, el
+ *     documento pasa a contingencia (DteContingencyService) y los siguientes se
+ *     emiten directamente en ella. Una respuesta sin sello deja el documento
+ *     `pending`: `dte:retry` lo reenvía tal cual, preguntando antes al MH si ya
+ *     lo tiene.
  */
 class DteService
 {
@@ -49,7 +53,10 @@ class DteService
     /** Nadie más envía el mismo documento mientras dura un envío. */
     private const SEND_LOCK_SECONDS = 60;
 
-    public function __construct(private readonly DteSigner $signer) {}
+    public function __construct(
+        private readonly DteSigner $signer,
+        private readonly DteContingencyService $contingencies,
+    ) {}
 
     /**
      * Emite (o reintenta) el DTE de una factura y lo transmite.
@@ -82,6 +89,9 @@ class DteService
         }
 
         $doc = $this->issue($invoice, $config, $key);
+        if ($doc->estado === DteDocument::CONTINGENCY) {
+            throw new DtePendingException('El MH no está disponible: el DTE se emitió en contingencia. Es válido para entregarse y se transmitirá en lote cuando el MH vuelva.');
+        }
         $this->transmit($doc, $config);
 
         return $invoice->fresh();
@@ -112,7 +122,7 @@ class DteService
     public function previewDte(Invoice $invoice): array
     {
         $vigente = $invoice->dteDocuments()
-            ->whereIn('estado', [DteDocument::PENDING, DteDocument::TRANSMITTED])
+            ->where('estado', '!=', DteDocument::REJECTED)
             ->latest('id')->first();
         if ($vigente) {
             return $vigente->document();
@@ -168,21 +178,28 @@ class DteService
             $locked = Invoice::whereKey($invoice->getKey())->lockForUpdate()->firstOrFail();
 
             $vigente = $locked->dteDocuments()
-                ->whereIn('estado', [DteDocument::PENDING, DteDocument::TRANSMITTED])
+                ->whereIn('estado', [DteDocument::PENDING, DteDocument::TRANSMITTED, DteDocument::CONTINGENCY, DteDocument::INVALIDATED])
                 ->latest('id')->first();
 
-            if ($vigente?->estado === DteDocument::TRANSMITTED) {
+            if (in_array($vigente?->estado, [DteDocument::TRANSMITTED, DteDocument::INVALIDATED], true)) {
                 throw new DteException('La factura ya tiene un DTE con sello.');
             }
             if ($vigente) {
                 return $vigente;
             }
 
+            // Con el MH caído no se le espera: se emite directamente en
+            // contingencia y el cliente se lleva un documento válido.
+            $contingencia = $this->contingencies->active($config->ambiente());
+
             $numero = $this->nextNumber($config->ambiente(), FacturaBuilder::TIPO_DTE);
             $codigo = strtoupper((string) Str::uuid());
             $documento = (new FacturaBuilder)->build(
                 $locked, $config, $this->numeroControl($config, $numero), $codigo, Carbon::now(),
             );
+            if ($contingencia) {
+                $documento = DteContingencyService::apply($documento, $contingencia);
+            }
             // Se firma el JSON exacto que se guarda y se envía.
             $json = json_encode($documento, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
@@ -192,13 +209,14 @@ class DteService
                 'version' => FacturaBuilder::VERSION,
                 'numero_control' => $documento['identificacion']['numeroControl'],
                 'codigo_generacion' => $codigo,
-                'estado' => DteDocument::PENDING,
+                'estado' => $contingencia ? DteDocument::CONTINGENCY : DteDocument::PENDING,
+                'contingencia_id' => $contingencia?->id,
                 'json_content' => $json,
                 'firma_electronica' => $this->signer->sign($json, $key),
             ]);
 
             $locked->update([
-                'dte_status' => Invoice::DTE_PENDING,
+                'dte_status' => $contingencia ? Invoice::DTE_CONTINGENCY : Invoice::DTE_PENDING,
                 'dte_type' => $doc->tipo_dte,
                 'dte_number' => $doc->numero_control,
                 'dte_generation_code' => $doc->codigo_generacion,
@@ -243,24 +261,32 @@ class DteService
                 if ($doc->intentos > 0) {
                     $consulta = $mh->consulta($doc->tipo_dte, $doc->codigo_generacion);
                     if ($consulta?->accepted()) {
-                        $this->markTransmitted($doc, $consulta);
+                        DteDocumentStates::transmitted($doc, $consulta->sello, $consulta->body);
 
                         return;
                     }
                 }
 
                 $result = $this->send($doc, $mh);
-            } catch (MhUnavailableException|\RuntimeException $e) {
+            } catch (MhUnavailableException $e) {
+                if ($e->status === null || $e->status >= 500) {
+                    $this->toContingency($doc, $config, $e->getMessage());
+                }
+                $this->markPending($doc, $e->getMessage());
+            } catch (\RuntimeException $e) {
                 $this->markPending($doc, $e->getMessage());
             }
 
             if ($result->accepted()) {
-                $this->markTransmitted($doc, $result);
+                DteDocumentStates::transmitted($doc, $result->sello, $result->body);
 
                 return;
             }
             if ($result->rejected()) {
-                $this->markRejected($doc, $result);
+                $mensaje = $result->message() ?: 'sin detalle';
+                DteDocumentStates::rejected($doc, $mensaje, $result->body);
+
+                throw new DteException("El MH rechazó el DTE: {$mensaje}");
             }
 
             // Ni sello ni rechazo: no es un recibo. El documento sigue pendiente.
@@ -290,56 +316,25 @@ class DteService
         }
     }
 
-    private function markTransmitted(DteDocument $doc, MhResult $result): void
+    /**
+     * El MH no contesta (red, timeout, 5xx) ni tras el reintento inmediato: se
+     * sigue facturando en contingencia.
+     */
+    private function toContingency(DteDocument $doc, DteConfig $config, string $causa): never
     {
-        DB::transaction(function () use ($doc, $result) {
-            $doc->update([
-                'estado' => DteDocument::TRANSMITTED,
-                'sello_recibido' => $result->sello,
-                'fh_procesamiento' => $result->body['fhProcesamiento'] ?? null,
-                'mh_response' => $result->body,
-                'ultimo_error' => null,
-                'transmitido_at' => now(),
-            ]);
-            $doc->invoice()->update([
-                'dte_status' => Invoice::DTE_ACCEPTED,
-                'dte_seal' => $result->sello,
-                'mh_response' => json_encode($result->body),
-                'status' => 'issued',
-                'dte_accepted_at' => now(),
-            ]);
-        });
-    }
+        try {
+            $this->contingencies->moveToContingency($doc, $config, $causa);
+        } catch (\Throwable $e) {
+            $this->markPending($doc, "{$causa} (no se pudo pasar a contingencia: {$e->getMessage()})");
+        }
 
-    private function markRejected(DteDocument $doc, MhResult $result): never
-    {
-        $mensaje = $result->message() ?: 'sin detalle';
-
-        DB::transaction(function () use ($doc, $result, $mensaje) {
-            $doc->update([
-                'estado' => DteDocument::REJECTED,
-                'mh_response' => $result->body,
-                'ultimo_error' => $mensaje,
-            ]);
-            $doc->invoice()->update([
-                'dte_status' => Invoice::DTE_REJECTED,
-                'mh_response' => json_encode($result->body),
-            ]);
-        });
-        Log::warning('DTE rechazado por el MH', ['dte_document_id' => $doc->id, 'response' => $result->body]);
-
-        throw new DteException("El MH rechazó el DTE: {$mensaje}");
+        throw new DtePendingException("El MH no responde ({$causa}). El DTE se emitió en contingencia: es válido para entregarse y se transmitirá en lote cuando el MH vuelva.");
     }
 
     /** @param  array<string, mixed>|null  $body */
     private function markPending(DteDocument $doc, string $error, ?array $body = null): never
     {
-        $doc->update(['ultimo_error' => $error, 'mh_response' => $body]);
-        $doc->invoice()->update([
-            'dte_status' => Invoice::DTE_PENDING,
-            'mh_response' => json_encode($body ?? ['error' => $error]),
-        ]);
-        Log::warning('DTE pendiente de sello', ['dte_document_id' => $doc->id, 'error' => $error]);
+        DteDocumentStates::pending($doc, $error, $body);
 
         throw new DtePendingException("El DTE quedó pendiente de sello: {$error} Se reenviará automáticamente.");
     }

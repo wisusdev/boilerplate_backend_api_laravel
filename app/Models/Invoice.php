@@ -20,6 +20,12 @@ class Invoice extends Model
     /** Firmado y enviado (o por enviar) sin sello todavía: se reintenta solo. */
     public const DTE_PENDING = 'pending';
 
+    /** Emitido en contingencia (el MH no respondía): se transmite en lote. */
+    public const DTE_CONTINGENCY = 'contingency';
+
+    /** Su DTE se anuló con un evento de invalidación sellado. */
+    public const DTE_INVALIDATED = 'invalidated';
+
     public const DTE_SIGNED = 'signed';
 
     public const DTE_SENT = 'sent';
@@ -88,12 +94,15 @@ class Invoice extends Model
     }
 
     /**
-     * Con un DTE sellado o en camino, la factura ya está declarada: cambiarla
-     * haría que dijera algo distinto de lo que tiene Hacienda.
+     * Con un DTE sellado, en camino o anulado, la factura ya está declarada:
+     * cambiarla haría que dijera algo distinto de lo que tiene Hacienda. Una
+     * factura anulada queda como historial; la corrección es otra factura.
      */
     public function isDteLocked(): bool
     {
-        return in_array($this->dte_status, [self::DTE_ACCEPTED, self::DTE_PENDING], true);
+        return in_array($this->dte_status, [
+            self::DTE_ACCEPTED, self::DTE_PENDING, self::DTE_CONTINGENCY, self::DTE_INVALIDATED,
+        ], true);
     }
 
     public function dteDocuments(): HasMany
