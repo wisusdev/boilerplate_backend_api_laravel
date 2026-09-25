@@ -27,7 +27,16 @@ class MhClient
     /** Hay un cajero (o un cliente) esperando al otro lado. */
     private const TIMEOUT = 10;
 
-    public function __construct(private readonly DteConfig $config) {}
+    private readonly string $ambiente;
+
+    /**
+     * Un documento se transmite siempre al ambiente en que se firmó, aunque
+     * después se haya cambiado el ajuste: un DTE de pruebas no va a producción.
+     */
+    public function __construct(private readonly DteConfig $config, ?string $ambiente = null)
+    {
+        $this->ambiente = $ambiente ?? $config->ambiente();
+    }
 
     /**
      * POST /fesv/recepciondte con el documento firmado.
@@ -37,7 +46,7 @@ class MhClient
     public function recepcion(string $tipoDte, int $version, string $codigoGeneracion, string $jws, int $idEnvio): MhResult
     {
         return $this->post('/fesv/recepciondte', [
-            'ambiente' => $this->config->ambiente(),
+            'ambiente' => $this->ambiente,
             'idEnvio' => $idEnvio,
             'version' => $version,
             'tipoDte' => $tipoDte,
@@ -142,11 +151,11 @@ class MhClient
     /** Al pasar de pruebas a producción no se reutiliza el token. */
     private function tokenKey(): string
     {
-        return 'dte:mh-token:'.$this->config->ambiente().':'.$this->config->mhUser();
+        return 'dte:mh-token:'.$this->ambiente.':'.$this->config->mhUser();
     }
 
     private function baseUrl(): string
     {
-        return $this->config->ambiente() === DteConfig::AMBIENTE_PRODUCCION ? self::API_PROD : self::API_TEST;
+        return $this->ambiente === DteConfig::AMBIENTE_PRODUCCION ? self::API_PROD : self::API_TEST;
     }
 }

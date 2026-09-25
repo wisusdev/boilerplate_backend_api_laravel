@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\DteDocument;
 use App\Models\Invoice;
 use App\Models\Setting;
 use App\Services\Dte\DteConfig;
 use App\Services\Dte\DteException;
+use App\Services\Dte\DtePendingException;
 use App\Services\Dte\DteSigner;
 use App\Services\Dte\FacturaBuilder;
 use App\Services\Dte\MhClient;
@@ -14,6 +16,7 @@ use App\Services\Dte\MhUnavailableException;
 use App\Support\Dte\SvCatalogs;
 use App\Traits\EncryptsCredentials;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -29,28 +32,30 @@ use Illuminate\Support\Str;
  *
  *  1. Se valida el emisor y se carga la llave ANTES de numerar: un documento
  *     que el MH rechazaría por datos incompletos no gasta un correlativo.
- *  2. Se numera con bloqueo (correlativo por tipo y ambiente), se construye y
- *     se firma (JWS RS512) dentro de una transacción que bloquea la factura.
+ *  2. Dentro de una transacción que bloquea la factura: si ya tiene un DTE
+ *     pendiente se reutiliza; si no, se numera, se construye, se firma (JWS
+ *     RS512) y se guarda como `pending` en `dte_documents`.
  *  3. Se envía. Solo cuenta el sello; un rechazo se guarda con su motivo; sin
- *     respuesta, el documento firmado se conserva y el siguiente intento
- *     reenvía ese mismo documento, preguntando antes al MH si ya lo tiene.
+ *     respuesta el documento sigue `pending` y el comando `dte:retry` lo
+ *     reenvía tal cual, preguntando antes al MH si ya lo tiene.
  */
 class DteService
 {
     use EncryptsCredentials;
 
-    /** Un envío en curso no se pisa; pasado este margen se da por interrumpido. */
-    private const STALE_GENERATING_MINUTES = 2;
-
     /** Pausa antes del reintento inmediato. Los tests la ponen en 0. */
     public static int $retryDelayMs = 2000;
+
+    /** Nadie más envía el mismo documento mientras dura un envío. */
+    private const SEND_LOCK_SECONDS = 60;
 
     public function __construct(private readonly DteSigner $signer) {}
 
     /**
-     * Genera (o reenvía) y transmite el DTE de una factura.
+     * Emite (o reintenta) el DTE de una factura y lo transmite.
      *
-     * @throws DteException
+     * @throws DtePendingException firmado pero aún sin sello (se reintenta solo)
+     * @throws DteException no se pudo emitir (datos incompletos, rechazo del MH…)
      */
     public function processDte(Invoice $invoice): Invoice
     {
@@ -59,7 +64,7 @@ class DteService
         if (! $config->enabled()) {
             throw new DteException('La facturación electrónica no está habilitada en la configuración.');
         }
-        if (! $this->canTransmit($invoice)) {
+        if (! $invoice->canGenerateDte()) {
             throw new DteException("El DTE no puede generarse en el estado actual: {$invoice->dte_status}");
         }
         $errors = [...$config->errors(), ...$config->transmissionErrors()];
@@ -76,20 +81,44 @@ class DteService
             throw new DteException($e->getMessage());
         }
 
-        [$invoice, $resend] = $this->prepare($invoice, $config, $key);
+        $doc = $this->issue($invoice, $config, $key);
+        $this->transmit($doc, $config);
 
-        return $this->transmit($invoice, new MhClient($config), $resend);
+        return $invoice->fresh();
+    }
+
+    /**
+     * Reintenta un documento pendiente (el comando `dte:retry`).
+     *
+     * @throws DteException
+     */
+    public function retry(DteDocument $doc): DteDocument
+    {
+        if ($doc->estado !== DteDocument::PENDING) {
+            return $doc;
+        }
+
+        $config = DteConfig::load();
+        if ($errors = $config->transmissionErrors()) {
+            throw DteException::invalid($errors);
+        }
+
+        $this->transmit($doc, $config);
+
+        return $doc->fresh();
     }
 
     /** Documento que se enviaría, sin numerarlo ni enviarlo (para revisión previa). */
     public function previewDte(Invoice $invoice): array
     {
-        $config = DteConfig::load();
-
-        if ($invoice->dte_jws && $invoice->dte_json) {
-            return $invoice->dte_json;
+        $vigente = $invoice->dteDocuments()
+            ->whereIn('estado', [DteDocument::PENDING, DteDocument::TRANSMITTED])
+            ->latest('id')->first();
+        if ($vigente) {
+            return $vigente->document();
         }
 
+        $config = DteConfig::load();
         $siguiente = (int) DB::table('dte_sequences')
             ->where('ambiente', $config->ambiente())
             ->where('tipo_dte', FacturaBuilder::TIPO_DTE)
@@ -127,44 +156,26 @@ class DteService
         return DteSigner::CERT_PATH;
     }
 
-    private function canTransmit(Invoice $invoice): bool
-    {
-        if ($invoice->canGenerateDte()) {
-            return true;
-        }
-
-        // Un envío que quedó a medias (el proceso murió) se puede retomar.
-        return $invoice->dte_status === Invoice::DTE_GENERATING
-            && $invoice->dte_jws
-            && $invoice->updated_at?->lt(now()->subMinutes(self::STALE_GENERATING_MINUTES));
-    }
-
     /**
-     * Reutiliza el documento ya firmado si el anterior intento no obtuvo
-     * respuesta; si no hay ninguno, o el MH lo rechazó, numera y firma uno nuevo.
-     *
-     * @return array{0: Invoice, 1: bool} la factura y si es un reenvío
+     * El documento vigente de la factura, o uno nuevo numerado y firmado.
      */
-    private function prepare(Invoice $invoice, DteConfig $config, \OpenSSLAsymmetricKey $key): array
+    private function issue(Invoice $invoice, DteConfig $config, \OpenSSLAsymmetricKey $key): DteDocument
     {
         return DB::transaction(function () use ($invoice, $config, $key) {
             // Serializa dos emisiones simultáneas de la misma factura (doble
-            // clic, la confirmación automática y el admin a la vez).
+            // clic, la confirmación automática y el admin a la vez): ambas
+            // verían "sin DTE" y declararían dos documentos para una venta.
             $locked = Invoice::whereKey($invoice->getKey())->lockForUpdate()->firstOrFail();
 
-            if (! $this->canTransmit($locked)) {
-                throw new DteException("El DTE no puede generarse en el estado actual: {$locked->dte_status}");
+            $vigente = $locked->dteDocuments()
+                ->whereIn('estado', [DteDocument::PENDING, DteDocument::TRANSMITTED])
+                ->latest('id')->first();
+
+            if ($vigente?->estado === DteDocument::TRANSMITTED) {
+                throw new DteException('La factura ya tiene un DTE con sello.');
             }
-
-            $resend = $locked->dte_status !== Invoice::DTE_REJECTED
-                && $locked->dte_jws
-                && $locked->dte_generation_code
-                && $locked->dte_environment === $config->ambiente();
-
-            if ($resend) {
-                $locked->update(['dte_status' => Invoice::DTE_GENERATING]);
-
-                return [$locked, true];
+            if ($vigente) {
+                return $vigente;
             }
 
             $numero = $this->nextNumber($config->ambiente(), FacturaBuilder::TIPO_DTE);
@@ -172,109 +183,165 @@ class DteService
             $documento = (new FacturaBuilder)->build(
                 $locked, $config, $this->numeroControl($config, $numero), $codigo, Carbon::now(),
             );
+            // Se firma el JSON exacto que se guarda y se envía.
             $json = json_encode($documento, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
+            $doc = $locked->dteDocuments()->create([
+                'tipo_dte' => FacturaBuilder::TIPO_DTE,
+                'ambiente' => $config->ambiente(),
+                'version' => FacturaBuilder::VERSION,
+                'numero_control' => $documento['identificacion']['numeroControl'],
+                'codigo_generacion' => $codigo,
+                'estado' => DteDocument::PENDING,
+                'json_content' => $json,
+                'firma_electronica' => $this->signer->sign($json, $key),
+            ]);
+
             $locked->update([
-                'dte_status' => Invoice::DTE_GENERATING,
-                'dte_type' => FacturaBuilder::TIPO_DTE,
-                'dte_number' => $documento['identificacion']['numeroControl'],
-                'dte_generation_code' => $codigo,
-                'dte_environment' => $config->ambiente(),
-                'dte_json' => $documento,
-                'dte_jws' => $this->signer->sign($json, $key),
+                'dte_status' => Invoice::DTE_PENDING,
+                'dte_type' => $doc->tipo_dte,
+                'dte_number' => $doc->numero_control,
+                'dte_generation_code' => $doc->codigo_generacion,
+                'dte_environment' => $doc->ambiente,
                 'dte_seal' => null,
                 'mh_response' => null,
                 'dte_submitted_at' => null,
                 'dte_accepted_at' => null,
             ]);
 
-            return [$locked, false];
+            return $doc;
         });
     }
 
-    private function transmit(Invoice $invoice, MhClient $mh, bool $resend): Invoice
+    /**
+     * Envía (o reenvía) un documento pendiente y registra el resultado.
+     *
+     * @throws DtePendingException
+     * @throws DteException
+     */
+    private function transmit(DteDocument $doc, DteConfig $config): void
     {
+        // El comando programado y un reintento manual podrían enviar el mismo
+        // documento a la vez: el segundo recibiría un rechazo por duplicado.
+        $lock = Cache::lock("dte:send:{$doc->id}", self::SEND_LOCK_SECONDS);
+        if (! $lock->get()) {
+            throw new DtePendingException('El DTE se está enviando en este momento. Vuelve a consultar en unos segundos.');
+        }
+
         try {
-            // Un documento ya enviado pudo llegar aunque no volviera la
-            // respuesta. Reenviarlo a ciegas podría recibir un rechazo por
-            // duplicado de un DTE que sí tiene sello: primero se pregunta.
-            if ($resend) {
-                $consulta = $mh->consulta($invoice->dte_type, $invoice->dte_generation_code);
-                if ($consulta?->accepted()) {
-                    return $this->markAccepted($invoice, $consulta);
-                }
+            $doc->refresh();
+            if ($doc->estado !== DteDocument::PENDING) {
+                return;
             }
 
-            $result = $this->send($invoice, $mh);
-        } catch (MhUnavailableException|\RuntimeException $e) {
-            return $this->markError($invoice, $e->getMessage());
+            $mh = new MhClient($config, $doc->ambiente);
+
+            try {
+                // Un documento ya enviado pudo llegar aunque no volviera la
+                // respuesta. Reenviarlo a ciegas podría recibir un rechazo por
+                // duplicado de un DTE que sí tiene sello: primero se pregunta.
+                if ($doc->intentos > 0) {
+                    $consulta = $mh->consulta($doc->tipo_dte, $doc->codigo_generacion);
+                    if ($consulta?->accepted()) {
+                        $this->markTransmitted($doc, $consulta);
+
+                        return;
+                    }
+                }
+
+                $result = $this->send($doc, $mh);
+            } catch (MhUnavailableException|\RuntimeException $e) {
+                $this->markPending($doc, $e->getMessage());
+            }
+
+            if ($result->accepted()) {
+                $this->markTransmitted($doc, $result);
+
+                return;
+            }
+            if ($result->rejected()) {
+                $this->markRejected($doc, $result);
+            }
+
+            // Ni sello ni rechazo: no es un recibo. El documento sigue pendiente.
+            $this->markPending($doc, 'Respuesta del MH sin sello de recepción.', $result->body);
+        } finally {
+            $lock->release();
         }
-
-        if ($result->accepted()) {
-            return $this->markAccepted($invoice, $result);
-        }
-
-        if ($result->rejected()) {
-            $invoice->update([
-                'dte_status' => Invoice::DTE_REJECTED,
-                'mh_response' => $result->body,
-                'dte_submitted_at' => now(),
-            ]);
-            Log::warning('DTE rechazado por el MH', ['invoice_id' => $invoice->id, 'response' => $result->body]);
-
-            throw new DteException('El MH rechazó el DTE: '.($result->message() ?: 'sin detalle'));
-        }
-
-        // Ni sello ni rechazo: no es un recibo. El documento se conserva para reenviarlo.
-        return $this->markError($invoice, 'Respuesta del MH sin sello de recepción.', $result->body);
     }
 
     /** Envía con un reintento inmediato si el MH no responde. */
-    private function send(Invoice $invoice, MhClient $mh): MhResult
+    private function send(DteDocument $doc, MhClient $mh): MhResult
     {
         for ($intento = 1; ; $intento++) {
+            $doc->increment('intentos');
+            Invoice::whereKey($doc->invoice_id)->update(['dte_submitted_at' => now()]);
+
             try {
                 return $mh->recepcion(
-                    $invoice->dte_type,
-                    FacturaBuilder::VERSION,
-                    $invoice->dte_generation_code,
-                    $invoice->dte_jws,
-                    $invoice->id,
+                    $doc->tipo_dte, $doc->version, $doc->codigo_generacion, $doc->firma_electronica, $doc->id,
                 );
             } catch (MhUnavailableException $e) {
                 if ($intento >= 2) {
                     throw $e;
                 }
                 usleep(self::$retryDelayMs * 1000);
-            } finally {
-                $invoice->forceFill(['dte_submitted_at' => now()])->save();
             }
         }
     }
 
-    private function markAccepted(Invoice $invoice, MhResult $result): Invoice
+    private function markTransmitted(DteDocument $doc, MhResult $result): void
     {
-        $invoice->update([
-            'dte_status' => Invoice::DTE_ACCEPTED,
-            'dte_seal' => $result->sello,
-            'mh_response' => $result->body,
-            'status' => 'issued',
-            'dte_accepted_at' => now(),
-        ]);
+        DB::transaction(function () use ($doc, $result) {
+            $doc->update([
+                'estado' => DteDocument::TRANSMITTED,
+                'sello_recibido' => $result->sello,
+                'fh_procesamiento' => $result->body['fhProcesamiento'] ?? null,
+                'mh_response' => $result->body,
+                'ultimo_error' => null,
+                'transmitido_at' => now(),
+            ]);
+            $doc->invoice()->update([
+                'dte_status' => Invoice::DTE_ACCEPTED,
+                'dte_seal' => $result->sello,
+                'mh_response' => json_encode($result->body),
+                'status' => 'issued',
+                'dte_accepted_at' => now(),
+            ]);
+        });
+    }
 
-        return $invoice->fresh();
+    private function markRejected(DteDocument $doc, MhResult $result): never
+    {
+        $mensaje = $result->message() ?: 'sin detalle';
+
+        DB::transaction(function () use ($doc, $result, $mensaje) {
+            $doc->update([
+                'estado' => DteDocument::REJECTED,
+                'mh_response' => $result->body,
+                'ultimo_error' => $mensaje,
+            ]);
+            $doc->invoice()->update([
+                'dte_status' => Invoice::DTE_REJECTED,
+                'mh_response' => json_encode($result->body),
+            ]);
+        });
+        Log::warning('DTE rechazado por el MH', ['dte_document_id' => $doc->id, 'response' => $result->body]);
+
+        throw new DteException("El MH rechazó el DTE: {$mensaje}");
     }
 
     /** @param  array<string, mixed>|null  $body */
-    private function markError(Invoice $invoice, string $message, ?array $body = null): never
+    private function markPending(DteDocument $doc, string $error, ?array $body = null): never
     {
-        $invoice->update([
-            'dte_status' => Invoice::DTE_ERROR,
-            'mh_response' => $body ?? ['error' => $message],
+        $doc->update(['ultimo_error' => $error, 'mh_response' => $body]);
+        $doc->invoice()->update([
+            'dte_status' => Invoice::DTE_PENDING,
+            'mh_response' => json_encode($body ?? ['error' => $error]),
         ]);
-        Log::error('DTE sin respuesta del MH', ['invoice_id' => $invoice->id, 'error' => $message]);
+        Log::warning('DTE pendiente de sello', ['dte_document_id' => $doc->id, 'error' => $error]);
 
-        throw new DteException("No se obtuvo el sello del MH: {$message} El documento se reenviará tal cual en el próximo intento.");
+        throw new DtePendingException("El DTE quedó pendiente de sello: {$error} Se reenviará automáticamente.");
     }
 
     /** Correlativo por tipo y ambiente, con bloqueo de fila en la transacción en curso. */

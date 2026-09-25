@@ -32,6 +32,11 @@ class Kernel extends ConsoleKernel
         // Antes vivía como línea de cron manual en el runbook de despliegue;
         // ahora es una línea más de este mismo archivo.
         $schedule->command('integrity:scan --fix')->weeklyOn(1, '03:00');
+
+        // Facturación electrónica: DTE firmados que no obtuvieron sello (el MH
+        // no respondió o el envío se interrumpió). Sin esto quedarían
+        // pendientes hasta que alguien pulse "reintentar" en el back-office.
+        $schedule->command('dte:retry')->everyFiveMinutes()->withoutOverlapping();
     }
 
     /**

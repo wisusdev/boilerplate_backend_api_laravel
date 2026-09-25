@@ -8,6 +8,7 @@ use App\Http\Resources\InvoiceResource;
 use App\Models\Booking;
 use App\Models\Invoice;
 use App\Services\Dte\DteException;
+use App\Services\Dte\DtePendingException;
 use App\Services\DteService;
 use App\Services\InvoiceBuilder;
 use App\Support\Dte\SvCatalogs;
@@ -48,7 +49,7 @@ class InvoiceController extends Controller
      */
     public function show(Invoice $invoice): InvoiceResource
     {
-        $invoice->loadMissing(['booking.bookable', 'items']);
+        $invoice->loadMissing(['booking.bookable', 'items', 'dteDocuments']);
 
         return InvoiceResource::make($invoice);
     }
@@ -119,8 +120,18 @@ class InvoiceController extends Controller
      * PATCH /api/invoices/{invoice}
      * Actualiza datos del receptor (nombre, documento, email) antes de generar el DTE.
      */
-    public function update(InvoiceRequest $request, Invoice $invoice): InvoiceResource
+    public function update(InvoiceRequest $request, Invoice $invoice): InvoiceResource|JsonResponse
     {
+        // Ya declarada a Hacienda (con sello o en camino): cambiarla haría que
+        // la factura dijera algo distinto del DTE. Se corrige invalidándolo.
+        if ($invoice->isDteLocked()) {
+            return response()->json(['errors' => [[
+                'status' => '409',
+                'title' => 'invoice.dteIssued',
+                'detail' => 'Esta factura ya tiene un DTE emitido y no puede modificarse.',
+            ]]], 409);
+        }
+
         $invoice = $this->builder->update($invoice, $request->validated());
 
         return InvoiceResource::make($invoice->load(['items']));
@@ -134,10 +145,18 @@ class InvoiceController extends Controller
     {
         try {
             $invoice = $this->dteService->processDte($invoice);
+        } catch (DtePendingException $e) {
+            // Firmado pero sin sello todavía: no es un error, se reintenta solo.
+            return $this->dteResult($invoice->fresh(), 202, $e->getMessage());
         } catch (DteException $e) {
             return $this->dteError($e, 'Error DTE', $invoice->fresh());
         }
 
+        return $this->dteResult($invoice);
+    }
+
+    private function dteResult(Invoice $invoice, int $status = 200, ?string $message = null): JsonResponse
+    {
         return response()->json([
             'data' => [
                 'type' => 'dte-result',
@@ -151,7 +170,8 @@ class InvoiceController extends Controller
                     'mh_response' => $invoice->mh_response,
                 ],
             ],
-        ]);
+            'meta' => array_filter(['message' => $message]),
+        ], $status);
     }
 
     /**

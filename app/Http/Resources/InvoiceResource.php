@@ -55,6 +55,22 @@ class InvoiceResource extends JsonResource
                 ? $inv->booking->bookable?->title : null,
             'vehicle_title' => $inv->relationLoaded('booking') && $inv->booking?->booking_type === 'transport'
                 ? $inv->booking->bookable?->title : null,
+            // Historial de DTE (el último manda): rechazados y el vigente.
+            'dte_documents' => $inv->relationLoaded('dteDocuments')
+                ? $inv->dteDocuments->sortByDesc('id')->values()->map(fn ($d) => [
+                    'id' => $d->id,
+                    'tipo_dte' => $d->tipo_dte,
+                    'ambiente' => $d->ambiente,
+                    'numero_control' => $d->numero_control,
+                    'codigo_generacion' => $d->codigo_generacion,
+                    'estado' => $d->estado,
+                    'sello_recibido' => $d->sello_recibido,
+                    'intentos' => $d->intentos,
+                    'ultimo_error' => $d->ultimo_error,
+                    'transmitido_at' => $d->transmitido_at,
+                    'created_at' => $d->created_at,
+                ])->all()
+                : [],
             // MH response (admin only or for error debugging)
             'mh_response' => $inv->mh_response,
             'created_at' => $inv->created_at,

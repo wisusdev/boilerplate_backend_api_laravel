@@ -17,6 +17,9 @@ class Invoice extends Model
 
     public const DTE_GENERATING = 'generating';
 
+    /** Firmado y enviado (o por enviar) sin sello todavía: se reintenta solo. */
+    public const DTE_PENDING = 'pending';
+
     public const DTE_SIGNED = 'signed';
 
     public const DTE_SENT = 'sent';
@@ -49,8 +52,6 @@ class Invoice extends Model
         'receptor_document_type',
         'receptor_email',
         'notes',
-        'dte_json',
-        'dte_jws',
         'mh_response',
         'dte_environment',
         'dte_submitted_at',
@@ -60,7 +61,6 @@ class Invoice extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'issued_at' => 'datetime',
-        'dte_json' => 'array',
         'mh_response' => 'array',
         'dte_submitted_at' => 'datetime',
         'dte_accepted_at' => 'datetime',
@@ -76,13 +76,29 @@ class Invoice extends Model
         return $this->dte_status === self::DTE_ACCEPTED;
     }
 
+    /** Emitir por primera vez, sustituir uno rechazado o reintentar uno pendiente. */
     public function canGenerateDte(): bool
     {
         return in_array($this->dte_status, [
             self::DTE_NOT_GENERATED,
             self::DTE_ERROR,
             self::DTE_REJECTED,
+            self::DTE_PENDING,
         ], true);
+    }
+
+    /**
+     * Con un DTE sellado o en camino, la factura ya está declarada: cambiarla
+     * haría que dijera algo distinto de lo que tiene Hacienda.
+     */
+    public function isDteLocked(): bool
+    {
+        return in_array($this->dte_status, [self::DTE_ACCEPTED, self::DTE_PENDING], true);
+    }
+
+    public function dteDocuments(): HasMany
+    {
+        return $this->hasMany(DteDocument::class);
     }
 
     public function getResourceType(): string
