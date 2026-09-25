@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\Travel\FinanceController;
 use App\Http\Controllers\Api\Travel\GalleryController;
 use App\Http\Controllers\Api\Travel\GuideController;
 use App\Http\Controllers\Api\Travel\InvoiceController;
+use App\Http\Controllers\Api\Travel\MapPinController;
 use App\Http\Controllers\Api\Travel\PaymentController;
 use App\Http\Controllers\Api\Travel\PaymentLinkController;
 use App\Http\Controllers\Api\Travel\ProductReviewController;
@@ -155,6 +156,20 @@ Route::middleware(['auth:api'])->group(function () {
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->middleware('permission:reviews:delete')->name('api.v1.reviews.destroy');
 
     // Cupones (CRUD admin)
+    // Mapa público: gestión de pines (lectura pública más abajo).
+    Route::prefix('map-pins')->name('api.v1.map-pins.')->group(function () {
+        Route::get('/manage', [MapPinController::class, 'manage'])
+            ->middleware('permission:map-pins:store|map-pins:update|map-pins:delete')->name('manage');
+        Route::post('/', [MapPinController::class, 'store'])->middleware('permission:map-pins:store')->name('store');
+        Route::patch('/{mapPin}', [MapPinController::class, 'update'])->middleware('permission:map-pins:update')->name('update');
+        Route::delete('/{mapPin}', [MapPinController::class, 'destroy'])->middleware('permission:map-pins:delete')->name('destroy');
+        Route::post('/{mapPin}/image', [MapPinController::class, 'uploadImage'])
+            ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+            ->middleware('permission:map-pins:update')->name('image');
+        Route::delete('/{mapPin}/image', [MapPinController::class, 'deleteImage'])
+            ->middleware('permission:map-pins:update')->name('image.delete');
+    });
+
     Route::prefix('coupons')->name('api.v1.coupons.')->group(function () {
         Route::get('/', [CouponController::class, 'index'])->middleware('permission:coupons:index')->name('index');
         Route::post('/', [CouponController::class, 'store'])->middleware('permission:coupons:store')->name('store');
@@ -446,6 +461,7 @@ Route::post('/subscribers/unsubscribe', [SubscriberController::class, 'unsubscri
 
 // Gallery (public read)
 Route::get('/gallery', [GalleryController::class, 'index'])->name('api.v1.gallery.index');
+Route::get('/map-pins', [MapPinController::class, 'index'])->name('api.v1.map-pins.index');
 
 // Settings (public read — returns safe subset without credentials)
 Route::get('/settings', [SettingsController::class, 'index'])->name('api.v1.settings.index');

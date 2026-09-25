@@ -115,6 +115,11 @@ class PermissionSeeder extends Seeder
             'gallery:delete',
             'gallery:reorder',
 
+            // ── Travel: mapa público de pines ──
+            'map-pins:store',
+            'map-pins:update',
+            'map-pins:delete',
+
             // ── Travel: suscriptores (leads) ──
             'subscribers:index',
             'subscribers:update',

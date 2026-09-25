@@ -45,6 +45,7 @@ class RoleSeeder extends Seeder
                 'reviews:store', 'reviews:update', 'reviews:delete',
                 'product-reviews:moderate',
                 'gallery:store', 'gallery:delete', 'gallery:reorder',
+                'map-pins:store', 'map-pins:update', 'map-pins:delete',
             ],
 
             // Guía: registra y consulta únicamente SUS gastos (el ownership por
