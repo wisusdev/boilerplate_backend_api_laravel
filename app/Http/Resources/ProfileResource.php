@@ -22,6 +22,10 @@ class ProfileResource extends JsonResource
                 'phone' => $this->resource->phone,
                 'phone_secondary' => $this->resource->phone_secondary,
                 'email_verified_at' => $this->resource->email_verified_at,
+                // Los mismos que da el login: el panel los refresca al cargar para
+                // que un permiso nuevo (o retirado) no espere a volver a entrar.
+                'roles' => $this->resource->getRoleNames()->values(),
+                'permissions' => $this->resource->getAllPermissions()->pluck('name')->values(),
             ],
         ];
     }
