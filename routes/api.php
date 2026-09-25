@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\Travel\InvoiceController;
 use App\Http\Controllers\Api\Travel\PaymentController;
 use App\Http\Controllers\Api\Travel\PaymentLinkController;
 use App\Http\Controllers\Api\Travel\ProductReviewController;
+use App\Http\Controllers\Api\Travel\PurchaseDocumentController;
 use App\Http\Controllers\Api\Travel\ReportController;
 use App\Http\Controllers\Api\Travel\ReviewController;
 use App\Http\Controllers\Api\Travel\SubscriberController;
@@ -341,6 +342,19 @@ Route::middleware(['auth:api'])->group(function () {
         ->middleware('permission:invoices:invalidate-dte')->name('api.v1.credit-notes.invalidate-dte');
     Route::get('/credit-notes/{creditNote}/dte-replacements', [DteController::class, 'replacementsNote'])
         ->middleware('permission:invoices:invalidate-dte')->name('api.v1.credit-notes.dte-replacements');
+    // Documentos de compra: factura de sujeto excluido (14) y comprobante de retención (07).
+    Route::prefix('purchase-documents')->name('api.v1.purchase-documents.')->group(function () {
+        Route::get('/', [PurchaseDocumentController::class, 'index'])->middleware('permission:invoices:index')->name('index');
+        Route::get('/{purchaseDocument}', [PurchaseDocumentController::class, 'show'])->middleware('permission:invoices:show')->name('show');
+        Route::post('/', [PurchaseDocumentController::class, 'store'])->middleware('permission:invoices:generate-dte')->name('store');
+        Route::post('/{purchaseDocument}/transmit', [PurchaseDocumentController::class, 'transmit'])
+            ->withoutMiddleware([ValidateJsonApiDocument::class])
+            ->middleware('permission:invoices:generate-dte')->name('transmit');
+        Route::post('/{purchaseDocument}/invalidate-dte', [DteController::class, 'invalidatePurchase'])
+            ->middleware('permission:invoices:invalidate-dte')->name('invalidate-dte');
+        Route::get('/{purchaseDocument}/dte-replacements', [DteController::class, 'replacementsPurchase'])
+            ->middleware('permission:invoices:invalidate-dte')->name('dte-replacements');
+    });
     // Cualquier DTE por su id: representación gráfica, archivo y envío al receptor.
     Route::get('/dte/documents/{dteDocument}/pdf', [DteController::class, 'documentPdf'])
         ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])

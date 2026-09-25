@@ -2,7 +2,7 @@
 
 namespace App\Services\Dte;
 
-use App\Models\CreditNote;
+use App\Models\Contracts\DteOwner;
 use App\Models\DteDocument;
 use App\Models\DteInvalidacion;
 use App\Models\Invoice;
@@ -48,7 +48,7 @@ class DteInvalidationService
      * @throws DtePendingException el evento quedó sin respuesta del MH (se reenvía solo)
      * @throws DteException regla incumplida o rechazo del MH
      */
-    public function invalidate(Invoice|CreditNote $owner, array $input, ?string $userId = null): DteInvalidacion
+    public function invalidate(DteOwner $owner, array $input, ?string $userId = null): DteInvalidacion
     {
         $doc = $owner->dteDocuments()
             ->whereIn('estado', [DteDocument::TRANSMITTED, DteDocument::INVALIDATED])
@@ -117,12 +117,12 @@ class DteInvalidationService
      * Documentos que pueden reemplazar al de este dueño: otros DTE del mismo
      * tipo, con sello.
      */
-    public function replacementCandidates(Invoice|CreditNote $owner)
+    public function replacementCandidates(DteOwner $owner)
     {
         $propios = $owner->dteDocuments()->pluck('id');
         $tipo = $owner->dteDocuments()->where('estado', DteDocument::TRANSMITTED)->latest('id')->value('tipo_dte');
 
-        return DteDocument::with(['invoice:id,receptor_name,amount', 'creditNote:id,number,total'])
+        return DteDocument::with(['invoice:id,receptor_name,amount', 'creditNote:id,number,total', 'purchaseDocument:id,number,total'])
             ->where('estado', DteDocument::TRANSMITTED)
             ->where('tipo_dte', $tipo ?? FacturaBuilder::TIPO_DTE)
             ->whereNotIn('id', $propios)

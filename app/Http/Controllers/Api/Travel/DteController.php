@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\Travel;
 
 use App\Http\Controllers\Controller;
+use App\Models\Contracts\DteOwner;
 use App\Models\CreditNote;
 use App\Models\DteContingencia;
 use App\Models\DteDocument;
 use App\Models\DteInvalidacion;
 use App\Models\Invoice;
+use App\Models\PurchaseDocument;
 use App\Services\Dte\DteContingencyService;
 use App\Services\Dte\DteDelivery;
 use App\Services\Dte\DteException;
@@ -118,13 +120,25 @@ class DteController extends Controller
         return $this->invalidateOwner($request, $invoice);
     }
 
+    /** POST /purchase-documents/{purchaseDocument}/invalidate-dte */
+    public function invalidatePurchase(Request $request, PurchaseDocument $purchaseDocument): JsonResponse
+    {
+        return $this->invalidateOwner($request, $purchaseDocument);
+    }
+
+    /** GET /purchase-documents/{purchaseDocument}/dte-replacements */
+    public function replacementsPurchase(PurchaseDocument $purchaseDocument): JsonResponse
+    {
+        return $this->replacementsFor($purchaseDocument);
+    }
+
     /** POST /credit-notes/{creditNote}/invalidate-dte */
     public function invalidateNote(Request $request, CreditNote $creditNote): JsonResponse
     {
         return $this->invalidateOwner($request, $creditNote);
     }
 
-    private function invalidateOwner(Request $request, Invoice|CreditNote $owner): JsonResponse
+    private function invalidateOwner(Request $request, DteOwner $owner): JsonResponse
     {
         $tipos = ['13', '36', '03', '02', '37'];
         $data = $request->validate([
@@ -166,7 +180,7 @@ class DteController extends Controller
         return $this->replacementsFor($creditNote);
     }
 
-    private function replacementsFor(Invoice|CreditNote $owner): JsonResponse
+    private function replacementsFor(DteOwner $owner): JsonResponse
     {
         return response()->json(['data' => $this->invalidations->replacementCandidates($owner)->map(fn (DteDocument $d) => [
             'type' => 'dte-documents',
@@ -175,7 +189,7 @@ class DteController extends Controller
                 'codigo_generacion' => $d->codigo_generacion,
                 'numero_control' => $d->numero_control,
                 'invoice_id' => $d->invoice_id,
-                'invoice_number' => $d->invoice?->number ?? $d->creditNote?->number,
+                'invoice_number' => $d->invoice?->number ?? $d->creditNote?->number ?? $d->purchaseDocument?->number,
                 'receptor_name' => $d->invoice?->receptor_name,
                 'amount' => $d->invoice?->amount,
                 'transmitido_at' => $d->transmitido_at,
@@ -220,7 +234,7 @@ class DteController extends Controller
         return response()->json(['data' => $this->contingenciaData($c)]);
     }
 
-    private function latestInvalidation(Invoice|CreditNote $owner): ?DteInvalidacion
+    private function latestInvalidation(DteOwner $owner): ?DteInvalidacion
     {
         return DteInvalidacion::whereIn('dte_document_id', $owner->dteDocuments()->select('id'))->latest('id')->first();
     }

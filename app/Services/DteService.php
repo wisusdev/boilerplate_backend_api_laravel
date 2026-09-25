@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Contracts\DteOwner;
 use App\Models\CreditNote;
 use App\Models\DteDocument;
 use App\Models\Invoice;
+use App\Models\PurchaseDocument;
 use App\Models\Setting;
 use App\Services\Dte\DteConfig;
 use App\Services\Dte\DteContingencyService;
@@ -19,6 +21,8 @@ use App\Services\Dte\MhClient;
 use App\Services\Dte\MhResult;
 use App\Services\Dte\MhUnavailableException;
 use App\Services\Dte\NotaBuilder;
+use App\Services\Dte\RetencionBuilder;
+use App\Services\Dte\SujetoExcluidoBuilder;
 use App\Support\Dte\SvCatalogs;
 use App\Traits\EncryptsCredentials;
 use Illuminate\Database\Eloquent\Model;
@@ -122,6 +126,28 @@ class DteService
         return $note->fresh();
     }
 
+    /**
+     * Emite (o reintenta) el DTE de un documento de compra: factura de sujeto
+     * excluido (14) o comprobante de retención (07).
+     *
+     * @throws DtePendingException
+     * @throws DteException
+     */
+    public function processPurchaseDocument(PurchaseDocument $doc): PurchaseDocument
+    {
+        $config = $this->enabledConfig();
+        if ($errors = [...$config->errors(), ...$config->transmissionErrors()]) {
+            throw DteException::invalid($errors);
+        }
+
+        $builder = $doc->kind === PurchaseDocument::CR ? new RetencionBuilder : new SujetoExcluidoBuilder;
+        $this->issueAndTransmit($doc, $doc->tipoDte(), $config, fn (PurchaseDocument $locked, string $numeroControl, string $codigo) => $builder->build(
+            $locked, $config, $numeroControl, $codigo, Carbon::now(),
+        ));
+
+        return $doc->fresh();
+    }
+
     private function enabledConfig(): DteConfig
     {
         $config = DteConfig::load();
@@ -138,7 +164,7 @@ class DteService
      *
      * @param  callable(Model, string, string): array<string, mixed>  $build
      */
-    private function issueAndTransmit(Invoice|CreditNote $owner, string $tipo, DteConfig $config, callable $build): void
+    private function issueAndTransmit(DteOwner $owner, string $tipo, DteConfig $config, callable $build): void
     {
         try {
             $key = $this->signer->loadKey($config);
@@ -230,7 +256,7 @@ class DteService
      *
      * @param  callable(Model, string, string): array<string, mixed>  $build
      */
-    private function issue(Invoice|CreditNote $owner, string $tipo, DteConfig $config, \OpenSSLAsymmetricKey $key, callable $build): DteDocument
+    private function issue(DteOwner $owner, string $tipo, DteConfig $config, \OpenSSLAsymmetricKey $key, callable $build): DteDocument
     {
         return DB::transaction(function () use ($owner, $tipo, $config, $key, $build) {
             // Serializa dos emisiones simultáneas del mismo documento (doble

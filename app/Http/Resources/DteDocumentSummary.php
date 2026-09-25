@@ -2,9 +2,8 @@
 
 namespace App\Http\Resources;
 
-use App\Models\CreditNote;
+use App\Models\Contracts\DteOwner;
 use App\Models\DteDocument;
-use App\Models\Invoice;
 
 /**
  * Historial de DTE de una factura o nota, del más reciente al más antiguo. Ni
@@ -13,7 +12,7 @@ use App\Models\Invoice;
 final class DteDocumentSummary
 {
     /** @return list<array<string, mixed>> */
-    public static function list(Invoice|CreditNote $owner): array
+    public static function list(DteOwner $owner): array
     {
         if (! $owner->relationLoaded('dteDocuments')) {
             return [];

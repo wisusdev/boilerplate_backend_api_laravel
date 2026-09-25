@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Contracts\DteOwner;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -30,6 +31,7 @@ class DteDocument extends Model
     protected $fillable = [
         'invoice_id',
         'credit_note_id',
+        'purchase_document_id',
         'contingencia_id',
         'tipo_dte',
         'ambiente',
@@ -71,10 +73,15 @@ class DteDocument extends Model
         return $this->belongsTo(CreditNote::class);
     }
 
-    /** A quién pertenece el DTE: una factura o una nota. */
-    public function owner(): Invoice|CreditNote
+    public function purchaseDocument(): BelongsTo
     {
-        return $this->invoice ?? $this->creditNote;
+        return $this->belongsTo(PurchaseDocument::class);
+    }
+
+    /** A quién pertenece el DTE: una factura, una nota o un documento de compra. */
+    public function owner(): DteOwner
+    {
+        return $this->invoice ?? $this->creditNote ?? $this->purchaseDocument;
     }
 
     public function contingencia(): BelongsTo

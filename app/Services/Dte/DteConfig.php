@@ -194,6 +194,12 @@ class DteConfig
         return (bool) ($this->raw['dte_retencion_activa'] ?? false);
     }
 
+    /** Designado agente de retención por Hacienda: puede emitir comprobantes de retención (07). */
+    public function agenteRetencion(): bool
+    {
+        return (bool) ($this->raw['dte_agente_retencion'] ?? false);
+    }
+
     /** Porcentaje de retención o percepción (por defecto 1 %). */
     public function ivaAjusteTasa(): float
     {

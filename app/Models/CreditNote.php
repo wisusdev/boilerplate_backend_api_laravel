@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasDteDocuments;
+use App\Models\Contracts\DteOwner;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Nota de crédito (05) o de débito (06): ajusta a la baja o al alza un CCF ya
  * sellado. Sus importes van sin IVA, como el CCF.
  */
-class CreditNote extends Model
+class CreditNote extends Model implements DteOwner
 {
     use HasDteDocuments;
 

@@ -28,6 +28,8 @@ class DteRepresentation
         '03' => 'COMPROBANTE DE CRÉDITO FISCAL',
         '05' => 'NOTA DE CRÉDITO',
         '06' => 'NOTA DE DÉBITO',
+        '07' => 'COMPROBANTE DE RETENCIÓN',
+        '14' => 'FACTURA DE SUJETO EXCLUIDO',
     ];
 
     /** CAT-005 */
@@ -140,32 +142,12 @@ class DteRepresentation
             ];
         }
 
-        $esFactura = ($id['tipoDte'] ?? $doc->tipo_dte) === '01';
-        $totales = [
-            ['Suma de ventas no sujetas', $resumen['totalNoSuj'] ?? 0, false],
-            ['Suma de ventas exentas', $resumen['totalExenta'] ?? 0, false],
-            ['Suma de ventas gravadas', $resumen['totalGravada'] ?? 0, false],
-            ['Suma total de operaciones', $resumen['subTotalVentas'] ?? 0, true],
-            ['Descuentos', $resumen['totalDescu'] ?? 0, false],
-        ];
-        foreach ((array) ($resumen['tributos'] ?? []) as $t) {
-            $totales[] = [$t['descripcion'] ?? $t['codigo'], $t['valor'] ?? 0, false];
-        }
-        if (array_key_exists('subTotal', $resumen)) { // las notas no lo llevan
-            $totales[] = ['Sub-total', $resumen['subTotal'], true];
-        }
-        if ($esFactura) {
-            $totales[] = ['IVA incluido en ventas gravadas (13%)', $resumen['totalIva'] ?? 0, false];
-        }
-        if (($resumen['ivaPerci'] ?? 0) > 0) {
-            $totales[] = ['IVA percibido', $resumen['ivaPerci'], false];
-        }
-        if (($resumen['ivaRete'] ?? 0) > 0) {
-            $totales[] = ['IVA retenido', $resumen['ivaRete'], false];
-        }
-        $totales[] = ['Monto total de la operación', $resumen['montoTotalOperacion'] ?? 0, true];
-        $totales[] = ['Otros montos no afectos', $resumen['totalNoGravado'] ?? 0, false];
-        $totales[] = ['Total a pagar', $resumen['totalPagar'] ?? 0, true];
+        $tipo = $id['tipoDte'] ?? $doc->tipo_dte;
+        [$tabla, $totales] = match ($tipo) {
+            '14' => $this->sujetoExcluido($j, $cat),
+            '07' => $this->retencion($j, $cat),
+            default => $this->venta($j, $cat, $tipo),
+        };
 
         return [
             'titulo' => self::TITULOS[$doc->tipo_dte] ?? 'DTE '.$doc->tipo_dte,
@@ -188,25 +170,23 @@ class DteRepresentation
                 'Nombre comercial' => $emisor['nombreComercial'] ?? null,
             ],
             'receptor' => $receptorFilas,
-            // Secciones "D" de la Normativa: con su nombre y un guion si no se usan.
+            'receptorTitulo' => match ($tipo) {
+                '14' => 'SUJETO EXCLUIDO',
+                '07' => 'SUJETO DE RETENCIÓN',
+                default => 'RECEPTOR',
+            },
+            // Secciones "D" de la Normativa (solo documentos de venta y notas):
+            // con su nombre y un guion si no se usan.
+            'seccionesD' => in_array($tipo, ['01', '03', '05', '06'], true),
             'relacionados' => (array) ($j['documentoRelacionado'] ?? []),
             'ventaTercero' => $j['ventaTercero'] ?? null,
             'otrosDocumentos' => (array) ($j['otrosDocumentos'] ?? []),
-            'items' => array_map(fn ($it) => [
-                'num' => $it['numItem'] ?? '',
-                'cantidad' => rtrim(rtrim(number_format((float) ($it['cantidad'] ?? 0), 4, '.', ''), '0'), '.'),
-                'unidad' => self::nombre($cat['unidades_medida'], (string) ($it['uniMedida'] ?? '')),
-                'descripcion' => $it['descripcion'] ?? '',
-                'precio' => $it['precioUni'] ?? 0,
-                'descuento' => $it['montoDescu'] ?? 0,
-                'noGravado' => $it['noGravado'] ?? 0,
-                'noSujeta' => $it['ventaNoSuj'] ?? 0,
-                'exenta' => $it['ventaExenta'] ?? 0,
-                'gravada' => $it['ventaGravada'] ?? 0,
-            ], (array) ($j['cuerpoDocumento'] ?? [])),
+            'tabla' => $tabla,
             'totales' => $totales,
             'letras' => $resumen['totalLetras'] ?? null,
-            'condicion' => self::CONDICIONES[$resumen['condicionOperacion'] ?? 1] ?? '-',
+            'condicion' => array_key_exists('condicionOperacion', $resumen)
+                ? (self::CONDICIONES[$resumen['condicionOperacion']] ?? '-')
+                : null,
             'pagos' => array_map(fn ($p) => [
                 // Con 99 ("otros"), la referencia es la que nombra el medio: "Pago en línea".
                 'forma' => ($p['codigo'] ?? '') === '99' && ! empty($p['referencia'])
@@ -217,6 +197,126 @@ class DteRepresentation
             'observaciones' => $resumen['observaciones'] ?? null,
             'apendice' => (array) ($j['apendice'] ?? []),
         ];
+    }
+
+    /**
+     * Factura, CCF y notas: columnas de venta y resumen con tributos.
+     *
+     * @return array{0: array<string, mixed>, 1: list<array{0: string, 1: mixed, 2: bool}>}
+     */
+    private function venta(array $j, array $cat, string $tipo): array
+    {
+        $resumen = $j['resumen'] ?? [];
+        $rows = array_map(fn ($it) => [
+            $it['numItem'] ?? '',
+            self::cantidad($it['cantidad'] ?? 0),
+            self::nombre($cat['unidades_medida'], (string) ($it['uniMedida'] ?? '')),
+            $it['descripcion'] ?? '',
+            self::dinero($it['precioUni'] ?? 0),
+            self::dinero($it['montoDescu'] ?? 0),
+            self::dinero($it['noGravado'] ?? 0),
+            self::dinero($it['ventaNoSuj'] ?? 0),
+            self::dinero($it['ventaExenta'] ?? 0),
+            self::dinero($it['ventaGravada'] ?? 0),
+        ], (array) ($j['cuerpoDocumento'] ?? []));
+
+        $totales = [
+            ['Suma de ventas no sujetas', $resumen['totalNoSuj'] ?? 0, false],
+            ['Suma de ventas exentas', $resumen['totalExenta'] ?? 0, false],
+            ['Suma de ventas gravadas', $resumen['totalGravada'] ?? 0, false],
+            ['Suma total de operaciones', $resumen['subTotalVentas'] ?? 0, true],
+            ['Descuentos', $resumen['totalDescu'] ?? 0, false],
+        ];
+        foreach ((array) ($resumen['tributos'] ?? []) as $t) {
+            $totales[] = [$t['descripcion'] ?? $t['codigo'], $t['valor'] ?? 0, false];
+        }
+        if (array_key_exists('subTotal', $resumen)) { // las notas no lo llevan
+            $totales[] = ['Sub-total', $resumen['subTotal'], true];
+        }
+        if ($tipo === '01') {
+            $totales[] = ['IVA incluido en ventas gravadas (13%)', $resumen['totalIva'] ?? 0, false];
+        }
+        if (($resumen['ivaPerci'] ?? 0) > 0) {
+            $totales[] = ['IVA percibido', $resumen['ivaPerci'], false];
+        }
+        if (($resumen['ivaRete'] ?? 0) > 0) {
+            $totales[] = ['IVA retenido', $resumen['ivaRete'], false];
+        }
+        $totales[] = ['Monto total de la operación', $resumen['montoTotalOperacion'] ?? 0, true];
+        $totales[] = ['Otros montos no afectos', $resumen['totalNoGravado'] ?? 0, false];
+        $totales[] = ['Total a pagar', $resumen['totalPagar'] ?? 0, true];
+
+        return [[
+            'cols' => [['N°', 'c'], ['Cant.', 'r'], ['Unidad', ''], ['Descripción', '', '30%'], ['Precio unit.', 'r'],
+                ['Descuento', 'r'], ['Otros montos no afectos', 'r'], ['Ventas no sujetas', 'r'], ['Ventas exentas', 'r'], ['Ventas gravadas', 'r']],
+            'rows' => $rows,
+        ], $totales];
+    }
+
+    /** Sujeto excluido: compras, sin IVA, con retención de renta. */
+    private function sujetoExcluido(array $j, array $cat): array
+    {
+        $r = $j['resumen'] ?? [];
+
+        return [[
+            'cols' => [['N°', 'c'], ['Cant.', 'r'], ['Unidad', ''], ['Descripción', '', '40%'], ['Precio unit.', 'r'], ['Descuento', 'r'], ['Compra', 'r']],
+            'rows' => array_map(fn ($it) => [
+                $it['numItem'] ?? '',
+                self::cantidad($it['cantidad'] ?? 0),
+                self::nombre($cat['unidades_medida'], (string) ($it['uniMedida'] ?? '')),
+                $it['descripcion'] ?? '',
+                self::dinero($it['precioUni'] ?? 0),
+                self::dinero($it['montoDescu'] ?? 0),
+                self::dinero($it['compra'] ?? 0),
+            ], (array) ($j['cuerpoDocumento'] ?? [])),
+        ], [
+            ['Total de operaciones', $r['totalCompra'] ?? 0, true],
+            ['Descuento global', $r['descu'] ?? 0, false],
+            ['Total descuentos', $r['totalDescu'] ?? 0, false],
+            ['Sub-total', $r['subTotal'] ?? 0, true],
+            ['Retención de renta', $r['reteRenta'] ?? 0, false],
+            ['Total a pagar', $r['totalPagar'] ?? 0, true],
+        ]];
+    }
+
+    /** Comprobante de retención: un documento retenido por línea. */
+    private function retencion(array $j, array $cat): array
+    {
+        $r = $j['resumen'] ?? [];
+        $tipos = array_column(self::TIPOS_DOCUMENTO_RELACIONADO, 1, 0);
+
+        return [[
+            'cols' => [['N°', 'c'], ['Documento', ''], ['Generación', ''], ['N° de documento', '', '28%'], ['Fecha', ''],
+                ['Monto sujeto', 'r'], ['Código', 'c'], ['IVA retenido', 'r'], ['Descripción', '']],
+            'rows' => array_map(fn ($it) => [
+                $it['numItem'] ?? '',
+                $tipos[$it['tipoDte'] ?? ''] ?? ($it['tipoDte'] ?? ''),
+                ((int) ($it['tipoGeneracion'] ?? 2)) === 1 ? 'Físico' : 'Electrónico',
+                $it['numeroDocumento'] ?? '',
+                $it['fechaEmision'] ?? '',
+                self::dinero($it['montoSujetoGrav'] ?? 0),
+                $it['codigoRetencionMH'] ?? '',
+                self::dinero($it['ivaRetenido'] ?? 0),
+                $it['descripcion'] ?? '-',
+            ], (array) ($j['cuerpoDocumento'] ?? [])),
+        ], [
+            ['Total monto sujeto a retención', $r['totalSujetoRetencion'] ?? 0, true],
+            ['IVA 13%', $r['totalIva'] ?? 0, false],
+            ['Total IVA retenido', $r['totalIvaRetenido'] ?? 0, true],
+        ]];
+    }
+
+    /** CAT-002, los que puede retener un comprobante de retención. */
+    private const TIPOS_DOCUMENTO_RELACIONADO = [['01', 'Factura'], ['03', 'CCF'], ['14', 'Sujeto excluido']];
+
+    private static function dinero(mixed $v): string
+    {
+        return '$'.number_format((float) $v, 2, '.', ',');
+    }
+
+    private static function cantidad(mixed $v): string
+    {
+        return rtrim(rtrim(number_format((float) $v, 4, '.', ''), '0'), '.');
     }
 
     private function qr(string $url): string

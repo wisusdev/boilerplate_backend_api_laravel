@@ -76,7 +76,7 @@
                 </table>
             </td>
             <td class="col">
-                <div class="sec">RECEPTOR</div>
+                <div class="sec">{{ $d['receptorTitulo'] }}</div>
                 <table class="kv">
                     @forelse ($d['receptor'] ?? [] as $k => $v)
                         <tr><td class="k">{{ $k }}:</td><td>{{ $o($v) }}</td></tr>
@@ -88,6 +88,7 @@
         </tr>
     </table>
 
+    @if ($d['seccionesD'])
     <div class="sec">DOCUMENTOS RELACIONADOS</div>
     @forelse ($d['relacionados'] as $r)
         <div>Tipo: {{ $r['tipoDocumento'] ?? '-' }} · N°: {{ $r['numeroDocumento'] ?? '-' }} · Fecha: {{ $r['fechaEmision'] ?? '-' }}</div>
@@ -104,29 +105,23 @@
     @empty
         <div>-</div>
     @endforelse
+    @endif
 
     <div class="sec">CUERPO DEL DOCUMENTO</div>
     <table class="items">
         <thead>
             <tr>
-                <th>N°</th><th>Cant.</th><th>Unidad</th><th style="width:30%">Descripción</th>
-                <th>Precio unit.</th><th>Descuento</th><th>Otros montos no afectos</th>
-                <th>Ventas no sujetas</th><th>Ventas exentas</th><th>Ventas gravadas</th>
+                @foreach ($d['tabla']['cols'] as $col)
+                    <th @if (!empty($col[2])) style="width:{{ $col[2] }}" @endif>{{ $col[0] }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
-            @foreach ($d['items'] as $it)
+            @foreach ($d['tabla']['rows'] as $row)
                 <tr>
-                    <td class="c">{{ $it['num'] }}</td>
-                    <td class="r">{{ $it['cantidad'] }}</td>
-                    <td>{{ $it['unidad'] }}</td>
-                    <td>{{ $it['descripcion'] }}</td>
-                    <td class="r">{{ $m($it['precio']) }}</td>
-                    <td class="r">{{ $m($it['descuento']) }}</td>
-                    <td class="r">{{ $m($it['noGravado']) }}</td>
-                    <td class="r">{{ $m($it['noSujeta']) }}</td>
-                    <td class="r">{{ $m($it['exenta']) }}</td>
-                    <td class="r">{{ $m($it['gravada']) }}</td>
+                    @foreach ($row as $i => $cell)
+                        <td class="{{ $d['tabla']['cols'][$i][1] ?? '' }}">{{ $cell }}</td>
+                    @endforeach
                 </tr>
             @endforeach
         </tbody>
@@ -137,14 +132,16 @@
             <td style="width:55%; vertical-align:top; padding-right:10px">
                 <div class="sec">VALOR EN LETRAS</div>
                 <div>{{ $o($d['letras']) }}</div>
-                <div class="sec">CONDICIÓN DE LA OPERACIÓN</div>
-                <div>{{ $d['condicion'] }}</div>
-                <div class="sec">FORMAS DE PAGO</div>
-                @forelse ($d['pagos'] as $p)
-                    <div>{{ $p['forma'] }}: {{ $m($p['monto']) }}</div>
-                @empty
-                    <div>-</div>
-                @endforelse
+                @if ($d['condicion'] !== null)
+                    <div class="sec">CONDICIÓN DE LA OPERACIÓN</div>
+                    <div>{{ $d['condicion'] }}</div>
+                    <div class="sec">FORMAS DE PAGO</div>
+                    @forelse ($d['pagos'] as $p)
+                        <div>{{ $p['forma'] }}: {{ $m($p['monto']) }}</div>
+                    @empty
+                        <div>-</div>
+                    @endforelse
+                @endif
                 <div class="sec">OBSERVACIONES</div>
                 <div>{{ $o($d['observaciones']) }}</div>
                 @foreach ($d['apendice'] as $a)

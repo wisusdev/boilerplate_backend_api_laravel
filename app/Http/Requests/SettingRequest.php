@@ -130,6 +130,7 @@ class SettingRequest extends FormRequest
             'data.attributes.dte_responsable_num_doc' => ['sometimes', 'nullable', 'string', 'max:25'],
             'data.attributes.dte_percepcion_activa' => $bool,
             'data.attributes.dte_retencion_activa' => $bool,
+            'data.attributes.dte_agente_retencion' => $bool,
             'data.attributes.dte_iva_ajuste_tasa' => ['sometimes', 'nullable', 'numeric', 'gt:0', 'max:13'],
             'data.attributes.dte_iva_ajuste_minimo' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:1000000'],
             'data.attributes.dte_direccion' => ['sometimes', 'nullable', 'string', 'max:500'],
