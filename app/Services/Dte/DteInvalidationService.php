@@ -2,6 +2,7 @@
 
 namespace App\Services\Dte;
 
+use App\Models\CreditNote;
 use App\Models\DteDocument;
 use App\Models\DteInvalidacion;
 use App\Models\Invoice;
@@ -38,7 +39,7 @@ class DteInvalidationService
     public function __construct(private readonly DteSigner $signer) {}
 
     /**
-     * Invalida el DTE vigente de una factura.
+     * Invalida el DTE vigente de una factura o de una nota.
      *
      * @param  array{tipo_anulacion: int, motivo?: ?string, codigo_generacion_r?: ?string,
      *               responsable_nombre?: ?string, responsable_tipo_doc?: ?string, responsable_num_doc?: ?string,
@@ -47,9 +48,9 @@ class DteInvalidationService
      * @throws DtePendingException el evento quedó sin respuesta del MH (se reenvía solo)
      * @throws DteException regla incumplida o rechazo del MH
      */
-    public function invalidate(Invoice $invoice, array $input, ?string $userId = null): DteInvalidacion
+    public function invalidate(Invoice|CreditNote $owner, array $input, ?string $userId = null): DteInvalidacion
     {
-        $doc = $invoice->dteDocuments()
+        $doc = $owner->dteDocuments()
             ->whereIn('estado', [DteDocument::TRANSMITTED, DteDocument::INVALIDATED])
             ->latest('id')->first();
         if (! $doc) {
@@ -113,18 +114,25 @@ class DteInvalidationService
     }
 
     /**
-     * Documentos que pueden reemplazar al de esta factura: otros DTE del mismo
+     * Documentos que pueden reemplazar al de este dueño: otros DTE del mismo
      * tipo, con sello.
      */
-    public function replacementCandidates(Invoice $invoice)
+    public function replacementCandidates(Invoice|CreditNote $owner)
     {
-        $tipo = $invoice->dteDocuments()->where('estado', DteDocument::TRANSMITTED)->latest('id')->value('tipo_dte');
+        $propios = $owner->dteDocuments()->pluck('id');
+        $tipo = $owner->dteDocuments()->where('estado', DteDocument::TRANSMITTED)->latest('id')->value('tipo_dte');
 
-        return DteDocument::with('invoice:id,receptor_name,amount')
+        return DteDocument::with(['invoice:id,receptor_name,amount', 'creditNote:id,number,total'])
             ->where('estado', DteDocument::TRANSMITTED)
             ->where('tipo_dte', $tipo ?? FacturaBuilder::TIPO_DTE)
-            ->where('invoice_id', '!=', $invoice->id)
+            ->whereNotIn('id', $propios)
             ->latest('id')->limit(50)->get();
+    }
+
+    /** Una nota de crédito se invalida siempre sin documento de reemplazo. */
+    private static function sinReemplazo(DteDocument $doc): bool
+    {
+        return $doc->tipo_dte === '05';
     }
 
     /**
@@ -154,12 +162,19 @@ class DteInvalidationService
             throw new DteException('Venció el plazo para invalidar la factura (3 meses desde su transmisión).');
         }
 
-        // Documento de reemplazo: con 1 o 3, otro DTE del mismo tipo ya sellado.
+        // Un CCF con notas vigentes no se invalida: primero se invalidan ellas.
+        if ($doc->tipo_dte === FacturaBuilder::TIPO_CCF && $doc->invoice
+            && $doc->invoice->creditNotes()->whereIn('dte_status', ['accepted', 'pending', 'contingency'])->exists()) {
+            throw new DteException('El CCF tiene notas de crédito o débito vigentes: primero hay que invalidarlas.');
+        }
+
+        // Documento de reemplazo: con 1 o 3, otro DTE del mismo tipo ya sellado
+        // (salvo en la nota de crédito, que nunca lleva).
         $reemplazo = null;
-        if ($tipo !== DteInvalidacion::TIPO_RESCINDIR) {
+        if ($tipo !== DteInvalidacion::TIPO_RESCINDIR && ! self::sinReemplazo($doc)) {
             $codigoR = strtoupper(trim((string) ($input['codigo_generacion_r'] ?? '')));
             if ($codigoR === '') {
-                throw new DteException("Con el tipo {$tipo} primero se emite la factura que reemplaza a esta y se indica su código de generación.");
+                throw new DteException("Con el tipo {$tipo} primero se emite el documento que reemplaza a este y se indica su código de generación.");
             }
             $r = DteDocument::where('codigo_generacion', $codigoR)->first();
             if (! $r || $r->id === $doc->id || $r->tipo_dte !== $doc->tipo_dte || $r->estado !== DteDocument::TRANSMITTED) {
@@ -287,7 +302,7 @@ class DteInvalidationService
                         'transmitido_at' => now(),
                     ]);
                     $doc->update(['estado' => DteDocument::INVALIDATED]);
-                    $doc->invoice()->update([
+                    $doc->owner()->applyDteSummary([
                         'dte_status' => Invoice::DTE_INVALIDATED,
                         'status' => 'cancelled',
                     ]);

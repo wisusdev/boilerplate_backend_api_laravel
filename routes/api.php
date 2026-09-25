@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Base\SettingsController;
 use App\Http\Controllers\Api\Base\UserController;
 use App\Http\Controllers\Api\Travel\BookingController;
 use App\Http\Controllers\Api\Travel\CouponController;
+use App\Http\Controllers\Api\Travel\CreditNoteController;
 use App\Http\Controllers\Api\Travel\CurrencyController;
 use App\Http\Controllers\Api\Travel\CustomInquiryController;
 use App\Http\Controllers\Api\Travel\DteController;
@@ -323,11 +324,33 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/{invoice}/dte/send', [DteController::class, 'send'])
             ->withoutMiddleware([ValidateJsonApiDocument::class])
             ->middleware('permission:invoices:generate-dte')->name('dte.send');
+        // Notas de crédito (05) y débito (06) sobre un CCF sellado.
+        Route::get('/{invoice}/credit-notes', [CreditNoteController::class, 'index'])
+            ->middleware('permission:invoices:show')->name('credit-notes.index');
+        Route::post('/{invoice}/credit-notes', [CreditNoteController::class, 'store'])
+            ->middleware('permission:invoices:generate-dte')->name('credit-notes.store');
     });
     Route::post('/settings/dte-certificate', [InvoiceController::class, 'uploadCertificate'])
         ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
         ->middleware('permission:invoices:generate-dte')
         ->name('api.v1.settings.dte-certificate');
+    Route::post('/credit-notes/{creditNote}/transmit', [CreditNoteController::class, 'transmit'])
+        ->withoutMiddleware([ValidateJsonApiDocument::class])
+        ->middleware('permission:invoices:generate-dte')->name('api.v1.credit-notes.transmit');
+    Route::post('/credit-notes/{creditNote}/invalidate-dte', [DteController::class, 'invalidateNote'])
+        ->middleware('permission:invoices:invalidate-dte')->name('api.v1.credit-notes.invalidate-dte');
+    Route::get('/credit-notes/{creditNote}/dte-replacements', [DteController::class, 'replacementsNote'])
+        ->middleware('permission:invoices:invalidate-dte')->name('api.v1.credit-notes.dte-replacements');
+    // Cualquier DTE por su id: representación gráfica, archivo y envío al receptor.
+    Route::get('/dte/documents/{dteDocument}/pdf', [DteController::class, 'documentPdf'])
+        ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+        ->middleware('permission:invoices:show')->name('api.v1.dte.documents.pdf');
+    Route::get('/dte/documents/{dteDocument}/json', [DteController::class, 'documentJson'])
+        ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
+        ->middleware('permission:invoices:show')->name('api.v1.dte.documents.json');
+    Route::post('/dte/documents/{dteDocument}/send', [DteController::class, 'documentSend'])
+        ->withoutMiddleware([ValidateJsonApiDocument::class])
+        ->middleware('permission:invoices:generate-dte')->name('api.v1.dte.documents.send');
     // Contingencias DTE: seguimiento de plazos y avance manual.
     Route::get('/dte/contingencias', [DteController::class, 'contingencias'])
         ->middleware('permission:invoices:generate-dte')->name('api.v1.dte.contingencias');

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Transiciones de estado de un DTE, siempre junto con el resumen `dte_*` de su
- * factura. Las usan la transmisión en línea, la contingencia y el lote.
+ * dueño (factura o nota). Las usan la transmisión en línea, la contingencia y el lote.
  */
 final class DteDocumentStates
 {
@@ -26,10 +26,10 @@ final class DteDocumentStates
                 'transmitido_at' => now(),
                 ...$extra,
             ]);
-            $doc->invoice()->update([
+            $doc->owner()->applyDteSummary([
                 'dte_status' => Invoice::DTE_ACCEPTED,
                 'dte_seal' => $sello,
-                'mh_response' => json_encode($body),
+                'mh_response' => $body,
                 'status' => 'issued',
                 'dte_accepted_at' => now(),
             ]);
@@ -48,9 +48,9 @@ final class DteDocumentStates
                 'mh_response' => $body,
                 'ultimo_error' => $mensaje,
             ]);
-            $doc->invoice()->update([
+            $doc->owner()->applyDteSummary([
                 'dte_status' => Invoice::DTE_REJECTED,
-                'mh_response' => json_encode($body),
+                'mh_response' => $body,
             ]);
         });
         Log::warning('DTE rechazado por el MH', ['dte_document_id' => $doc->id, 'response' => $body]);
@@ -60,9 +60,9 @@ final class DteDocumentStates
     public static function pending(DteDocument $doc, string $error, ?array $body = null): void
     {
         $doc->update(['ultimo_error' => $error, 'mh_response' => $body]);
-        $doc->invoice()->update([
+        $doc->owner()->applyDteSummary([
             'dte_status' => Invoice::DTE_PENDING,
-            'mh_response' => json_encode($body ?? ['error' => $error]),
+            'mh_response' => $body ?? ['error' => $error],
         ]);
         Log::warning('DTE pendiente de sello', ['dte_document_id' => $doc->id, 'error' => $error]);
     }

@@ -114,9 +114,9 @@ class DteContingencyService
                 'firma_electronica' => $this->signer->sign($json, $key),
                 'ultimo_error' => $causa,
             ]);
-            $doc->invoice()->update([
+            $doc->owner()->applyDteSummary([
                 'dte_status' => Invoice::DTE_CONTINGENCY,
-                'mh_response' => json_encode(['error' => $causa]),
+                'mh_response' => ['error' => $causa],
             ]);
         });
 

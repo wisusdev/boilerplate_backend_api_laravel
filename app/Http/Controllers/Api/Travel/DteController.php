@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Travel;
 
 use App\Http\Controllers\Controller;
+use App\Models\CreditNote;
 use App\Models\DteContingencia;
 use App\Models\DteDocument;
 use App\Models\DteInvalidacion;
@@ -36,11 +37,15 @@ class DteController extends Controller
      */
     public function pdf(Invoice $invoice)
     {
-        $doc = $this->currentDocument($invoice);
+        return $this->documentPdf($this->currentDocument($invoice));
+    }
 
-        return response($this->representation->pdf($doc), 200, [
+    /** GET /dte/documents/{dteDocument}/pdf — cualquier DTE (factura, nota…). */
+    public function documentPdf(DteDocument $dteDocument)
+    {
+        return response($this->representation->pdf($dteDocument), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$this->representation->filename($doc, 'pdf').'"',
+            'Content-Disposition' => 'attachment; filename="'.$this->representation->filename($dteDocument, 'pdf').'"',
         ]);
     }
 
@@ -50,11 +55,15 @@ class DteController extends Controller
      */
     public function json(Invoice $invoice)
     {
-        $doc = $this->currentDocument($invoice);
+        return $this->documentJson($this->currentDocument($invoice));
+    }
 
-        return response($this->representation->json($doc), 200, [
+    /** GET /dte/documents/{dteDocument}/json */
+    public function documentJson(DteDocument $dteDocument)
+    {
+        return response($this->representation->json($dteDocument), 200, [
             'Content-Type' => 'application/json',
-            'Content-Disposition' => 'attachment; filename="'.$this->representation->filename($doc, 'json').'"',
+            'Content-Disposition' => 'attachment; filename="'.$this->representation->filename($dteDocument, 'json').'"',
         ]);
     }
 
@@ -66,10 +75,16 @@ class DteController extends Controller
      */
     public function send(Request $request, Invoice $invoice): JsonResponse
     {
+        return $this->documentSend($request, $this->currentDocument($invoice));
+    }
+
+    /** POST /dte/documents/{dteDocument}/send */
+    public function documentSend(Request $request, DteDocument $dteDocument): JsonResponse
+    {
         $request->validate(['data.attributes.to' => ['nullable', 'email', 'max:150']]);
 
         try {
-            $doc = $this->delivery->deliver($this->currentDocument($invoice), $request->input('data.attributes.to'));
+            $doc = $this->delivery->deliver($dteDocument, $request->input('data.attributes.to'));
         } catch (DteException $e) {
             return response()->json(['errors' => [['title' => 'Error de envío', 'detail' => $e->getMessage()]]], 422);
         }
@@ -100,6 +115,17 @@ class DteController extends Controller
      */
     public function invalidate(Request $request, Invoice $invoice): JsonResponse
     {
+        return $this->invalidateOwner($request, $invoice);
+    }
+
+    /** POST /credit-notes/{creditNote}/invalidate-dte */
+    public function invalidateNote(Request $request, CreditNote $creditNote): JsonResponse
+    {
+        return $this->invalidateOwner($request, $creditNote);
+    }
+
+    private function invalidateOwner(Request $request, Invoice|CreditNote $owner): JsonResponse
+    {
         $tipos = ['13', '36', '03', '02', '37'];
         $data = $request->validate([
             'data.type' => ['required', 'in:dte-invalidations'],
@@ -115,9 +141,9 @@ class DteController extends Controller
         ])['data']['attributes'];
 
         try {
-            $inv = $this->invalidations->invalidate($invoice, $data, $request->user()?->id);
+            $inv = $this->invalidations->invalidate($owner, $data, $request->user()?->id);
         } catch (DtePendingException $e) {
-            return $this->invalidationResponse($this->latestInvalidation($invoice), 202, $e->getMessage());
+            return $this->invalidationResponse($this->latestInvalidation($owner), 202, $e->getMessage());
         } catch (DteException $e) {
             return response()->json(['errors' => [['title' => 'Error de invalidación', 'detail' => $e->getMessage()]]], 422);
         }
@@ -131,14 +157,25 @@ class DteController extends Controller
      */
     public function replacements(Invoice $invoice): JsonResponse
     {
-        return response()->json(['data' => $this->invalidations->replacementCandidates($invoice)->map(fn (DteDocument $d) => [
+        return $this->replacementsFor($invoice);
+    }
+
+    /** GET /credit-notes/{creditNote}/dte-replacements — para invalidar una nota de débito. */
+    public function replacementsNote(CreditNote $creditNote): JsonResponse
+    {
+        return $this->replacementsFor($creditNote);
+    }
+
+    private function replacementsFor(Invoice|CreditNote $owner): JsonResponse
+    {
+        return response()->json(['data' => $this->invalidations->replacementCandidates($owner)->map(fn (DteDocument $d) => [
             'type' => 'dte-documents',
             'id' => (string) $d->id,
             'attributes' => [
                 'codigo_generacion' => $d->codigo_generacion,
                 'numero_control' => $d->numero_control,
                 'invoice_id' => $d->invoice_id,
-                'invoice_number' => $d->invoice?->number,
+                'invoice_number' => $d->invoice?->number ?? $d->creditNote?->number,
                 'receptor_name' => $d->invoice?->receptor_name,
                 'amount' => $d->invoice?->amount,
                 'transmitido_at' => $d->transmitido_at,
@@ -183,9 +220,9 @@ class DteController extends Controller
         return response()->json(['data' => $this->contingenciaData($c)]);
     }
 
-    private function latestInvalidation(Invoice $invoice): ?DteInvalidacion
+    private function latestInvalidation(Invoice|CreditNote $owner): ?DteInvalidacion
     {
-        return DteInvalidacion::whereIn('dte_document_id', $invoice->dteDocuments()->select('id'))->latest('id')->first();
+        return DteInvalidacion::whereIn('dte_document_id', $owner->dteDocuments()->select('id'))->latest('id')->first();
     }
 
     private function invalidationResponse(?DteInvalidacion $inv, int $status, ?string $message = null): JsonResponse

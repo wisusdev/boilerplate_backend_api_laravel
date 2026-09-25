@@ -92,7 +92,7 @@ class DteEventosTest extends DteTestCase
         $original = $this->facturaSellada();
 
         $this->invalidar($original, ['tipo_anulacion' => 1])->assertStatus(422)
-            ->assertJsonPath('errors.0.detail', 'Con el tipo 1 primero se emite la factura que reemplaza a esta y se indica su código de generación.');
+            ->assertJsonPath('errors.0.detail', 'Con el tipo 1 primero se emite el documento que reemplaza a este y se indica su código de generación.');
 
         // Un reemplazo sin sello no vale.
         $sinSello = $this->facturaManual();

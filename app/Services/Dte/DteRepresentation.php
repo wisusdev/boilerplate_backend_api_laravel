@@ -151,7 +151,9 @@ class DteRepresentation
         foreach ((array) ($resumen['tributos'] ?? []) as $t) {
             $totales[] = [$t['descripcion'] ?? $t['codigo'], $t['valor'] ?? 0, false];
         }
-        $totales[] = ['Sub-total', $resumen['subTotal'] ?? 0, true];
+        if (array_key_exists('subTotal', $resumen)) { // las notas no lo llevan
+            $totales[] = ['Sub-total', $resumen['subTotal'], true];
+        }
         if ($esFactura) {
             $totales[] = ['IVA incluido en ventas gravadas (13%)', $resumen['totalIva'] ?? 0, false];
         }

@@ -29,6 +29,7 @@ class DteDocument extends Model
 
     protected $fillable = [
         'invoice_id',
+        'credit_note_id',
         'contingencia_id',
         'tipo_dte',
         'ambiente',
@@ -63,6 +64,17 @@ class DteDocument extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function creditNote(): BelongsTo
+    {
+        return $this->belongsTo(CreditNote::class);
+    }
+
+    /** A quién pertenece el DTE: una factura o una nota. */
+    public function owner(): Invoice|CreditNote
+    {
+        return $this->invoice ?? $this->creditNote;
     }
 
     public function contingencia(): BelongsTo

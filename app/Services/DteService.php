@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CreditNote;
 use App\Models\DteDocument;
 use App\Models\Invoice;
 use App\Models\Setting;
@@ -17,8 +18,10 @@ use App\Services\Dte\FacturaBuilder;
 use App\Services\Dte\MhClient;
 use App\Services\Dte\MhResult;
 use App\Services\Dte\MhUnavailableException;
+use App\Services\Dte\NotaBuilder;
 use App\Support\Dte\SvCatalogs;
 use App\Traits\EncryptsCredentials;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
@@ -68,11 +71,8 @@ class DteService
      */
     public function processDte(Invoice $invoice): Invoice
     {
-        $config = DteConfig::load();
+        $config = $this->enabledConfig();
 
-        if (! $config->enabled()) {
-            throw new DteException('La facturación electrónica no está habilitada en la configuración.');
-        }
         if (! $invoice->canGenerateDte()) {
             throw new DteException("El DTE no puede generarse en el estado actual: {$invoice->dte_status}");
         }
@@ -90,21 +90,69 @@ class DteService
             throw new DteException('La factura no tiene importe.');
         }
 
+        $this->issueAndTransmit($invoice, $tipo, $config, fn (Invoice $locked, string $numeroControl, string $codigo) => (new FacturaBuilder)->build(
+            $locked, $config, $numeroControl, $codigo, Carbon::now(), $tipo,
+        ));
+
+        return $invoice->fresh();
+    }
+
+    /**
+     * Emite (o reintenta) el DTE de una nota de crédito (05) o débito (06).
+     *
+     * @throws DtePendingException
+     * @throws DteException
+     */
+    public function processCreditNote(CreditNote $note): CreditNote
+    {
+        $config = $this->enabledConfig();
+        if ($errors = [...$config->errors(), ...$config->transmissionErrors()]) {
+            throw DteException::invalid($errors);
+        }
+
+        $ccf = $note->invoice->dteDocuments()->where('estado', DteDocument::TRANSMITTED)->latest('id')->first();
+        if (! $ccf || $ccf->tipo_dte !== FacturaBuilder::TIPO_CCF) {
+            throw new DteException('La nota solo ajusta un comprobante de crédito fiscal con sello de recepción.');
+        }
+
+        $this->issueAndTransmit($note, $note->tipoDte(), $config, fn (CreditNote $locked, string $numeroControl, string $codigo) => (new NotaBuilder)->build(
+            $locked, $ccf, $config, $numeroControl, $codigo, Carbon::now(),
+        ));
+
+        return $note->fresh();
+    }
+
+    private function enabledConfig(): DteConfig
+    {
+        $config = DteConfig::load();
+        if (! $config->enabled()) {
+            throw new DteException('La facturación electrónica no está habilitada en la configuración.');
+        }
+
+        return $config;
+    }
+
+    /**
+     * Carga la llave (antes de numerar: un documento que no se puede firmar no
+     * gasta correlativo), emite o reutiliza el documento y lo transmite.
+     *
+     * @param  callable(Model, string, string): array<string, mixed>  $build
+     */
+    private function issueAndTransmit(Invoice|CreditNote $owner, string $tipo, DteConfig $config, callable $build): void
+    {
         try {
             $key = $this->signer->loadKey($config);
         } catch (\RuntimeException $e) {
             throw new DteException($e->getMessage());
         }
 
-        $doc = $this->issue($invoice, $config, $key);
+        $doc = $this->issue($owner, $tipo, $config, $key, $build);
         if ($doc->estado === DteDocument::CONTINGENCY) {
             DteDelivery::autoDeliver($doc);
 
             throw new DtePendingException('El MH no está disponible: el DTE se emitió en contingencia. Es válido para entregarse y se transmitirá en lote cuando el MH vuelva.');
         }
         $this->transmit($doc, $config);
-
-        return $invoice->fresh();
     }
 
     /**
@@ -177,22 +225,25 @@ class DteService
     }
 
     /**
-     * El documento vigente de la factura, o uno nuevo numerado y firmado.
+     * El documento vigente del dueño (factura o nota), o uno nuevo numerado y
+     * firmado.
+     *
+     * @param  callable(Model, string, string): array<string, mixed>  $build
      */
-    private function issue(Invoice $invoice, DteConfig $config, \OpenSSLAsymmetricKey $key): DteDocument
+    private function issue(Invoice|CreditNote $owner, string $tipo, DteConfig $config, \OpenSSLAsymmetricKey $key, callable $build): DteDocument
     {
-        return DB::transaction(function () use ($invoice, $config, $key) {
-            // Serializa dos emisiones simultáneas de la misma factura (doble
+        return DB::transaction(function () use ($owner, $tipo, $config, $key, $build) {
+            // Serializa dos emisiones simultáneas del mismo documento (doble
             // clic, la confirmación automática y el admin a la vez): ambas
             // verían "sin DTE" y declararían dos documentos para una venta.
-            $locked = Invoice::whereKey($invoice->getKey())->lockForUpdate()->firstOrFail();
+            $locked = $owner::whereKey($owner->getKey())->lockForUpdate()->firstOrFail();
 
             $vigente = $locked->dteDocuments()
                 ->whereIn('estado', [DteDocument::PENDING, DteDocument::TRANSMITTED, DteDocument::CONTINGENCY, DteDocument::INVALIDATED])
                 ->latest('id')->first();
 
             if (in_array($vigente?->estado, [DteDocument::TRANSMITTED, DteDocument::INVALIDATED], true)) {
-                throw new DteException('La factura ya tiene un DTE con sello.');
+                throw new DteException('El documento ya tiene un DTE con sello.');
             }
             if ($vigente) {
                 return $vigente;
@@ -202,12 +253,9 @@ class DteService
             // contingencia y el cliente se lleva un documento válido.
             $contingencia = $this->contingencies->active($config->ambiente());
 
-            $tipo = self::tipoDe($locked);
             $numero = self::nextNumber($config->ambiente(), $tipo);
             $codigo = strtoupper((string) Str::uuid());
-            $documento = (new FacturaBuilder)->build(
-                $locked, $config, self::numeroControl($config, $tipo, $numero), $codigo, Carbon::now(), $tipo,
-            );
+            $documento = $build($locked, self::numeroControl($config, $tipo, $numero), $codigo);
             if ($contingencia) {
                 $documento = DteContingencyService::apply($documento, $contingencia);
             }
@@ -226,7 +274,7 @@ class DteService
                 'firma_electronica' => $this->signer->sign($json, $key),
             ]);
 
-            $locked->update([
+            $locked->applyDteSummary([
                 'dte_status' => $contingencia ? Invoice::DTE_CONTINGENCY : Invoice::DTE_PENDING,
                 'dte_type' => $doc->tipo_dte,
                 'dte_number' => $doc->numero_control,
@@ -312,7 +360,7 @@ class DteService
     {
         for ($intento = 1; ; $intento++) {
             $doc->increment('intentos');
-            Invoice::whereKey($doc->invoice_id)->update(['dte_submitted_at' => now()]);
+            $doc->owner()->applyDteSummary(['dte_submitted_at' => now()]);
 
             try {
                 return $mh->recepcion(

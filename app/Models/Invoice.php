@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasDteDocuments;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasDteDocuments, HasFactory, SoftDeletes;
 
     // DTE status constants
     public const DTE_NOT_GENERATED = 'not_generated';
@@ -115,9 +116,20 @@ class Invoice extends Model
         ], true);
     }
 
-    public function dteDocuments(): HasMany
+    public function dteForeignKey(): string
     {
-        return $this->hasMany(DteDocument::class);
+        return 'invoice_id';
+    }
+
+    /** La factura pasa a emitida con el sello y a cancelada al invalidarse. */
+    protected function extraDteSummaryColumns(): array
+    {
+        return ['status'];
+    }
+
+    public function creditNotes(): HasMany
+    {
+        return $this->hasMany(CreditNote::class);
     }
 
     public function getResourceType(): string
