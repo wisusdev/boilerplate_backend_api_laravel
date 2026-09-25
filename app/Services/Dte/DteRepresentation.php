@@ -155,6 +155,9 @@ class DteRepresentation
         if ($esFactura) {
             $totales[] = ['IVA incluido en ventas gravadas (13%)', $resumen['totalIva'] ?? 0, false];
         }
+        if (($resumen['ivaPerci'] ?? 0) > 0) {
+            $totales[] = ['IVA percibido', $resumen['ivaPerci'], false];
+        }
         if (($resumen['ivaRete'] ?? 0) > 0) {
             $totales[] = ['IVA retenido', $resumen['ivaRete'], false];
         }

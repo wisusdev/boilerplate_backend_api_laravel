@@ -182,6 +182,32 @@ class DteConfig
         return trim((string) ($this->raw['dte_responsable_num_doc'] ?? ''));
     }
 
+    /** vamosPues es agente de percepción: cobra el 1 % a los clientes que no son grandes contribuyentes. */
+    public function percepcionActiva(): bool
+    {
+        return (bool) ($this->raw['dte_percepcion_activa'] ?? false);
+    }
+
+    /** Se acepta que los clientes agentes de retención retengan el 1 %. */
+    public function retencionActiva(): bool
+    {
+        return (bool) ($this->raw['dte_retencion_activa'] ?? false);
+    }
+
+    /** Porcentaje de retención o percepción (por defecto 1 %). */
+    public function ivaAjusteTasa(): float
+    {
+        $tasa = (float) ($this->raw['dte_iva_ajuste_tasa'] ?? 1);
+
+        return $tasa > 0 ? $tasa : 1.0;
+    }
+
+    /** Venta gravada mínima, sin IVA, para retener o percibir (por defecto $100.00). */
+    public function ivaAjusteMinimoCents(): int
+    {
+        return (int) round((float) ($this->raw['dte_iva_ajuste_minimo'] ?? 100) * 100);
+    }
+
     /** Usuario de la API del MH: el NIT del emisor, salvo que se haya indicado otro. */
     public function mhUser(): string
     {

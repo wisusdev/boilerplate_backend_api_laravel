@@ -10,12 +10,15 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
 /**
- * Factura de consumidor final (tipo 01, esquema fe-f-v2.json).
+ * Documentos de venta de una factura: Factura de consumidor final (01,
+ * fe-f-v2.json) y Comprobante de Crédito Fiscal (03, fe-ccf-v4.json).
  *
- * La Factura declara los precios CON IVA incluido y el IVA por línea
- * (ivaItem = ventaGravada × 13/113) y en totalIva. El tributo 20 no aplica a
- * la Factura (CAT-015): tributos va en null. Es el CCF (03) el que declara
- * precios sin IVA y el IVA como tributo 20.
+ * La diferencia central:
+ *  - la Factura declara los precios CON IVA incluido y el IVA por línea
+ *    (ivaItem = ventaGravada × 13/113) y en totalIva; el tributo 20 no aplica
+ *    (CAT-015): tributos va en null;
+ *  - el CCF declara los precios SIN IVA (cobrado / 1.13) y el IVA como
+ *    tributo 20 en el resumen; además lleva retención o percepción del 1 %.
  *
  * Los importes de vamosPues son lo que el cliente paga, IVA incluido.
  */
@@ -23,26 +26,26 @@ class FacturaBuilder
 {
     public const TIPO_DTE = '01';
 
+    public const TIPO_CCF = '03';
+
     public const VERSION = 2;
 
-    private const IVA_RATE = 0.13;
+    private const IVA_RATE = DteParts::IVA_RATE;
 
     /** @return array<string, mixed> */
-    public function build(Invoice $invoice, DteConfig $config, string $numeroControl, string $codigoGeneracion, CarbonInterface $now): array
+    public function build(Invoice $invoice, DteConfig $config, string $numeroControl, string $codigoGeneracion, CarbonInterface $now, ?string $tipo = null): array
     {
         $invoice->loadMissing(['items', 'booking.bookable', 'booking.payments']);
-        $now = $now->copy()->setTimezone('America/El_Salvador');
+        $tipo ??= $invoice->dte_type ?: self::TIPO_DTE;
+        $ccf = $tipo === self::TIPO_CCF;
 
         $cuerpo = [];
         $totalGravadaCents = 0;
         $totalIva = 0.0;
 
         foreach ($this->lines($invoice) as $line) {
-            $grossCents = (int) round($line['total'] * 100);
-            $gross = $grossCents / 100;
-            $iva = round($gross * self::IVA_RATE / (1 + self::IVA_RATE), 8);
-
-            $cuerpo[] = [
+            $grossCents = DteParts::cents($line['total']);
+            $item = [
                 'numItem' => count($cuerpo) + 1,
                 'tipoItem' => 2,          // CAT-011: servicio
                 'numeroDocumento' => null,
@@ -51,46 +54,74 @@ class FacturaBuilder
                 'descripcion' => mb_substr($line['description'], 0, 1000),
                 'cantidad' => $line['quantity'],
                 'uniMedida' => 99,        // CAT-014: otra (un servicio)
-                'precioUni' => round($gross / $line['quantity'], 8),
+                'precioUni' => 0,
                 'montoDescu' => 0,
                 'ventaNoSuj' => 0,
                 'ventaExenta' => 0,
-                'ventaGravada' => $gross,
+                'ventaGravada' => 0,
                 'tributos' => null,
                 'psv' => 0,
                 'noGravado' => 0,
-                'ivaItem' => $iva,
             ];
 
-            $totalGravadaCents += $grossCents;
-            $totalIva += $iva;
+            if ($ccf) {
+                // Sin IVA: lo cobrado entre 1.13.
+                $baseCents = (int) round($grossCents / (1 + self::IVA_RATE));
+                $item['precioUni'] = round($baseCents / 100 / $line['quantity'], 8);
+                $item['ventaGravada'] = $baseCents / 100;
+                $item['tributos'] = ['20'];
+                $totalGravadaCents += $baseCents;
+            } else {
+                $gross = $grossCents / 100;
+                $iva = round($gross * self::IVA_RATE / (1 + self::IVA_RATE), 8);
+                $item['precioUni'] = round($gross / $line['quantity'], 8);
+                $item['ventaGravada'] = $gross;
+                $item['ivaItem'] = $iva;
+                $totalGravadaCents += $grossCents;
+                $totalIva += $iva;
+            }
+
+            $cuerpo[] = $item;
         }
 
         $totalGravada = $totalGravadaCents / 100;
-        [$condicion, $pagos] = $this->pagos($invoice, $totalGravadaCents);
 
-        return [
-            'identificacion' => [
-                'version' => self::VERSION,
-                'ambiente' => $config->ambiente(),
-                'tipoDte' => self::TIPO_DTE,
-                'numeroControl' => $numeroControl,
-                'codigoGeneracion' => $codigoGeneracion,
-                'tipoModelo' => 1,        // CAT-003: modelo previo
-                'tipoOperacion' => 1,     // CAT-004: transmisión normal
-                'tipoContingencia' => null,
-                'motivoContin' => null,
-                'fecEmi' => $now->format('Y-m-d'),
-                'horEmi' => $now->format('H:i:s'),
-                'tipoMoneda' => 'USD',
-            ],
-            'documentoRelacionado' => null,
-            'emisor' => $this->emisor($config),
-            'receptor' => $this->receptor($invoice),
-            'otrosDocumentos' => null,
-            'ventaTercero' => null,
-            'cuerpoDocumento' => $cuerpo,
-            'resumen' => [
+        if ($ccf) {
+            $ivaCents = (int) round($totalGravadaCents * self::IVA_RATE);
+            [$reteCents, $perciCents] = IvaAjuste::calcular($config, (bool) $invoice->receptor_agente_retencion, $totalGravadaCents);
+            $montoCents = $totalGravadaCents + $ivaCents;
+            $pagarCents = $montoCents - $reteCents + $perciCents;
+            [$condicion, $pagos] = $this->pagos($invoice, $pagarCents);
+
+            $resumen = [
+                'totalNoSuj' => 0,
+                'totalExenta' => 0,
+                'totalGravada' => $totalGravada,
+                'subTotalVentas' => $totalGravada,
+                'descuNoSuj' => 0,
+                'descuExenta' => 0,
+                'descuGravada' => 0,
+                'porcentajeDescuento' => 0,
+                'totalDescu' => 0,
+                'tributos' => $totalGravadaCents > 0
+                    ? [['codigo' => '20', 'descripcion' => 'Impuesto al Valor Agregado 13%', 'valor' => $ivaCents / 100]]
+                    : null,
+                'subTotal' => $totalGravada,
+                'ivaPerci' => $perciCents / 100,
+                'ivaRete' => $reteCents / 100,
+                'montoTotalOperacion' => $montoCents / 100,
+                'totalNoGravado' => 0,
+                'totalPagar' => $pagarCents / 100,
+                'totalLetras' => AmountToWords::convert($pagarCents),
+                'saldoFavor' => 0,
+                'condicionOperacion' => $condicion,
+                'pagos' => $pagos,
+                'numPagoElectronico' => null,
+                'observaciones' => DteParts::optional($invoice->notes, 1, 3000),
+            ];
+        } else {
+            [$condicion, $pagos] = $this->pagos($invoice, $totalGravadaCents);
+            $resumen = [
                 'totalNoSuj' => 0,
                 'totalExenta' => 0,
                 'totalGravada' => $totalGravada,
@@ -112,14 +143,77 @@ class FacturaBuilder
                 'condicionOperacion' => $condicion,
                 'pagos' => $pagos,
                 'numPagoElectronico' => null,
-                'observaciones' => self::optional($invoice->notes, 1, 3000),
-            ],
+                'observaciones' => DteParts::optional($invoice->notes, 1, 3000),
+            ];
+        }
+
+        return [
+            'identificacion' => DteParts::identificacion($tipo, $config, $numeroControl, $codigoGeneracion, $now),
+            'documentoRelacionado' => null,
+            'emisor' => DteParts::emisor($config),
+            'receptor' => $ccf ? self::receptorCcf($invoice) : $this->receptor($invoice),
+            'otrosDocumentos' => null,
+            'ventaTercero' => null,
+            'cuerpoDocumento' => $cuerpo,
+            'resumen' => $resumen,
             'apendice' => [[
                 'campo' => 'factura',
                 'etiqueta' => 'Factura interna',
                 'valor' => $invoice->number,
             ]],
         ];
+    }
+
+    /**
+     * Receptor del CCF: un contribuyente identificado por completo, con su
+     * actividad y dirección en códigos de catálogo.
+     *
+     * @return array<string, mixed>
+     */
+    public static function receptorCcf(Invoice $invoice): array
+    {
+        return [
+            'nit' => DteConfig::digits($invoice->receptor_document),
+            'nrc' => DteParts::optional(DteConfig::digits($invoice->receptor_nrc), 2, 8),
+            'nombre' => mb_substr(trim((string) $invoice->receptor_name), 0, 250),
+            'codActividad' => trim((string) $invoice->receptor_cod_actividad),
+            'descActividad' => mb_substr((string) SvCatalogs::actividad($invoice->receptor_cod_actividad), 0, 150),
+            'nombreComercial' => DteParts::optional($invoice->receptor_nombre_comercial, 1, 150),
+            'direccion' => DteParts::direccion(
+                $invoice->receptor_departamento, $invoice->receptor_municipio,
+                $invoice->receptor_distrito, $invoice->receptor_direccion,
+            ),
+            'telefono' => DteParts::optional($invoice->receptor_telefono, 8, 30),
+            'correo' => DteParts::optional($invoice->receptor_email, 6, 100),
+        ];
+    }
+
+    /**
+     * Lo que falta o está mal en el receptor de un CCF. Se valida al guardar la
+     * factura y otra vez antes de numerar: el MH rechazaría el documento.
+     *
+     * @return list<string>
+     */
+    public static function receptorCcfErrors(Invoice $invoice): array
+    {
+        $errors = [];
+        if (! preg_match('/^([0-9]{14}|[0-9]{9})$/', DteConfig::digits($invoice->receptor_document))) {
+            $errors[] = 'El NIT del cliente debe tener 9 o 14 dígitos.';
+        }
+        if (! preg_match('/^[0-9]{2,8}$/', DteConfig::digits($invoice->receptor_nrc))) {
+            $errors[] = 'El NRC del cliente debe tener entre 2 y 8 dígitos.';
+        }
+        if (trim((string) $invoice->receptor_name) === '') {
+            $errors[] = 'Falta el nombre o razón social del cliente.';
+        }
+        if (SvCatalogs::actividad($invoice->receptor_cod_actividad) === null) {
+            $errors[] = 'La actividad económica del cliente no está en el catálogo CAT-019.';
+        }
+
+        return [...$errors, ...DteParts::direccionErrors(
+            'del cliente', $invoice->receptor_departamento, $invoice->receptor_municipio,
+            $invoice->receptor_distrito, $invoice->receptor_direccion,
+        )];
     }
 
     /**
@@ -152,29 +246,6 @@ class FacturaBuilder
         return [['description' => $descripcion, 'quantity' => 1, 'total' => (float) $invoice->amount]];
     }
 
-    /** @return array<string, mixed> */
-    private function emisor(DteConfig $config): array
-    {
-        return [
-            'nit' => $config->nit(),
-            'nrc' => $config->nrc(),
-            'nombre' => mb_substr($config->nombre(), 0, 250),
-            'codActividad' => $config->codActividad(),
-            'descActividad' => mb_substr($config->descActividad(), 0, 150),
-            'nombreComercial' => self::optional($config->nombreComercial(), 1, 150),
-            'direccion' => [
-                'departamento' => $config->departamento(),
-                'municipio' => $config->municipio(),
-                'distrito' => $config->distrito(),
-                'complemento' => mb_substr($config->direccion(), 0, 200),
-            ],
-            'telefono' => mb_substr($config->telefono(), 0, 30),
-            'correo' => mb_substr($config->correo(), 0, 100),
-            'codEstable' => $config->codEstableCompleto(),
-            'codPuntoVenta' => $config->codPuntoVentaCompleto(),
-        ];
-    }
-
     /**
      * Consumidor final: las nueve claves siempre presentes y lo desconocido en
      * null. "Consumidor Final" no es un nombre. No se exige documento: la DGII
@@ -195,12 +266,12 @@ class FacturaBuilder
             'tipoDocumento' => $tipoDoc,
             'numDocumento' => $numDoc,
             'nrc' => null,
-            'nombre' => self::optional($nombre, 1, 250),
+            'nombre' => DteParts::optional($nombre, 1, 250),
             'codActividad' => null,
             'descActividad' => null,
             'direccion' => null,
             'telefono' => null,
-            'correo' => self::optional($invoice->receptor_email, 6, 100),
+            'correo' => DteParts::optional($invoice->receptor_email, 6, 100),
         ];
     }
 
@@ -302,13 +373,5 @@ class FacturaBuilder
             'plazo' => null,
             'periodo' => null,
         ];
-    }
-
-    /** null si está vacío o no llega al mínimo del esquema; recortado al máximo. */
-    private static function optional(?string $value, int $min, int $max): ?string
-    {
-        $value = trim((string) $value);
-
-        return mb_strlen($value) < $min ? null : mb_substr($value, 0, $max);
     }
 }

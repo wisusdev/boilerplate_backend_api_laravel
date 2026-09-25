@@ -10,6 +10,7 @@ use App\Services\Dte\DteContingencyService;
 use App\Services\Dte\DteDelivery;
 use App\Services\Dte\DteDocumentStates;
 use App\Services\Dte\DteException;
+use App\Services\Dte\DteParts;
 use App\Services\Dte\DtePendingException;
 use App\Services\Dte\DteSigner;
 use App\Services\Dte\FacturaBuilder;
@@ -75,7 +76,13 @@ class DteService
         if (! $invoice->canGenerateDte()) {
             throw new DteException("El DTE no puede generarse en el estado actual: {$invoice->dte_status}");
         }
-        $errors = [...$config->errors(), ...$config->transmissionErrors()];
+        $tipo = self::tipoDe($invoice);
+        $errors = [
+            ...$config->errors(),
+            ...$config->transmissionErrors(),
+            // Un CCF con el receptor incompleto sería rechazado: no gasta número.
+            ...($tipo === FacturaBuilder::TIPO_CCF ? FacturaBuilder::receptorCcfErrors($invoice) : []),
+        ];
         if ($errors) {
             throw DteException::invalid($errors);
         }
@@ -134,13 +141,13 @@ class DteService
         $config = DteConfig::load();
         $siguiente = (int) DB::table('dte_sequences')
             ->where('ambiente', $config->ambiente())
-            ->where('tipo_dte', FacturaBuilder::TIPO_DTE)
+            ->where('tipo_dte', self::tipoDe($invoice))
             ->value('last_number') + 1;
 
         return (new FacturaBuilder)->build(
             $invoice,
             $config,
-            $this->numeroControl($config, $siguiente),
+            self::numeroControl($config, self::tipoDe($invoice), $siguiente),
             strtoupper((string) Str::uuid()),
             Carbon::now(),
         );
@@ -195,10 +202,11 @@ class DteService
             // contingencia y el cliente se lleva un documento válido.
             $contingencia = $this->contingencies->active($config->ambiente());
 
-            $numero = $this->nextNumber($config->ambiente(), FacturaBuilder::TIPO_DTE);
+            $tipo = self::tipoDe($locked);
+            $numero = self::nextNumber($config->ambiente(), $tipo);
             $codigo = strtoupper((string) Str::uuid());
             $documento = (new FacturaBuilder)->build(
-                $locked, $config, $this->numeroControl($config, $numero), $codigo, Carbon::now(),
+                $locked, $config, self::numeroControl($config, $tipo, $numero), $codigo, Carbon::now(), $tipo,
             );
             if ($contingencia) {
                 $documento = DteContingencyService::apply($documento, $contingencia);
@@ -207,9 +215,9 @@ class DteService
             $json = json_encode($documento, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
             $doc = $locked->dteDocuments()->create([
-                'tipo_dte' => FacturaBuilder::TIPO_DTE,
+                'tipo_dte' => $tipo,
                 'ambiente' => $config->ambiente(),
-                'version' => FacturaBuilder::VERSION,
+                'version' => DteParts::VERSIONES[$tipo],
                 'numero_control' => $documento['identificacion']['numeroControl'],
                 'codigo_generacion' => $codigo,
                 'estado' => $contingencia ? DteDocument::CONTINGENCY : DteDocument::PENDING,
@@ -343,7 +351,7 @@ class DteService
     }
 
     /** Correlativo por tipo y ambiente, con bloqueo de fila en la transacción en curso. */
-    private function nextNumber(string $ambiente, string $tipoDte): int
+    public static function nextNumber(string $ambiente, string $tipoDte): int
     {
         DB::table('dte_sequences')->insertOrIgnore([
             'ambiente' => $ambiente, 'tipo_dte' => $tipoDte, 'last_number' => 0,
@@ -360,12 +368,18 @@ class DteService
         return $next;
     }
 
-    /** DTE-01-{M|S|B|P}EEEPNNN-{15 dígitos}: 31 caracteres. */
-    private function numeroControl(DteConfig $config, int $numero): string
+    /** Tipo de documento de venta de la factura: 01 Factura (por defecto) o 03 CCF. */
+    public static function tipoDe(Invoice $invoice): string
+    {
+        return $invoice->dte_type === FacturaBuilder::TIPO_CCF ? FacturaBuilder::TIPO_CCF : FacturaBuilder::TIPO_DTE;
+    }
+
+    /** DTE-TT-{M|S|B|P}EEEPNNN-{15 dígitos}: 31 caracteres. */
+    public static function numeroControl(DteConfig $config, string $tipo, int $numero): string
     {
         return sprintf(
             'DTE-%s-%s%sP%s-%015d',
-            FacturaBuilder::TIPO_DTE,
+            $tipo,
             SvCatalogs::establecimientoLetter($config->tipoEstablecimiento()),
             $config->codEstable(),
             $config->codPuntoVenta(),

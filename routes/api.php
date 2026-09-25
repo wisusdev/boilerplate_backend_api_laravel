@@ -334,9 +334,9 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/dte/contingencias/{contingencia}/process', [DteController::class, 'processContingencia'])
         ->withoutMiddleware([ValidateJsonApiDocument::class])
         ->middleware('permission:invoices:generate-dte')->name('api.v1.dte.contingencias.process');
-    // Catálogos del MH para el formulario del emisor (ajustes de facturación).
+    // Catálogos del MH: el formulario del emisor (ajustes) y el del cliente de un CCF.
     Route::get('/dte/catalogs', [InvoiceController::class, 'catalogs'])
-        ->middleware('permission:settings:update')
+        ->middleware('permission:settings:update|invoices:store|invoices:update')
         ->name('api.v1.dte.catalogs');
 
     // Settings (admin write)

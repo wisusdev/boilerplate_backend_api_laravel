@@ -2,9 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Invoice;
+use App\Services\Dte\FacturaBuilder;
+use App\Services\InvoiceBuilder;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class InvoiceRequest extends FormRequest
 {
@@ -34,6 +38,18 @@ class InvoiceRequest extends FormRequest
             'data.attributes.issued_at' => ['sometimes', 'nullable', 'date'],
             'data.attributes.status' => ['sometimes', 'string', Rule::in(['pending', 'issued', 'paid', 'cancelled'])],
 
+            // Documento de venta: 01 Factura (consumidor final) o 03 CCF (contribuyente).
+            'data.attributes.dte_type' => ['sometimes', 'nullable', Rule::in(['01', '03'])],
+            'data.attributes.receptor_nrc' => ['sometimes', 'nullable', 'string', 'max:10'],
+            'data.attributes.receptor_cod_actividad' => ['sometimes', 'nullable', 'string', 'max:6'],
+            'data.attributes.receptor_nombre_comercial' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'data.attributes.receptor_departamento' => ['sometimes', 'nullable', 'string', 'max:2'],
+            'data.attributes.receptor_municipio' => ['sometimes', 'nullable', 'string', 'max:2'],
+            'data.attributes.receptor_distrito' => ['sometimes', 'nullable', 'string', 'max:2'],
+            'data.attributes.receptor_direccion' => ['sometimes', 'nullable', 'string', 'max:200'],
+            'data.attributes.receptor_telefono' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'data.attributes.receptor_agente_retencion' => ['sometimes', 'boolean'],
+
             // Conceptos. Al crear hace falta al menos uno: una factura sin líneas
             // no tiene importe y saldría en blanco.
             'data.attributes.items' => [$creando ? 'required' : 'sometimes', 'array', 'min:1', 'max:50'],
@@ -43,6 +59,33 @@ class InvoiceRequest extends FormRequest
             'data.attributes.items.*.tour_id' => ['sometimes', 'nullable', 'integer', 'exists:tours,id'],
             'data.attributes.items.*.transport_vehicle_id' => ['sometimes', 'nullable', 'integer', 'exists:transport_vehicles,id'],
         ];
+    }
+
+    /**
+     * Un CCF necesita al receptor completo y en códigos de catálogo: se
+     * comprueba al guardar para que quien factura lo corrija con el cliente
+     * delante, y no al emitir.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v) {
+            if ($v->errors()->isNotEmpty()) {
+                return;
+            }
+            $attrs = (array) $this->input('data.attributes', []);
+            $actual = $this->route('invoice');
+            $invoice = $actual instanceof Invoice ? (clone $actual) : new Invoice;
+            $invoice->forceFill(array_intersect_key($attrs, array_flip([
+                'dte_type', 'receptor_name', 'receptor_document', 'receptor_email', ...InvoiceBuilder::RECEPTOR_FISCAL,
+            ])));
+
+            if ($invoice->dte_type === FacturaBuilder::TIPO_CCF) {
+                // Una clave por error: la respuesta JSON:API muestra uno por campo.
+                foreach (FacturaBuilder::receptorCcfErrors($invoice) as $i => $error) {
+                    $v->errors()->add("data.attributes.receptor.{$i}", $error);
+                }
+            }
+        });
     }
 
     /**

@@ -36,6 +36,9 @@ class InvoiceBuilder
                 'receptor_document_type' => $data['receptor_document_type'] ?? null,
                 'receptor_email' => $data['receptor_email'] ?? null,
                 'notes' => $data['notes'] ?? null,
+                // 01 Factura (consumidor final) o 03 CCF (contribuyente).
+                'dte_type' => $data['dte_type'] ?? null,
+                ...self::receptorFiscal($data),
             ]);
 
             $this->syncItems($invoice, $data['items'] ?? []);
@@ -58,7 +61,8 @@ class InvoiceBuilder
                 'receptor_document_type' => $data['receptor_document_type'] ?? null,
                 'receptor_email' => $data['receptor_email'] ?? null,
                 'notes' => $data['notes'] ?? null,
-            ], fn ($v) => $v !== null));
+                'dte_type' => $data['dte_type'] ?? null,
+            ], fn ($v) => $v !== null) + self::receptorFiscal($data, onlyPresent: true));
 
             // Los conceptos solo se tocan si el cliente los envía: así un PATCH
             // que solo cambia el receptor no borra las líneas.
@@ -69,6 +73,41 @@ class InvoiceBuilder
 
             return $invoice->fresh(['items']);
         });
+    }
+
+    /** Campos del receptor contribuyente (CCF). */
+    public const RECEPTOR_FISCAL = [
+        'receptor_nrc',
+        'receptor_cod_actividad',
+        'receptor_nombre_comercial',
+        'receptor_departamento',
+        'receptor_municipio',
+        'receptor_distrito',
+        'receptor_direccion',
+        'receptor_telefono',
+        'receptor_agente_retencion',
+    ];
+
+    /**
+     * Datos del receptor contribuyente. En una edición solo los que llegan:
+     * un PATCH que cambia el nombre no borra la dirección fiscal.
+     *
+     * @param  array<string,mixed>  $data
+     * @return array<string,mixed>
+     */
+    private static function receptorFiscal(array $data, bool $onlyPresent = false): array
+    {
+        $out = [];
+        foreach (self::RECEPTOR_FISCAL as $campo) {
+            if ($onlyPresent && ! array_key_exists($campo, $data)) {
+                continue;
+            }
+            $out[$campo] = $campo === 'receptor_agente_retencion'
+                ? (bool) ($data[$campo] ?? false)
+                : ($data[$campo] ?? null);
+        }
+
+        return $out;
     }
 
     /**

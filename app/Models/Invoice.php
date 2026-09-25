@@ -56,6 +56,15 @@ class Invoice extends Model
         'receptor_name',
         'receptor_document',
         'receptor_document_type',
+        'receptor_nrc',
+        'receptor_cod_actividad',
+        'receptor_nombre_comercial',
+        'receptor_departamento',
+        'receptor_municipio',
+        'receptor_distrito',
+        'receptor_direccion',
+        'receptor_telefono',
+        'receptor_agente_retencion',
         'receptor_email',
         'notes',
         'mh_response',
@@ -66,6 +75,7 @@ class Invoice extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'receptor_agente_retencion' => 'boolean',
         'issued_at' => 'datetime',
         'mh_response' => 'array',
         'dte_submitted_at' => 'datetime',
