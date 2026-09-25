@@ -5,6 +5,7 @@ namespace Tests\Feature\Travel;
 use App\Models\DteInvalidacion;
 use App\Models\PurchaseDocument;
 use App\Services\Dte\DteRepresentation;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 
 /**
@@ -239,5 +240,30 @@ class DteComprasTest extends DteTestCase
         $this->apiJson('GET', '/api/v1/purchase-documents?kind=cr')->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.attributes.number', 'CR-00001');
+    }
+
+    public function test_con_el_dte_desactivado_no_se_guarda_el_documento(): void
+    {
+        $this->configurar(['dte_enabled' => false, 'dte_agente_retencion' => true]);
+
+        $this->sujetoExcluido()->assertStatus(422)
+            ->assertJsonPath('errors.0.detail', 'La facturación electrónica no está habilitada en la configuración.');
+        $this->retencion()->assertStatus(422);
+        $this->assertSame(0, PurchaseDocument::count());
+        Http::assertNothingSent();
+    }
+
+    public function test_el_panel_consulta_si_el_dte_esta_activo(): void
+    {
+        $this->configurar(['dte_agente_retencion' => true]);
+        $this->admin();
+
+        $this->apiJson('GET', '/api/v1/dte/status')->assertOk()
+            ->assertJsonPath('data.attributes.enabled', true)
+            ->assertJsonPath('data.attributes.ambiente', '00')
+            ->assertJsonPath('data.attributes.agente_retencion', true);
+
+        $this->configurar(['dte_enabled' => false]);
+        $this->apiJson('GET', '/api/v1/dte/status')->assertJsonPath('data.attributes.enabled', false);
     }
 }

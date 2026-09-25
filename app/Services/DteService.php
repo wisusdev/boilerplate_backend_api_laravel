@@ -150,12 +150,9 @@ class DteService
 
     private function enabledConfig(): DteConfig
     {
-        $config = DteConfig::load();
-        if (! $config->enabled()) {
-            throw new DteException('La facturación electrónica no está habilitada en la configuración.');
-        }
+        DteConfig::assertEnabled();
 
-        return $config;
+        return DteConfig::load();
     }
 
     /**

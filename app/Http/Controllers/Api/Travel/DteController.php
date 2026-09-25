@@ -10,6 +10,7 @@ use App\Models\DteDocument;
 use App\Models\DteInvalidacion;
 use App\Models\Invoice;
 use App\Models\PurchaseDocument;
+use App\Services\Dte\DteConfig;
 use App\Services\Dte\DteContingencyService;
 use App\Services\Dte\DteDelivery;
 use App\Services\Dte\DteException;
@@ -32,6 +33,26 @@ class DteController extends Controller
         private readonly DteRepresentation $representation,
         private readonly DteDelivery $delivery,
     ) {}
+
+    /**
+     * GET /dte/status
+     * Lo que el panel necesita para mostrar u ocultar las acciones de DTE, sin
+     * exponer la configuración del emisor a quien no puede editarla.
+     */
+    public function status(): JsonResponse
+    {
+        $config = DteConfig::load();
+
+        return response()->json(['data' => [
+            'type' => 'dte-status',
+            'id' => 'current',
+            'attributes' => [
+                'enabled' => $config->enabled(),
+                'ambiente' => $config->ambiente(),
+                'agente_retencion' => $config->agenteRetencion(),
+            ],
+        ]]);
+    }
 
     /**
      * GET /invoices/{invoice}/dte/pdf

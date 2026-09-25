@@ -365,6 +365,9 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/dte/documents/{dteDocument}/send', [DteController::class, 'documentSend'])
         ->withoutMiddleware([ValidateJsonApiDocument::class])
         ->middleware('permission:invoices:generate-dte')->name('api.v1.dte.documents.send');
+    // Si el DTE está activo (y en qué ambiente), para mostrar u ocultar acciones.
+    Route::get('/dte/status', [DteController::class, 'status'])
+        ->middleware('permission:invoices:index')->name('api.v1.dte.status');
     // Contingencias DTE: seguimiento de plazos y avance manual.
     Route::get('/dte/contingencias', [DteController::class, 'contingencias'])
         ->middleware('permission:invoices:generate-dte')->name('api.v1.dte.contingencias');

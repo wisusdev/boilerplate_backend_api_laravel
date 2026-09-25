@@ -210,4 +210,14 @@ class DteNotasTest extends DteTestCase
             ->assertJsonPath('data.0.attributes.number', 'NC-00001')
             ->assertJsonPath('data.0.attributes.dte_documents.0.estado', DteDocument::TRANSMITTED);
     }
+
+    public function test_con_el_dte_desactivado_no_se_guarda_la_nota(): void
+    {
+        $ccf = $this->ccfSellado();
+        $this->configurar(['dte_enabled' => false]);
+
+        $this->nota($ccf)->assertStatus(422)
+            ->assertJsonPath('errors.0.detail', 'La facturación electrónica no está habilitada en la configuración.');
+        $this->assertSame(0, CreditNote::count());
+    }
 }

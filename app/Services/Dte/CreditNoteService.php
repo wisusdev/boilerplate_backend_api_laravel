@@ -35,6 +35,8 @@ class CreditNoteService
      */
     public function create(Invoice $invoice, array $data, ?string $userId = null): CreditNote
     {
+        // Sin DTE no hay nota válida: no se guarda una que no se puede emitir.
+        DteConfig::assertEnabled();
         $ccf = $invoice->dteDocuments()->where('estado', DteDocument::TRANSMITTED)->latest('id')->first();
         if (! $ccf || $ccf->tipo_dte !== FacturaBuilder::TIPO_CCF) {
             throw new DteException('Las notas de crédito y débito solo ajustan un comprobante de crédito fiscal con sello. Una factura de consumidor final se corrige invalidándola.');

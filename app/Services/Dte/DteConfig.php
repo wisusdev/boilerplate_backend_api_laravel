@@ -41,6 +41,14 @@ class DteConfig
         return (bool) ($this->raw['dte_enabled'] ?? false);
     }
 
+    /** @throws DteException si la facturación electrónica está desactivada. */
+    public static function assertEnabled(): void
+    {
+        if (! self::load()->enabled()) {
+            throw new DteException('La facturación electrónica no está habilitada en la configuración.');
+        }
+    }
+
     public function autoGenerate(): bool
     {
         return (bool) ($this->raw['dte_auto_generate'] ?? false);

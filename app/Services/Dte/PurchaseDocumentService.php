@@ -22,6 +22,8 @@ class PurchaseDocumentService
      */
     public function create(string $kind, array $data, ?string $userId = null): PurchaseDocument
     {
+        // Sin DTE el documento de compra no existe: no se guarda uno a medias.
+        DteConfig::assertEnabled();
         $kind = $kind === PurchaseDocument::CR ? PurchaseDocument::CR : PurchaseDocument::FSE;
         if ($errors = $this->errors($kind, $data)) {
             throw DteException::invalid($errors);
