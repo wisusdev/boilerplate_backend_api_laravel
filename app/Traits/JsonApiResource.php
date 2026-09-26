@@ -57,7 +57,9 @@ trait JsonApiResource
     {
         $showRoute = 'api.v1.'.$this->getResourceType().'.show';
 
-        if (Route::has($showRoute)) {
+        // Location solo al crear (201), como pide JSON:API. En un 200 PHP-FPM lo
+        // convierte en un 302 hacia la misma URL y el navegador entra en bucle.
+        if ($response->getStatusCode() === 201 && Route::has($showRoute)) {
             $response->header(
                 'Location',
                 route($showRoute, $this->resource)

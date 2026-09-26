@@ -3,10 +3,11 @@
 namespace Tests\Feature\Travel;
 
 use App\Models\Currency;
-use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TransportVehicle;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\Passport;
@@ -77,6 +78,17 @@ class TourVehicleOptionTest extends TestCase
         $response->assertJsonPath('data.attributes.booking_sections.pickup', true);
     }
 
+    public function test_tour_show_does_not_send_location_header(): void
+    {
+        // Con Location en un 200, PHP-FPM responde 302 a la misma URL y el
+        // navegador entra en bucle hasta agotar el rate limit (429).
+        $tour = $this->tour();
+
+        $this->apiJson('GET', '/api/v1/tours/'.$tour->id)
+            ->assertOk()
+            ->assertHeaderMissing('Location');
+    }
+
     public function test_booking_with_vehicle_option_adds_surcharge(): void
     {
         Passport::actingAs($this->user());
@@ -133,7 +145,7 @@ class TourVehicleOptionTest extends TestCase
 
     public function test_admin_can_configure_vehicle_options_and_sections(): void
     {
-        $this->seed([\Database\Seeders\PermissionSeeder::class, \Database\Seeders\RoleSeeder::class]);
+        $this->seed([PermissionSeeder::class, RoleSeeder::class]);
         Currency::create(['code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$', 'rate_to_usd' => 1, 'is_default' => true, 'is_active' => true]);
         $admin = $this->user();
         $admin->assignRole('admin');

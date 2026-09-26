@@ -48,8 +48,7 @@ class JsonApiTestResponse
     {
         return function ($model, array $attributes = []) {
             /** @var TestResponse $this */
-
-            return $this->assertJson([
+            $this->assertJson([
                 'data' => [
                     'type' => $model->getResourceType(),
                     'id' => (string) $model->getRouteKey(),
@@ -58,10 +57,14 @@ class JsonApiTestResponse
                         'self' => route('api.v1.'.$model->getResourceType().'.show', $model),
                     ],
                 ],
-            ])->assertHeader(
-                'Location',
-                route('api.v1.'.$model->getResourceType().'.show', $model)
-            );
+            ]);
+
+            // Location solo acompaña a la creación (201).
+            if ($this->getStatusCode() === 201) {
+                return $this->assertHeader('Location', route('api.v1.'.$model->getResourceType().'.show', $model));
+            }
+
+            return $this->assertHeaderMissing('Location');
         };
     }
 
