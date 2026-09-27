@@ -58,6 +58,11 @@ class BookingRequest extends FormRequest
             $rules['data.attributes.notes'] = ['sometimes', 'nullable', 'string'];
             // Cupón de descuento (opcional, tour o transporte).
             $rules['data.attributes.coupon_code'] = ['sometimes', 'nullable', 'string', 'max:60'];
+            // El cliente acepta términos y políticas al reservar. Una reserva
+            // presencial la registra el equipo y no pasa por aquí.
+            $rules['data.attributes.accept_terms'] = $this->user()?->can('bookings:view-all')
+                ? ['sometimes', 'boolean']
+                : ['accepted'];
         } else {
             $rules['data.attributes.status'] = ['required', 'string', Rule::in([
                 Booking::STATUS_PENDING,

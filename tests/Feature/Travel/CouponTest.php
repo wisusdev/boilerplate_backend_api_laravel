@@ -97,7 +97,7 @@ class CouponTest extends TestCase
         Coupon::create(['code' => 'SAVE20', 'type' => 'percentage', 'value' => 20, 'applies_to' => 'all', 'is_active' => true]);
 
         $response = $this->apiJson('POST', '/api/v1/coupons/validate', [
-            'data' => ['attributes' => ['code' => 'SAVE20', 'booking_type' => 'tour', 'pax' => 2, 'amount' => 200]],
+            'data' => ['attributes' => ['code' => 'SAVE20', 'booking_type' => 'tour', 'accept_terms' => true, 'pax' => 2, 'amount' => 200]],
         ]);
 
         $response->assertOk();
@@ -124,7 +124,7 @@ class CouponTest extends TestCase
             'data' => [
                 'type' => 'bookings',
                 'attributes' => [
-                    'booking_type' => 'tour',
+                    'booking_type' => 'tour', 'accept_terms' => true,
                     'tour_id' => $tour->id,
                     'booking_date' => now()->addDays(5)->toDateString(),
                     'pax_count' => 2,
@@ -150,7 +150,7 @@ class CouponTest extends TestCase
         // Reserva con cupón: 100 * 2 - 10% = 180.
         $booking = $this->apiJson('POST', '/api/v1/bookings', [
             'data' => ['type' => 'bookings', 'attributes' => [
-                'booking_type' => 'tour', 'tour_id' => $tour->id,
+                'booking_type' => 'tour', 'accept_terms' => true, 'tour_id' => $tour->id,
                 'booking_date' => now()->addDays(5)->toDateString(), 'pax_count' => 2, 'coupon_code' => 'TEN',
             ]],
         ])->assertSuccessful()->json('data.id');
@@ -181,7 +181,7 @@ class CouponTest extends TestCase
 
         $booking = $this->apiJson('POST', '/api/v1/bookings', [
             'data' => ['type' => 'bookings', 'attributes' => [
-                'booking_type' => 'tour', 'tour_id' => $tour->id,
+                'booking_type' => 'tour', 'accept_terms' => true, 'tour_id' => $tour->id,
                 'booking_date' => now()->addDays(5)->toDateString(), 'pax_count' => 2, 'coupon_code' => 'ONCE',
             ]],
         ])->assertSuccessful()->json('data.id');
@@ -206,7 +206,7 @@ class CouponTest extends TestCase
             'data' => [
                 'type' => 'bookings',
                 'attributes' => [
-                    'booking_type' => 'tour',
+                    'booking_type' => 'tour', 'accept_terms' => true,
                     'tour_id' => $tour->id,
                     'booking_date' => now()->addDays(5)->toDateString(),
                     'pax_count' => 2,

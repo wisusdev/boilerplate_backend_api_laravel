@@ -70,7 +70,7 @@ class TransportAndInquiryTest extends TestCase
             'data' => [
                 'type' => 'bookings',
                 'attributes' => [
-                    'booking_type' => 'transport',
+                    'booking_type' => 'transport', 'accept_terms' => true,
                     'transport_vehicle_id' => $vehicle->id,
                     'pickup_at' => '2026-06-10 08:00:00',
                     'dropoff_at' => '2026-06-10 12:00:00',

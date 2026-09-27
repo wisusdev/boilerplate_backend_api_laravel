@@ -16,6 +16,7 @@ use App\Services\Booking\TransportBookingHandler;
 use App\Services\BookingService;
 use App\Services\TourAvailabilityService;
 use App\Support\AdminAlerts;
+use App\Support\LegalDocuments;
 use App\Support\SiteSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -75,6 +76,13 @@ class BookingController extends Controller
             $attrs['booking_type'],
             $attrs
         );
+
+        if (! empty($attrs['accept_terms'])) {
+            $booking->forceFill([
+                'terms_accepted_at' => now(),
+                'terms_version' => LegalDocuments::version(),
+            ])->save();
+        }
 
         // Presencial: el admin puede confirmar de una vez (dispara la notificación de confirmación).
         if ($this->isAdmin($request) && $request->input('data.attributes.status') === Booking::STATUS_CONFIRMED) {

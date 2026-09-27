@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
 use App\Models\User;
+use App\Support\LegalDocuments;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -26,6 +27,11 @@ class RegisterController extends Controller
         }
 
         $user = User::create($attributes);
+        // Constancia de qué versión de términos y políticas aceptó.
+        $user->forceFill([
+            'terms_accepted_at' => now(),
+            'terms_version' => LegalDocuments::version(),
+        ])->save();
         $user->assignRole('user');
         $user->sendEmailVerificationNotification();
 

@@ -32,6 +32,7 @@ class RegisterRequest extends FormRequest
             'data.attributes.last_name' => ['required', 'max:255'],
             'data.attributes.email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
             'data.attributes.password' => ['required', 'confirmed', 'min:8', 'max:128'],
+            'data.attributes.accept_terms' => ['accepted'],
         ];
     }
 
@@ -59,6 +60,7 @@ class RegisterRequest extends FormRequest
             'data.attributes.password.confirmed' => 'validation.passwordConfirmed',
             'data.attributes.password.min' => 'validation.passwordMin',
             'data.attributes.password.max' => 'validation.passwordMax',
+            'data.attributes.accept_terms.accepted' => 'validation.acceptTerms',
         ];
     }
 }

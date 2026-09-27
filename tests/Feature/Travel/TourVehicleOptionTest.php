@@ -98,7 +98,7 @@ class TourVehicleOptionTest extends TestCase
             'data' => [
                 'type' => 'bookings',
                 'attributes' => [
-                    'booking_type' => 'tour',
+                    'booking_type' => 'tour', 'accept_terms' => true,
                     'tour_id' => $tour->id,
                     'booking_date' => now()->addDays(3)->toDateString(),
                     'pax_count' => 2,
@@ -133,7 +133,7 @@ class TourVehicleOptionTest extends TestCase
             'data' => [
                 'type' => 'bookings',
                 'attributes' => [
-                    'booking_type' => 'tour',
+                    'booking_type' => 'tour', 'accept_terms' => true,
                     'tour_id' => $tour->id,
                     'booking_date' => now()->addDays(3)->toDateString(),
                     'pax_count' => 2,

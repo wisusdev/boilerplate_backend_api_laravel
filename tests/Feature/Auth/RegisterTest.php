@@ -33,6 +33,7 @@ class RegisterTest extends TestCase
                     'email' => 'john@example.com',
                     'password' => 'secure123',
                     'password_confirmation' => 'secure123',
+                    'accept_terms' => true,
                 ],
             ],
         ];

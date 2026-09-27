@@ -85,7 +85,7 @@ class BookingFlowTest extends TestCase
             'data' => [
                 'type' => 'bookings',
                 'attributes' => [
-                    'booking_type' => 'tour',
+                    'booking_type' => 'tour', 'accept_terms' => true,
                     'tour_id' => $tour->id,
                     'booking_date' => '2099-06-01',
                     'pax_count' => 1,
@@ -122,7 +122,7 @@ class BookingFlowTest extends TestCase
             'data' => [
                 'type' => 'bookings',
                 'attributes' => [
-                    'booking_type' => 'tour',
+                    'booking_type' => 'tour', 'accept_terms' => true,
                     'tour_id' => $tour->id,
                     'booking_date' => '2099-06-01',
                     'pax_count' => 2,
@@ -165,7 +165,7 @@ class BookingFlowTest extends TestCase
             'data' => [
                 'type' => 'bookings',
                 'attributes' => [
-                    'booking_type' => 'tour',
+                    'booking_type' => 'tour', 'accept_terms' => true,
                     'tour_id' => $tour->id,
                     'booking_date' => '2099-06-01',
                     'pax_count' => 1,

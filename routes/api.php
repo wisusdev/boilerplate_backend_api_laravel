@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Auth\SocialAuthController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\Base\AccountController;
 use App\Http\Controllers\Api\Base\InstallController;
+use App\Http\Controllers\Api\Base\LegalDocumentController;
 use App\Http\Controllers\Api\Base\PermissionsController;
 use App\Http\Controllers\Api\Base\RolesController;
 use App\Http\Controllers\Api\Base\SettingsController;
@@ -39,6 +40,7 @@ use App\Http\Controllers\Api\Travel\TransportVehicleController;
 use App\Http\Controllers\Api\Travel\WebhookController;
 use App\Http\Middleware\ValidateJsonApiDocument;
 use App\Http\Middleware\ValidateJsonApiHeaders;
+use App\Support\LegalDocuments;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -396,6 +398,10 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Settings (admin write)
     Route::patch('/settings', [SettingsController::class, 'update'])->middleware('permission:settings:update')->name('api.v1.settings.update');
+    Route::patch('/legal/{slug}', [LegalDocumentController::class, 'update'])
+        ->middleware('permission:settings:update')
+        ->whereIn('slug', array_keys(LegalDocuments::DOCUMENTS))
+        ->name('api.v1.legal.update');
     Route::post('/settings/logo', [SettingsController::class, 'uploadLogo'])
         ->withoutMiddleware([ValidateJsonApiHeaders::class, ValidateJsonApiDocument::class])
         ->middleware('permission:settings:update')
@@ -465,3 +471,7 @@ Route::get('/map-pins', [MapPinController::class, 'index'])->name('api.v1.map-pi
 
 // Settings (public read — returns safe subset without credentials)
 Route::get('/settings', [SettingsController::class, 'index'])->name('api.v1.settings.index');
+
+// Textos legales (lectura pública)
+Route::get('/legal', [LegalDocumentController::class, 'index'])->name('api.v1.legal.index');
+Route::get('/legal/{slug}', [LegalDocumentController::class, 'show'])->name('api.v1.legal.show');
