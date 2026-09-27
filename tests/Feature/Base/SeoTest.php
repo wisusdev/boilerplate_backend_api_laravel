@@ -110,6 +110,16 @@ class SeoTest extends TestCase
             ->assertSee('<meta name="description" content="Sube al volcán con guía local." />', false);
     }
 
+    public function test_la_pagina_no_lleva_la_csp_de_la_api_que_bloquearia_los_scripts(): void
+    {
+        $res = $this->get('/seo/page/tours')->assertOk();
+
+        $this->assertNull($res->headers->get('Content-Security-Policy'));
+        $res->assertHeader('X-Content-Type-Options', 'nosniff');
+        // La API conserva la suya.
+        $this->get('/api/v1/tours')->assertHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; sandbox");
+    }
+
     public function test_la_portada_conserva_su_titulo_y_describe_a_la_agencia(): void
     {
         $html = $this->get('/seo/page')->assertOk()->getContent();

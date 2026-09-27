@@ -25,10 +25,14 @@ class SecurityHeaders
         $response->headers->set('Cross-Origin-Resource-Policy', 'same-site');
 
         // La API solo devuelve JSON y ficheros; nada debe ejecutarse desde aquí.
-        $response->headers->set(
-            'Content-Security-Policy',
-            "default-src 'none'; frame-ancestors 'none'; sandbox"
-        );
+        // Las rutas /seo/* sirven el HTML del sitio público (la SPA), que sí
+        // necesita ejecutar sus scripts: sus cabeceras las pone el nginx del sitio.
+        if (! $request->routeIs('seo.*')) {
+            $response->headers->set(
+                'Content-Security-Policy',
+                "default-src 'none'; frame-ancestors 'none'; sandbox"
+            );
+        }
 
         if ($request->secure()) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
