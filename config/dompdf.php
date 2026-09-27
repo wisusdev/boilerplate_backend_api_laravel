@@ -91,9 +91,9 @@ return [
          * @var array
          */
         'allowed_protocols' => [
+            // Solo ficheros locales: logos y QR se embeben desde disco o como
+            // data URI, nunca se descargan al generar el PDF.
             'file://' => ['rules' => []],
-            'http://' => ['rules' => []],
-            'https://' => ['rules' => []],
         ],
 
         /**
@@ -264,7 +264,7 @@ return [
          *
          * @var bool
          */
-        'enable_remote' => true,
+        'enable_remote' => false,
 
         /**
          * A ratio applied to the fonts height to be more like browsers' line height
