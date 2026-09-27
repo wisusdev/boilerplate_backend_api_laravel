@@ -105,6 +105,9 @@ class SeoController extends Controller
         $front = $this->frontUrl();
         $sitio = SiteSettings::name();
         $meta = new PageMeta(canonical: $front.($ruta === '/' ? '/' : $ruta), siteName: $sitio);
+        // Imagen genérica del build del frontend (public/og-default.jpg); los
+        // tours y vehículos con foto la sustituyen.
+        $meta->image = $front.'/og-default.jpg';
 
         foreach (self::PRIVATE_PREFIXES as $prefijo) {
             if ($ruta === $prefijo || str_starts_with($ruta, $prefijo.'/')) {
@@ -137,9 +140,10 @@ class SeoController extends Controller
 
         if (preg_match('#^/transport/(\d+)$#', $ruta, $m)
             && $vehiculo = TransportVehicle::query()->where('is_active', true)->find($m[1])) {
-            $meta->title = $vehiculo->title;
-            $meta->description = PageMeta::summary((string) $vehiculo->description);
-            $meta->image = $vehiculo->getFirstMedia('featured_image')?->getUrl();
+            // Los campos SEO del panel mandan; si están vacíos, título y descripción.
+            $meta->title = $this->texto($vehiculo->meta_title) ?? $vehiculo->title;
+            $meta->description = PageMeta::summary($this->texto($vehiculo->meta_description) ?? (string) $vehiculo->description);
+            $meta->image = $vehiculo->getFirstMedia('featured_image')?->getUrl() ?? $meta->image;
 
             return [$meta, 200];
         }
@@ -162,9 +166,9 @@ class SeoController extends Controller
     private function tourMeta(PageMeta $meta, Tour $tour): PageMeta
     {
         $imagen = $tour->getFirstMedia('featured_image')?->getUrl();
-        $meta->title = $tour->title;
-        $meta->description = PageMeta::summary((string) $tour->description);
-        $meta->image = $imagen;
+        $meta->title = $this->texto($tour->meta_title) ?? $tour->title;
+        $meta->description = PageMeta::summary($this->texto($tour->meta_description) ?? (string) $tour->description);
+        $meta->image = $imagen ?? $meta->image;
         $meta->type = 'product';
         // Un solo canónico por tour aunque se llegue por el slug.
         $meta->canonical = $this->frontUrl().'/tours/'.$tour->id;
@@ -226,6 +230,11 @@ class SeoController extends Controller
         ]);
 
         return $agencia;
+    }
+
+    private function texto(mixed $valor): ?string
+    {
+        return is_string($valor) && trim($valor) !== '' ? trim($valor) : null;
     }
 
     private function frontUrl(): string

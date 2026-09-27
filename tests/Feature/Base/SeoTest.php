@@ -100,6 +100,16 @@ class SeoTest extends TestCase
         $this->assertStringContainsString('<div id="root"></div>', $html);
     }
 
+    public function test_los_campos_seo_del_panel_mandan_sobre_titulo_y_descripcion(): void
+    {
+        $tour = $this->tour(['meta_title' => 'Santa Ana al amanecer', 'meta_description' => 'Sube al volcán con guía local.']);
+
+        $this->get("/seo/page/tours/{$tour->id}")
+            ->assertOk()
+            ->assertSee('<title>Santa Ana al amanecer · ', false)
+            ->assertSee('<meta name="description" content="Sube al volcán con guía local." />', false);
+    }
+
     public function test_la_portada_conserva_su_titulo_y_describe_a_la_agencia(): void
     {
         $html = $this->get('/seo/page')->assertOk()->getContent();
@@ -107,6 +117,8 @@ class SeoTest extends TestCase
         $this->assertStringContainsString('<title>Cusgo Adventures — Aventura auténtica en El Salvador</title>', $html);
         $this->assertStringContainsString('<link rel="canonical" href="https://cusgo.test/" />', $html);
         $this->assertStringContainsString('"@type":"TravelAgency"', $html);
+        // La imagen genérica con dirección absoluta: WhatsApp no resuelve rutas relativas.
+        $this->assertStringContainsString('<meta property="og:image" content="https://cusgo.test/og-default.jpg" />', $html);
     }
 
     public function test_una_ruta_inexistente_o_un_tour_inactivo_dan_404_sin_indexar(): void
