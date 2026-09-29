@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialAuthController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\Base\AccountController;
+use App\Http\Controllers\Api\Base\HelpController;
 use App\Http\Controllers\Api\Base\InstallController;
 use App\Http\Controllers\Api\Base\LegalDocumentController;
 use App\Http\Controllers\Api\Base\PermissionsController;
@@ -398,6 +399,10 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Settings (admin write)
     Route::patch('/settings', [SettingsController::class, 'update'])->middleware('permission:settings:update')->name('api.v1.settings.update');
+    // Manual del panel (Ayuda): los mismos roles que pueden entrar al panel.
+    Route::get('/help/admin', [HelpController::class, 'admin'])
+        ->middleware('role:superadmin|admin|finanzas|editor|guia')
+        ->name('api.v1.help.admin');
     Route::patch('/legal/{slug}', [LegalDocumentController::class, 'update'])
         ->middleware('permission:settings:update')
         ->whereIn('slug', array_keys(LegalDocuments::DOCUMENTS))
